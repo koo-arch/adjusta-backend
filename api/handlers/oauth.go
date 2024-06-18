@@ -1,20 +1,22 @@
 package handlers
 
 import (
-	"net/http"
 	"fmt"
+	"net/http"
 
-	"github.com/gin-gonic/gin"
 	"github.com/gin-contrib/sessions"
-	"golang.org/x/oauth2"
+	"github.com/gin-gonic/gin"
 	"github.com/koo-arch/adjusta-backend/ent"
-	"github.com/koo-arch/adjusta-backend/internal/auth"
-	"github.com/koo-arch/adjusta-backend/internal/apps/user"
 	"github.com/koo-arch/adjusta-backend/internal/apps/account"
+	"github.com/koo-arch/adjusta-backend/internal/apps/user"
+	"github.com/koo-arch/adjusta-backend/internal/auth"
+	"github.com/koo-arch/adjusta-backend/internal/google/oauth"
+	"github.com/koo-arch/adjusta-backend/internal/google/userinfo"
+	"golang.org/x/oauth2"
 )
 
 func GoogleLoginHandler(c *gin.Context) {
-	url := auth.GetGoogleAuthConfig().AuthCodeURL("state", oauth2.AccessTypeOffline, oauth2.ApprovalForce)
+	url := oauth.GetGoogleAuthConfig().AuthCodeURL("state", oauth2.AccessTypeOffline, oauth2.ApprovalForce)
 	c.Redirect(http.StatusTemporaryRedirect, url)
 }
 
@@ -47,7 +49,7 @@ func GoogleCallbackHandler(client *ent.Client) gin.HandlerFunc {
 		ctx := c.Request.Context()
 
 		// Googleからトークンを取得
-		oauthToken, err := auth.GetGoogleAuthConfig().Exchange(ctx, code)
+		oauthToken, err := oauth.GetGoogleAuthConfig().Exchange(ctx, code)
 		if err != nil {
 			fmt.Println("failed to exchange oauthToken")
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to exchange oauthToken"})
@@ -55,31 +57,32 @@ func GoogleCallbackHandler(client *ent.Client) gin.HandlerFunc {
 		}
 
 		// Googleからユーザー情報を取得
-		userInfo, err := auth.FetchGoogleUserInfo(ctx, oauthToken)
+		userInfo, err := userinfo.FetchGoogleUserInfo(ctx, oauthToken)
 		if err != nil {
 			fmt.Println("failed to fetch user info")
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch user info"})
 			return
 		}
-		
+
 		// アプリ独自のJWTトークンを生成
 		jwtManager := auth.NewJWTManager(client, auth.NewKeyManager(client))
 		jwtToken, err := jwtManager.GenerateTokens(ctx, client, userInfo.Email)
-		
+
 		userRepo := user.NewUserRepository(client)
 		accountRepo := account.NewAccountRepository(client)
+		authManager := auth.NewAuthManager(client, userRepo, accountRepo)
 
 		// ユーザー情報をデータベースに保存
-		u, err := auth.CreateUserOrUpdateRefreshToken(ctx, client, userRepo, accountRepo, userInfo, jwtToken, oauthToken)
+		u, err := authManager.ProcessUserSignIn(ctx, userInfo, jwtToken, oauthToken)
 		if err != nil {
 			fmt.Printf("failed to create or update user: %s", err.Error())
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create or update user"})
 			return
 		}
-		
+
 		// クッキーにトークンをセット
 		c.SetCookie("access_token", jwtToken.AccessToken, 256, "/", "", false, true)
-		
+
 		// セッションにユーザー情報をセット
 		session.Set("googleid", userInfo.GoogleID)
 		session.Set("userid", u.ID)
@@ -88,8 +91,6 @@ func GoogleCallbackHandler(client *ent.Client) gin.HandlerFunc {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to save session"})
 			return
 		}
-
-		c.JSON(http.StatusOK, gin.H{"access_token": jwtToken.AccessToken, "refresh_token": jwtToken.RefreshToken, "user": userInfo})
 
 		// リダイレクト
 		c.Redirect(http.StatusTemporaryRedirect, "http://localhost:3000")
