@@ -3,6 +3,7 @@ package handlers
 import (
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
@@ -12,6 +13,7 @@ import (
 	"github.com/koo-arch/adjusta-backend/internal/auth"
 	"github.com/koo-arch/adjusta-backend/internal/google/oauth"
 	"github.com/koo-arch/adjusta-backend/internal/google/userinfo"
+	"github.com/koo-arch/adjusta-backend/cookie"
 	"golang.org/x/oauth2"
 )
 
@@ -24,13 +26,15 @@ func LogoutHandler(c *gin.Context) {
 	// セッションをクリア
 	session := sessions.Default(c)
 	session.Clear()
+	session.Options(sessions.Options{MaxAge: -1, Path: "/"})
 	if err := session.Save(); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to save session"})
 		return
 	}
 
 	// クッキーを削除
-	c.SetCookie("access_token", "", -1, "/", "", false, true)
+	cookie.DeleteCookie(c, "access_token")
+	cookie.DeleteCookie(c, "refresh_token")
 
 	c.JSON(http.StatusOK, gin.H{"message": "logged out"})
 }
@@ -81,7 +85,9 @@ func GoogleCallbackHandler(client *ent.Client) gin.HandlerFunc {
 		}
 
 		// クッキーにトークンをセット
-		c.SetCookie("access_token", jwtToken.AccessToken, 256, "/", "", false, true)
+		maxAge := int(jwtToken.RefreshExpiration.Sub(time.Now()).Seconds())
+		cookie.SetCookie(c, "access_token", jwtToken.AccessToken, maxAge)
+		cookie.SetCookie(c, "refresh_token", jwtToken.RefreshToken, maxAge)
 
 		// セッションにユーザー情報をセット
 		session.Set("googleid", userInfo.GoogleID)

@@ -4,9 +4,11 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"time"
 
-	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
+	"github.com/gin-contrib/sessions"
+	"github.com/koo-arch/adjusta-backend/cookie"
 	"github.com/koo-arch/adjusta-backend/ent"
 	"github.com/koo-arch/adjusta-backend/internal/apps/user"
 	"github.com/koo-arch/adjusta-backend/internal/auth"
@@ -15,27 +17,23 @@ import (
 
 func AuthMiddleware(client *ent.Client) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		authHeader := c.GetHeader("Authorization")
-		if authHeader == "" {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "missing Authorization header"})
+		accessToken, err := c.Cookie("access_token")
+		if err != nil {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "failed to get access token"})
 			c.Abort()
 			return
 		}
 
-		tokenStr := strings.TrimPrefix(authHeader, "Bearer ")
-		if tokenStr == authHeader {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid Authorization header"})
-			c.Abort()
-			return
-		}
+		session := sessions.Default(c)
+		googleid := session.Get("googleid").(string)
+		println(googleid)
 
 		ctx := c.Request.Context()
 
 		// トークンの有効性を確認
-		accessToken := tokenStr
 		jwtManager := auth.NewJWTManager(client, auth.NewKeyManager(client))
 		email, err := jwtManager.VerifyToken(ctx, client, accessToken, "access")
-		if err != nil{
+		if err != nil {
 			// トークンの有効期限が切れている場合はリフレッシュトークンを利用してトークンを再発行
 			if strings.Contains(err.Error(), "token is expired") {
 				token, err := tokenRefresh(c, client, jwtManager)
@@ -48,11 +46,14 @@ func AuthMiddleware(client *ent.Client) gin.HandlerFunc {
 				accessToken = token.AccessToken
 				email, err = jwtManager.VerifyToken(ctx, client, accessToken, "access")
 				if err != nil {
+					println("アクセストークンの再発行に失敗")
 					c.JSON(http.StatusUnauthorized, gin.H{"error": "failed to verify token"})
 					c.Abort()
 					return
 				}
 			} else {
+				println(err.Error())
+				println("アクセストークンの有効性確認に失敗")
 				c.JSON(http.StatusUnauthorized, gin.H{"error": "failed to verify token"})
 				c.Abort()
 				return
@@ -66,17 +67,16 @@ func AuthMiddleware(client *ent.Client) gin.HandlerFunc {
 }
 
 func tokenRefresh(c *gin.Context, client *ent.Client, jwtManager *auth.JWTManager) (*models.JWTToken, error) {
-	session := sessions.Default(c)
-
-	userID, ok := session.Get("userid").(int)
-	if !ok {
-		return nil, fmt.Errorf("session not found")
-	}
-	userRepo := user.NewUserRepository(client)
-
 	ctx := c.Request.Context()
-	// ユーザーの検索
-	u, err := userRepo.Read(ctx, nil, userID)
+	session := sessions.Default(c)
+	userid, ok := session.Get("userid").(int)
+	if !ok {
+		return nil, fmt.Errorf("failed to get userid")
+	}
+
+	// リフレッシュトークンの取得
+	userRepo := user.NewUserRepository(client)
+	u, err := userRepo.Read(ctx, nil, userid)
 	if err != nil {
 		return nil, err
 	}
@@ -93,13 +93,14 @@ func tokenRefresh(c *gin.Context, client *ent.Client, jwtManager *auth.JWTManage
 		return nil, err
 	}
 
-	// ユーザーのリフレッシュトークンを更新
-	_, err = userRepo.Update(ctx, nil, userID, token)
+	maxAge := int(token.RefreshExpiration.Sub(time.Now()).Seconds())
+	cookie.SetCookie(c, "access_token", token.AccessToken, maxAge)
+	
+	// リフレッシュトークンの更新
+	_, err = userRepo.Update(ctx, nil, userid, token)
 	if err != nil {
 		return nil, err
 	}
-
-	c.SetCookie("access_token", token.AccessToken, 256, "/", "", false, true)
 
 	return token, nil
 }

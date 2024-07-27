@@ -2,6 +2,7 @@ package auth
 
 import (
 	"context"
+	"strings"
 	"time"
 	"log"
 
@@ -114,6 +115,8 @@ func (jm *JWTManager) VerifyToken(ctx context.Context, client *ent.Client, token
 		email, err := jm.verifyTokenWithKey(tokenString, []byte(key.Key))
 		if err == nil {
 			return email, nil
+		} else if strings.Contains(err.Error(), "token is expired") {
+			return "", err
 		}
 	}
 
@@ -128,11 +131,13 @@ func (jm *JWTManager) verifyTokenWithKey(tokenString string, key []byte) (string
 		return key, nil
 	})
 	if err != nil {
+		println("failed to parse token", err.Error())
 		return "", err
 	}
 
 	claims, ok := token.Claims.(*Claims)
 	if !ok || !token.Valid {
+		println("invalid token")
 		return "", jwt.ErrSignatureInvalid
 	}
 

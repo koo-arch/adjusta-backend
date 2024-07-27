@@ -4,19 +4,22 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"net/http"
+	"strings"
+	"time"
 
-	"github.com/gin-gonic/gin"
+	"github.com/gin-contrib/cors"
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-contrib/sessions/cookie"
+	"github.com/gin-gonic/gin"
+	"github.com/koo-arch/adjusta-backend/api/handlers"
+	"github.com/koo-arch/adjusta-backend/api/middlewares"
 	"github.com/koo-arch/adjusta-backend/configs"
 	"github.com/koo-arch/adjusta-backend/ent"
-	"github.com/koo-arch/adjusta-backend/api/handlers"
+	_ "github.com/koo-arch/adjusta-backend/ent/runtime"
 	"github.com/koo-arch/adjusta-backend/internal/auth"
 	"github.com/koo-arch/adjusta-backend/scheduler"
-	"github.com/koo-arch/adjusta-backend/api/middlewares"
-	_ "github.com/koo-arch/adjusta-backend/ent/runtime"
 	_ "github.com/lib/pq"
-
 )
 
 func main() {
@@ -59,11 +62,28 @@ func main() {
 	s.SetupJobs(ctx)
 	s.Start()
 	defer s.Stop()
-
 	
 	//Ginフレームワークのデフォルトの設定を使用してルータを作成
 	router := gin.Default()
+
+	// CORSの設定
+	allowedOrigins := strings.Split(configs.GetEnv("CORS_ALLOW_ORIGINS"), ",")
+
+	router.Use(cors.New(cors.Config{
+		AllowOrigins: allowedOrigins,
+		AllowMethods: []string{"GET", "POST", "PUT", "DELETE"},
+		AllowHeaders: []string{"Origin", "Content-Length", "Content-Type", "Authorization"},
+		AllowCredentials: true,
+		MaxAge: 12 * time.Hour,
+	}))
+
 	store := cookie.NewStore([]byte("secret"))
+	store.Options(sessions.Options{
+        Path:     "/",
+        MaxAge:   60 * 60 * 24 * 7,
+        HttpOnly: true,
+        SameSite: http.SameSiteLaxMode,
+    })
 	router.Use(sessions.Sessions("session", store))
 	
 	// ルートハンドラの定義
@@ -71,8 +91,9 @@ func main() {
 	router.GET("/auth/google/callback", handlers.GoogleCallbackHandler(client))
 	router.GET("/auth/logout", handlers.LogoutHandler)
 
+
 	// 認証が必要なAPIグループ
-	auth := router.Group("/api").Use(middlewares.SessionRenewalMiddleware(), middlewares.AuthMiddleware(client))
+	auth := router.Group("/api").Use(middlewares.AuthMiddleware(client))
 	{
 		auth.GET("/users/me", handlers.GetCurrentUserHandler(client))
 	}

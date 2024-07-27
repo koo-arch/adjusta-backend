@@ -14,7 +14,7 @@ func SessionRenewalMiddleware() gin.HandlerFunc {
 			Path: "/",
 			MaxAge: 60 * 60 * 24 * 7,
 			HttpOnly: true,
-			SameSite: http.SameSiteNoneMode,
+			SameSite: http.SameSiteLaxMode,
 		})
 		if err := session.Save(); err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to save session"})
