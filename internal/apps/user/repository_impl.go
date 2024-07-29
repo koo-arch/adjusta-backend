@@ -6,6 +6,7 @@ import (
 	"github.com/koo-arch/adjusta-backend/ent"
 	"github.com/koo-arch/adjusta-backend/ent/user"
 	"github.com/koo-arch/adjusta-backend/internal/models"
+	"github.com/google/uuid"
 )
 
 type UserRepositoryImpl struct {
@@ -18,7 +19,7 @@ func NewUserRepository(client *ent.Client) *UserRepositoryImpl {
 	}
 }
 
-func (r *UserRepositoryImpl) Read(ctx context.Context, tx *ent.Tx, id int) (*ent.User, error) {
+func (r *UserRepositoryImpl) Read(ctx context.Context, tx *ent.Tx, id uuid.UUID) (*ent.User, error) {
 	if tx != nil {
 		return tx.User.Get(ctx, id)
 	}
@@ -51,7 +52,7 @@ func (r *UserRepositoryImpl) Create(ctx context.Context, tx *ent.Tx, email strin
 		Save(ctx)
 }
 
-func (r *UserRepositoryImpl) Update(ctx context.Context,tx *ent.Tx, id int, jwtToken *models.JWTToken) (*ent.User, error) {
+func (r *UserRepositoryImpl) Update(ctx context.Context,tx *ent.Tx, id uuid.UUID, jwtToken *models.JWTToken) (*ent.User, error) {
 	if tx != nil {
 		return tx.User.UpdateOneID(id).
 			SetNillableRefreshToken(&jwtToken.RefreshToken).
@@ -64,7 +65,7 @@ func (r *UserRepositoryImpl) Update(ctx context.Context,tx *ent.Tx, id int, jwtT
 		Save(ctx)
 }
 
-func (r *UserRepositoryImpl) Delete(ctx context.Context, tx *ent.Tx, id int) error {
+func (r *UserRepositoryImpl) Delete(ctx context.Context, tx *ent.Tx, id uuid.UUID) error {
 	if tx != nil {
 		return tx.User.DeleteOneID(id).Exec(ctx)
 	}

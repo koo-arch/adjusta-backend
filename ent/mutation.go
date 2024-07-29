@@ -11,6 +11,7 @@ import (
 
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
+	"github.com/google/uuid"
 	"github.com/koo-arch/adjusta-backend/ent/account"
 	"github.com/koo-arch/adjusta-backend/ent/jwtkey"
 	"github.com/koo-arch/adjusta-backend/ent/predicate"
@@ -36,14 +37,14 @@ type AccountMutation struct {
 	config
 	op                  Op
 	typ                 string
-	id                  *int
+	id                  *uuid.UUID
 	email               *string
 	google_id           *string
 	access_token        *string
 	refresh_token       *string
 	access_token_expiry *time.Time
 	clearedFields       map[string]struct{}
-	user                *int
+	user                *uuid.UUID
 	cleareduser         bool
 	done                bool
 	oldValue            func(context.Context) (*Account, error)
@@ -70,7 +71,7 @@ func newAccountMutation(c config, op Op, opts ...accountOption) *AccountMutation
 }
 
 // withAccountID sets the ID field of the mutation.
-func withAccountID(id int) accountOption {
+func withAccountID(id uuid.UUID) accountOption {
 	return func(m *AccountMutation) {
 		var (
 			err   error
@@ -120,9 +121,15 @@ func (m AccountMutation) Tx() (*Tx, error) {
 	return tx, nil
 }
 
+// SetID sets the value of the id field. Note that this
+// operation is only accepted on creation of Account entities.
+func (m *AccountMutation) SetID(id uuid.UUID) {
+	m.id = &id
+}
+
 // ID returns the ID value in the mutation. Note that the ID is only available
 // if it was provided to the builder or after it was returned from the database.
-func (m *AccountMutation) ID() (id int, exists bool) {
+func (m *AccountMutation) ID() (id uuid.UUID, exists bool) {
 	if m.id == nil {
 		return
 	}
@@ -133,12 +140,12 @@ func (m *AccountMutation) ID() (id int, exists bool) {
 // That means, if the mutation is applied within a transaction with an isolation level such
 // as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
 // or updated by the mutation.
-func (m *AccountMutation) IDs(ctx context.Context) ([]int, error) {
+func (m *AccountMutation) IDs(ctx context.Context) ([]uuid.UUID, error) {
 	switch {
 	case m.op.Is(OpUpdateOne | OpDeleteOne):
 		id, exists := m.ID()
 		if exists {
-			return []int{id}, nil
+			return []uuid.UUID{id}, nil
 		}
 		fallthrough
 	case m.op.Is(OpUpdate | OpDelete):
@@ -368,7 +375,7 @@ func (m *AccountMutation) ResetAccessTokenExpiry() {
 }
 
 // SetUserID sets the "user" edge to the User entity by id.
-func (m *AccountMutation) SetUserID(id int) {
+func (m *AccountMutation) SetUserID(id uuid.UUID) {
 	m.user = &id
 }
 
@@ -383,7 +390,7 @@ func (m *AccountMutation) UserCleared() bool {
 }
 
 // UserID returns the "user" edge ID in the mutation.
-func (m *AccountMutation) UserID() (id int, exists bool) {
+func (m *AccountMutation) UserID() (id uuid.UUID, exists bool) {
 	if m.user != nil {
 		return *m.user, true
 	}
@@ -393,7 +400,7 @@ func (m *AccountMutation) UserID() (id int, exists bool) {
 // UserIDs returns the "user" edge IDs in the mutation.
 // Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
 // UserID instead. It exists only for internal usage by the builders.
-func (m *AccountMutation) UserIDs() (ids []int) {
+func (m *AccountMutation) UserIDs() (ids []uuid.UUID) {
 	if id := m.user; id != nil {
 		ids = append(ids, *id)
 	}
@@ -1193,13 +1200,13 @@ type UserMutation struct {
 	config
 	op                   Op
 	typ                  string
-	id                   *int
+	id                   *uuid.UUID
 	email                *string
 	refresh_token        *string
 	refresh_token_expiry *time.Time
 	clearedFields        map[string]struct{}
-	accounts             map[int]struct{}
-	removedaccounts      map[int]struct{}
+	accounts             map[uuid.UUID]struct{}
+	removedaccounts      map[uuid.UUID]struct{}
 	clearedaccounts      bool
 	done                 bool
 	oldValue             func(context.Context) (*User, error)
@@ -1226,7 +1233,7 @@ func newUserMutation(c config, op Op, opts ...userOption) *UserMutation {
 }
 
 // withUserID sets the ID field of the mutation.
-func withUserID(id int) userOption {
+func withUserID(id uuid.UUID) userOption {
 	return func(m *UserMutation) {
 		var (
 			err   error
@@ -1276,9 +1283,15 @@ func (m UserMutation) Tx() (*Tx, error) {
 	return tx, nil
 }
 
+// SetID sets the value of the id field. Note that this
+// operation is only accepted on creation of User entities.
+func (m *UserMutation) SetID(id uuid.UUID) {
+	m.id = &id
+}
+
 // ID returns the ID value in the mutation. Note that the ID is only available
 // if it was provided to the builder or after it was returned from the database.
-func (m *UserMutation) ID() (id int, exists bool) {
+func (m *UserMutation) ID() (id uuid.UUID, exists bool) {
 	if m.id == nil {
 		return
 	}
@@ -1289,12 +1302,12 @@ func (m *UserMutation) ID() (id int, exists bool) {
 // That means, if the mutation is applied within a transaction with an isolation level such
 // as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
 // or updated by the mutation.
-func (m *UserMutation) IDs(ctx context.Context) ([]int, error) {
+func (m *UserMutation) IDs(ctx context.Context) ([]uuid.UUID, error) {
 	switch {
 	case m.op.Is(OpUpdateOne | OpDeleteOne):
 		id, exists := m.ID()
 		if exists {
-			return []int{id}, nil
+			return []uuid.UUID{id}, nil
 		}
 		fallthrough
 	case m.op.Is(OpUpdate | OpDelete):
@@ -1439,9 +1452,9 @@ func (m *UserMutation) ResetRefreshTokenExpiry() {
 }
 
 // AddAccountIDs adds the "accounts" edge to the Account entity by ids.
-func (m *UserMutation) AddAccountIDs(ids ...int) {
+func (m *UserMutation) AddAccountIDs(ids ...uuid.UUID) {
 	if m.accounts == nil {
-		m.accounts = make(map[int]struct{})
+		m.accounts = make(map[uuid.UUID]struct{})
 	}
 	for i := range ids {
 		m.accounts[ids[i]] = struct{}{}
@@ -1459,9 +1472,9 @@ func (m *UserMutation) AccountsCleared() bool {
 }
 
 // RemoveAccountIDs removes the "accounts" edge to the Account entity by IDs.
-func (m *UserMutation) RemoveAccountIDs(ids ...int) {
+func (m *UserMutation) RemoveAccountIDs(ids ...uuid.UUID) {
 	if m.removedaccounts == nil {
-		m.removedaccounts = make(map[int]struct{})
+		m.removedaccounts = make(map[uuid.UUID]struct{})
 	}
 	for i := range ids {
 		delete(m.accounts, ids[i])
@@ -1470,7 +1483,7 @@ func (m *UserMutation) RemoveAccountIDs(ids ...int) {
 }
 
 // RemovedAccounts returns the removed IDs of the "accounts" edge to the Account entity.
-func (m *UserMutation) RemovedAccountsIDs() (ids []int) {
+func (m *UserMutation) RemovedAccountsIDs() (ids []uuid.UUID) {
 	for id := range m.removedaccounts {
 		ids = append(ids, id)
 	}
@@ -1478,7 +1491,7 @@ func (m *UserMutation) RemovedAccountsIDs() (ids []int) {
 }
 
 // AccountsIDs returns the "accounts" edge IDs in the mutation.
-func (m *UserMutation) AccountsIDs() (ids []int) {
+func (m *UserMutation) AccountsIDs() (ids []uuid.UUID) {
 	for id := range m.accounts {
 		ids = append(ids, id)
 	}

@@ -6,6 +6,7 @@ import (
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
+	"github.com/google/uuid"
 )
 
 const (
@@ -78,6 +79,8 @@ var (
 	EmailValidator func(string) error
 	// GoogleIDValidator is a validator for the "google_id" field. It is called by the builders before save.
 	GoogleIDValidator func(string) error
+	// DefaultID holds the default value on creation for the "id" field.
+	DefaultID func() uuid.UUID
 )
 
 // OrderOption defines the ordering options for the Account queries.

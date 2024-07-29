@@ -13,6 +13,7 @@ import (
 	"github.com/koo-arch/adjusta-backend/internal/google/userinfo"
 	"github.com/koo-arch/adjusta-backend/internal/models"
 	"golang.org/x/oauth2"
+	"github.com/google/uuid"
 )
 
 type AuthManager struct {
@@ -121,7 +122,7 @@ func (am *AuthManager) CreateAccount(ctx context.Context, userInfo *userinfo.Use
 	return a, nil
 }
 
-func (am *AuthManager) UpdateTokens(ctx context.Context, id int, jwtToken *models.JWTToken, oauthToken *oauth2.Token) (*ent.User, error) {
+func (am *AuthManager) UpdateTokens(ctx context.Context, id uuid.UUID, jwtToken *models.JWTToken, oauthToken *oauth2.Token) (*ent.User, error) {
 	u, err := am.userRepo.Update(ctx, nil, id, jwtToken)
 	if err != nil {
 		return nil, fmt.Errorf("error updating refresh token: %w", err)

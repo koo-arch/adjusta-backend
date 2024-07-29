@@ -3,6 +3,7 @@
 package runtime
 
 import (
+	"github.com/google/uuid"
 	"github.com/koo-arch/adjusta-backend/ent/account"
 	"github.com/koo-arch/adjusta-backend/ent/jwtkey"
 	"github.com/koo-arch/adjusta-backend/ent/schema"
@@ -19,13 +20,17 @@ func init() {
 	accountFields := schema.Account{}.Fields()
 	_ = accountFields
 	// accountDescEmail is the schema descriptor for email field.
-	accountDescEmail := accountFields[0].Descriptor()
+	accountDescEmail := accountFields[1].Descriptor()
 	// account.EmailValidator is a validator for the "email" field. It is called by the builders before save.
 	account.EmailValidator = accountDescEmail.Validators[0].(func(string) error)
 	// accountDescGoogleID is the schema descriptor for google_id field.
-	accountDescGoogleID := accountFields[1].Descriptor()
+	accountDescGoogleID := accountFields[2].Descriptor()
 	// account.GoogleIDValidator is a validator for the "google_id" field. It is called by the builders before save.
 	account.GoogleIDValidator = accountDescGoogleID.Validators[0].(func(string) error)
+	// accountDescID is the schema descriptor for id field.
+	accountDescID := accountFields[0].Descriptor()
+	// account.DefaultID holds the default value on creation for the id field.
+	account.DefaultID = accountDescID.Default.(func() uuid.UUID)
 	jwtkeyFields := schema.JWTKey{}.Fields()
 	_ = jwtkeyFields
 	// jwtkeyDescKey is the schema descriptor for key field.
@@ -43,9 +48,13 @@ func init() {
 	userFields := schema.User{}.Fields()
 	_ = userFields
 	// userDescEmail is the schema descriptor for email field.
-	userDescEmail := userFields[0].Descriptor()
+	userDescEmail := userFields[1].Descriptor()
 	// user.EmailValidator is a validator for the "email" field. It is called by the builders before save.
 	user.EmailValidator = userDescEmail.Validators[0].(func(string) error)
+	// userDescID is the schema descriptor for id field.
+	userDescID := userFields[0].Descriptor()
+	// user.DefaultID holds the default value on creation for the id field.
+	user.DefaultID = userDescID.Default.(func() uuid.UUID)
 }
 
 const (

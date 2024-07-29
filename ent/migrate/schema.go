@@ -10,13 +10,13 @@ import (
 var (
 	// AccountsColumns holds the columns for the "accounts" table.
 	AccountsColumns = []*schema.Column{
-		{Name: "id", Type: field.TypeInt, Increment: true},
+		{Name: "id", Type: field.TypeUUID, Unique: true},
 		{Name: "email", Type: field.TypeString},
 		{Name: "google_id", Type: field.TypeString},
 		{Name: "access_token", Type: field.TypeString, Nullable: true},
 		{Name: "refresh_token", Type: field.TypeString, Nullable: true},
 		{Name: "access_token_expiry", Type: field.TypeTime, Nullable: true},
-		{Name: "user_accounts", Type: field.TypeInt, Nullable: true},
+		{Name: "user_accounts", Type: field.TypeUUID, Nullable: true},
 	}
 	// AccountsTable holds the schema information for the "accounts" table.
 	AccountsTable = &schema.Table{
@@ -55,7 +55,7 @@ var (
 	}
 	// UsersColumns holds the columns for the "users" table.
 	UsersColumns = []*schema.Column{
-		{Name: "id", Type: field.TypeInt, Increment: true},
+		{Name: "id", Type: field.TypeUUID, Unique: true},
 		{Name: "email", Type: field.TypeString, Unique: true},
 		{Name: "refresh_token", Type: field.TypeString, Nullable: true},
 		{Name: "refresh_token_expiry", Type: field.TypeTime, Nullable: true},

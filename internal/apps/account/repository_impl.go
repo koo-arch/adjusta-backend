@@ -7,6 +7,7 @@ import (
 	"github.com/koo-arch/adjusta-backend/ent"
 	"github.com/koo-arch/adjusta-backend/ent/user"
 	"github.com/koo-arch/adjusta-backend/ent/account"
+	"github.com/google/uuid"
 )
 
 type AccountRepositoryImpl struct {
@@ -19,7 +20,7 @@ func NewAccountRepository(client *ent.Client) *AccountRepositoryImpl {
 	}
 }
 
-func (r *AccountRepositoryImpl) Read(ctx context.Context, tx *ent.Tx, id int) (*ent.Account, error) {
+func (r *AccountRepositoryImpl) Read(ctx context.Context, tx *ent.Tx, id uuid.UUID) (*ent.Account, error) {
 	if tx != nil {
 		return tx.Account.Get(ctx, id)
 	}
@@ -37,7 +38,7 @@ func (r *AccountRepositoryImpl) FindByEmail(ctx context.Context, tx *ent.Tx, ema
 		Only(ctx)
 }
 
-func (r *AccountRepositoryImpl) FilterByUserID(ctx context.Context, tx *ent.Tx, userID int) ([]*ent.Account, error) {
+func (r *AccountRepositoryImpl) FilterByUserID(ctx context.Context, tx *ent.Tx, userID uuid.UUID) ([]*ent.Account, error) {
 	if tx != nil {
 		return tx.Account.Query().
 			Where(account.HasUserWith(user.ID(userID))).
@@ -69,7 +70,7 @@ func (r *AccountRepositoryImpl) Create(ctx context.Context, tx *ent.Tx, email, g
 		Save(ctx)
 }
 
-func (r *AccountRepositoryImpl) Update(ctx context.Context, tx *ent.Tx, id int, oauthToken *oauth2.Token) (*ent.Account, error) {
+func (r *AccountRepositoryImpl) Update(ctx context.Context, tx *ent.Tx, id uuid.UUID, oauthToken *oauth2.Token) (*ent.Account, error) {
 	if tx != nil {
 		return tx.Account.UpdateOneID(id).
 			SetNillableAccessToken(&oauthToken.AccessToken).
@@ -84,7 +85,7 @@ func (r *AccountRepositoryImpl) Update(ctx context.Context, tx *ent.Tx, id int, 
 		Save(ctx)
 }
 
-func (r *AccountRepositoryImpl) Delete(ctx context.Context, tx *ent.Tx, id int) error {
+func (r *AccountRepositoryImpl) Delete(ctx context.Context, tx *ent.Tx, id uuid.UUID) error {
 	if tx != nil {
 		return tx.Account.DeleteOneID(id).Exec(ctx)
 	}

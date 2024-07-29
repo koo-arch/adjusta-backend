@@ -11,6 +11,7 @@ import (
 	"github.com/koo-arch/adjusta-backend/ent/account"
 	"github.com/koo-arch/adjusta-backend/ent/hook"
 	"github.com/koo-arch/adjusta-backend/ent/user"
+	"github.com/google/uuid"
 )
 
 // Account holds the schema definition for the Account entity.
@@ -21,6 +22,7 @@ type Account struct {
 // Fields of the Account.
 func (Account) Fields() []ent.Field {
 	return []ent.Field{
+		field.UUID("id", uuid.UUID{}).Default(uuid.New).Unique().Immutable(),
 		field.String("email").NotEmpty(),
 		field.String("google_id").NotEmpty(),
 		field.String("access_token").Sensitive().Optional(),

@@ -7,13 +7,13 @@ import (
 
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
+	"github.com/koo-arch/adjusta-backend/cookie"
 	"github.com/koo-arch/adjusta-backend/ent"
 	"github.com/koo-arch/adjusta-backend/internal/apps/account"
 	"github.com/koo-arch/adjusta-backend/internal/apps/user"
 	"github.com/koo-arch/adjusta-backend/internal/auth"
 	"github.com/koo-arch/adjusta-backend/internal/google/oauth"
 	"github.com/koo-arch/adjusta-backend/internal/google/userinfo"
-	"github.com/koo-arch/adjusta-backend/cookie"
 	"golang.org/x/oauth2"
 )
 
@@ -87,13 +87,12 @@ func GoogleCallbackHandler(client *ent.Client) gin.HandlerFunc {
 		// クッキーにトークンをセット
 		maxAge := int(jwtToken.RefreshExpiration.Sub(time.Now()).Seconds())
 		cookie.SetCookie(c, "access_token", jwtToken.AccessToken, maxAge)
-		cookie.SetCookie(c, "refresh_token", jwtToken.RefreshToken, maxAge)
 
 		// セッションにユーザー情報をセット
 		session.Set("googleid", userInfo.GoogleID)
-		session.Set("userid", u.ID)
+		session.Set("userid", u.ID.String())
 		if err := session.Save(); err != nil {
-			fmt.Println("failed to save session")
+			fmt.Printf("failed to save session:%v", err)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to save session"})
 			return
 		}
