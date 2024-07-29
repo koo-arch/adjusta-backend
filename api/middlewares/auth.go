@@ -13,6 +13,7 @@ import (
 	"github.com/koo-arch/adjusta-backend/internal/apps/user"
 	"github.com/koo-arch/adjusta-backend/internal/auth"
 	"github.com/koo-arch/adjusta-backend/internal/models"
+	"github.com/google/uuid"
 )
 
 func AuthMiddleware(client *ent.Client) gin.HandlerFunc {
@@ -69,9 +70,14 @@ func AuthMiddleware(client *ent.Client) gin.HandlerFunc {
 func tokenRefresh(c *gin.Context, client *ent.Client, jwtManager *auth.JWTManager) (*models.JWTToken, error) {
 	ctx := c.Request.Context()
 	session := sessions.Default(c)
-	userid, ok := session.Get("userid").(int)
+	useridStr, ok := session.Get("userid").(string)
 	if !ok {
 		return nil, fmt.Errorf("failed to get userid")
+	}
+
+	userid, err := uuid.Parse(useridStr)
+	if err != nil {
+		return nil, err
 	}
 
 	// リフレッシュトークンの取得

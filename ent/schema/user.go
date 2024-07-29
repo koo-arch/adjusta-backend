@@ -10,6 +10,7 @@ import (
 	"entgo.io/ent/schema/field"
 	"entgo.io/ent/schema/edge"
 	"github.com/koo-arch/adjusta-backend/ent/hook"
+	"github.com/google/uuid"
 )
 
 // User holds the schema definition for the User entity.
@@ -23,6 +24,7 @@ var emailRegex = regexp.MustCompile(`^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]
 // Fields of the User.
 func (User) Fields() []ent.Field {
 	return []ent.Field{
+		field.UUID("id", uuid.UUID{}).Default(uuid.New).Unique().Immutable(),
 		field.String("email").NotEmpty().Unique(),
 		field.String("refresh_token").Sensitive().Optional(),
 		field.Time("refresh_token_expiry").Optional(),

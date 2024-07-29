@@ -1,10 +1,8 @@
 package handlers
 
 import (
-	"fmt"
 	"net/http"
 
-	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
 	"github.com/koo-arch/adjusta-backend/ent"
 	"github.com/koo-arch/adjusta-backend/internal/apps/account"
@@ -20,14 +18,6 @@ func GetCurrentUserHandler(client *ent.Client) gin.HandlerFunc {
 			c.JSON(http.StatusForbidden, gin.H{"error": "missing email"})
 			c.Abort()
 			return
-		}
-
-		session := sessions.Default(c)
-		userID, ok := session.Get("userid").(int)
-		if !ok {
-			fmt.Println("missing userID")
-		} else {
-			fmt.Printf("userID: %v\n", userID)
 		}
 
 		ctx := c.Request.Context()

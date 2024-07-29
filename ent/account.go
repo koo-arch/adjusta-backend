@@ -9,6 +9,7 @@ import (
 
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
+	"github.com/google/uuid"
 	"github.com/koo-arch/adjusta-backend/ent/account"
 	"github.com/koo-arch/adjusta-backend/ent/user"
 )
@@ -17,7 +18,7 @@ import (
 type Account struct {
 	config `json:"-"`
 	// ID of the ent.
-	ID int `json:"id,omitempty"`
+	ID uuid.UUID `json:"id,omitempty"`
 	// Email holds the value of the "email" field.
 	Email string `json:"email,omitempty"`
 	// GoogleID holds the value of the "google_id" field.
@@ -31,7 +32,7 @@ type Account struct {
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the AccountQuery when eager-loading is set.
 	Edges         AccountEdges `json:"edges"`
-	user_accounts *int
+	user_accounts *uuid.UUID
 	selectValues  sql.SelectValues
 }
 
@@ -60,14 +61,14 @@ func (*Account) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case account.FieldID:
-			values[i] = new(sql.NullInt64)
 		case account.FieldEmail, account.FieldGoogleID, account.FieldAccessToken, account.FieldRefreshToken:
 			values[i] = new(sql.NullString)
 		case account.FieldAccessTokenExpiry:
 			values[i] = new(sql.NullTime)
+		case account.FieldID:
+			values[i] = new(uuid.UUID)
 		case account.ForeignKeys[0]: // user_accounts
-			values[i] = new(sql.NullInt64)
+			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		default:
 			values[i] = new(sql.UnknownType)
 		}
@@ -84,11 +85,11 @@ func (a *Account) assignValues(columns []string, values []any) error {
 	for i := range columns {
 		switch columns[i] {
 		case account.FieldID:
-			value, ok := values[i].(*sql.NullInt64)
-			if !ok {
-				return fmt.Errorf("unexpected type %T for field id", value)
+			if value, ok := values[i].(*uuid.UUID); !ok {
+				return fmt.Errorf("unexpected type %T for field id", values[i])
+			} else if value != nil {
+				a.ID = *value
 			}
-			a.ID = int(value.Int64)
 		case account.FieldEmail:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field email", values[i])
@@ -120,11 +121,11 @@ func (a *Account) assignValues(columns []string, values []any) error {
 				a.AccessTokenExpiry = value.Time
 			}
 		case account.ForeignKeys[0]:
-			if value, ok := values[i].(*sql.NullInt64); !ok {
-				return fmt.Errorf("unexpected type %T for edge-field user_accounts", value)
+			if value, ok := values[i].(*sql.NullScanner); !ok {
+				return fmt.Errorf("unexpected type %T for field user_accounts", values[i])
 			} else if value.Valid {
-				a.user_accounts = new(int)
-				*a.user_accounts = int(value.Int64)
+				a.user_accounts = new(uuid.UUID)
+				*a.user_accounts = *value.S.(*uuid.UUID)
 			}
 		default:
 			a.selectValues.Set(columns[i], values[i])
