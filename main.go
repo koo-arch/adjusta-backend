@@ -96,7 +96,7 @@ func main() {
 	auth := router.Group("/api").Use(middlewares.SessionRenewalMiddleware(), middlewares.AuthMiddleware(client))
 	{
 		auth.GET("/users/me", handlers.GetCurrentUserHandler(client))
-		auth.GET("/calendar/get", handlers.GetCalendarHandler(client))
+		auth.GET("/calendar/list", handlers.FetchEventListHandler(client))
 	}
 	
 	// サーバー起動

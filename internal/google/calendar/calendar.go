@@ -30,7 +30,7 @@ func NewCalendar(ctx context.Context, token *oauth2.Token) (*Calendar, error) {
 	return &Calendar{Service: service}, nil
 }
 
-func (c *Calendar) FetchEvents(startTime, endTime time.Time) ([]Event, error) {
+func (c *Calendar) FetchEvents(startTime, endTime time.Time) ([]*Event, error) {
 	events, err := c.Service.Events.List("primary").
 		TimeMin(startTime.Format(time.RFC3339)).
 		TimeMax(endTime.Format(time.RFC3339)).
@@ -39,9 +39,9 @@ func (c *Calendar) FetchEvents(startTime, endTime time.Time) ([]Event, error) {
 		return nil, err
 	}
 
-	var eventsList []Event
+	var eventsList []*Event
 	for _, item := range events.Items {
-		event := Event{
+		event := &Event{
 			ID:      item.Id,
 			Summary: item.Summary,
 			ColorID: item.ColorId,

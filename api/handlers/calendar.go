@@ -2,9 +2,10 @@ package handlers
 
 import (
 	"net/http"
-	"time"
 
+	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"github.com/koo-arch/adjusta-backend/ent"
 	"github.com/koo-arch/adjusta-backend/internal/apps/account"
 	"github.com/koo-arch/adjusta-backend/internal/apps/user"
@@ -12,45 +13,49 @@ import (
 	"github.com/koo-arch/adjusta-backend/internal/google/calendar"
 )
 
-func GetCalendarHandler(client *ent.Client) gin.HandlerFunc {
+type AccountsEvents struct {
+	AccountID uuid.UUID        `json:"account_id"`
+	Email     string           `json:"email"`
+	Events    []calendar.Event `json:"events"`
+}
+
+func FetchEventListHandler(client *ent.Client) gin.HandlerFunc {
 	return func (c *gin.Context) {
-		email, ok := c.Get("email")
+		ctx := c.Request.Context()
+
+		session := sessions.Default(c)
+		useridStr, ok := session.Get("userid").(string)
 		if !ok {
-			c.JSON(http.StatusForbidden, gin.H{"error": "missing email"})
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "failed to get userid from session"})
 			c.Abort()
 			return
 		}
 
-		ctx := c.Request.Context()
+		userid, err := uuid.Parse(useridStr)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid userid format"})
+			c.Abort()
+			return
+		}
 
 		userRepo := user.NewUserRepository(client)
 		accountRepo := account.NewAccountRepository(client)
 		authManager := auth.NewAuthManager(client, userRepo, accountRepo)
 
-		token, err := authManager.VerifyOAuthToken(ctx, email.(string))
+		userAccounts, err := accountRepo.FilterByUserID(ctx, nil, userid)
 		if err != nil {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "failed to verify token"})
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to get user accounts"})
 			c.Abort()
 			return
 		}
 
-		calendarService, err := calendar.NewCalendar(ctx, token)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create calendar service"})
-			c.Abort()
-			return
-		}
-		now := time.Now()
-		startTime := now.AddDate(0, -2, 0)
-		endTime := now.AddDate(1, 0, 0)
-		
-		events, err := calendarService.FetchEvents(startTime, endTime)
+		accountsEvents, err := calendar.FetchAllEvents(ctx, authManager, userAccounts)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch events"})
 			c.Abort()
 			return
 		}
 
-		c.JSON(http.StatusOK, events)
+		c.JSON(http.StatusOK, accountsEvents)
 	}
 }
