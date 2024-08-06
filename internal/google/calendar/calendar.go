@@ -13,8 +13,8 @@ type Event struct {
 	ID 		string `json:"id"`
 	Summary string `json:"summary"`
 	ColorID  string `json:"color"`
-	Start   *calendar.EventDateTime `json:"start"`
-	End     *calendar.EventDateTime `json:"end"`
+	Start   string `json:"start"`
+	End     string`json:"end"`
 }
 
 type Calendar struct {
@@ -45,12 +45,11 @@ func (c *Calendar) FetchEvents(startTime, endTime time.Time) ([]*Event, error) {
 			ID:      item.Id,
 			Summary: item.Summary,
 			ColorID: item.ColorId,
-			Start:   item.Start,
-			End:     item.End,
+			Start:   item.Start.DateTime,
+			End:     item.End.DateTime,
 		}
 		eventsList = append(eventsList, event)
 	}
-
 
 	return eventsList, nil
 }
