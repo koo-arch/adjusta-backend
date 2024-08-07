@@ -93,9 +93,10 @@ func main() {
 
 
 	// 認証が必要なAPIグループ
-	auth := router.Group("/api").Use(middlewares.AuthMiddleware(client))
+	auth := router.Group("/api").Use(middlewares.SessionRenewalMiddleware(), middlewares.AuthMiddleware(client))
 	{
 		auth.GET("/users/me", handlers.GetCurrentUserHandler(client))
+		auth.GET("/calendar/list", handlers.FetchEventListHandler(client))
 	}
 	
 	// サーバー起動
