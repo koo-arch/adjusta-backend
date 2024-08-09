@@ -5,8 +5,8 @@ import (
 	"time"
 
 	"golang.org/x/oauth2"
-	"google.golang.org/api/option"
 	"google.golang.org/api/calendar/v3"
+	"google.golang.org/api/option"
 )
 
 type Event struct {

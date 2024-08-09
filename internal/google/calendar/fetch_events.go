@@ -16,11 +16,11 @@ type AccountsEvents struct {
 	Events    []*Event    `json:"events"`
 }
 
-func FetchAllEvents(ctx context.Context, authManager *auth.AuthManager, userAccounts []*ent.Account) ([]*AccountsEvents, error) {
+func FetchAllEvents(ctx context.Context, authManager *auth.AuthManager, userID uuid.UUID, userAccounts []*ent.Account) ([]*AccountsEvents, error) {
 	var accountsEvents []*AccountsEvents
 
 	for _, userAccount := range userAccounts {
-		token, err := authManager.VerifyOAuthToken(ctx, userAccount.Email)
+		token, err := authManager.VerifyOAuthToken(ctx, userID, userAccount.Email)
 		if err != nil {
 			return nil, fmt.Errorf("failed to verify token for account: %s, error: %w", userAccount.Email, err)
 		}

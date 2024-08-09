@@ -9,7 +9,10 @@ import (
 	"github.com/koo-arch/adjusta-backend/configs"
 )
 
-var GoogleOAuthConfig oauth2.Config
+var (
+	GoogleOAuthConfig   oauth2.Config
+	AddAccountOAuthConfig oauth2.Config
+)
 
 func init() {
 	configs.LoadEnv()
@@ -21,10 +24,18 @@ func init() {
 		Scopes:       []string{"https://www.googleapis.com/auth/userinfo.email", "https://www.googleapis.com/auth/userinfo.profile", "https://www.googleapis.com/auth/calendar", "openid"},
 		Endpoint:     google.Endpoint,
 	}
+
+	// 別のRedirectURLを持つOAuthConfig
+	AddAccountOAuthConfig = GoogleOAuthConfig
+	AddAccountOAuthConfig.RedirectURL = configs.GetEnv("GOOGLE_ADD_ACCOUNT_REDIRECT_URI")
 }
 
 func GetGoogleAuthConfig() *oauth2.Config {
 	return &GoogleOAuthConfig
+}
+
+func GetAddAccountAuthConfig() *oauth2.Config {
+	return &AddAccountOAuthConfig
 }
 
 func RefreshOAuthToken(ctx context.Context, token *oauth2.Token) (*oauth2.Token, error) {

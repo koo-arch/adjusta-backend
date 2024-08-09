@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/gin-contrib/sessions"
@@ -49,8 +50,9 @@ func FetchEventListHandler(client *ent.Client) gin.HandlerFunc {
 			return
 		}
 
-		accountsEvents, err := calendar.FetchAllEvents(ctx, authManager, userAccounts)
+		accountsEvents, err := calendar.FetchAllEvents(ctx, authManager, userid, userAccounts)
 		if err != nil {
+			fmt.Printf("failed to fetch events: %v", err)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch events"})
 			c.Abort()
 			return

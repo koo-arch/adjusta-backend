@@ -3,11 +3,11 @@ package account
 import (
 	"context"
 
-	"golang.org/x/oauth2"
-	"github.com/koo-arch/adjusta-backend/ent"
-	"github.com/koo-arch/adjusta-backend/ent/user"
-	"github.com/koo-arch/adjusta-backend/ent/account"
 	"github.com/google/uuid"
+	"github.com/koo-arch/adjusta-backend/ent"
+	"github.com/koo-arch/adjusta-backend/ent/account"
+	"github.com/koo-arch/adjusta-backend/ent/user"
+	"golang.org/x/oauth2"
 )
 
 type AccountRepositoryImpl struct {
@@ -47,6 +47,23 @@ func (r *AccountRepositoryImpl) FilterByUserID(ctx context.Context, tx *ent.Tx, 
 	return r.client.Account.Query().
 		Where(account.HasUserWith(user.ID(userID))).
 		All(ctx)
+}
+
+func (r *AccountRepositoryImpl) FindByUserIDAndEmail(ctx context.Context, tx *ent.Tx, userID uuid.UUID, accountEmail string) (*ent.Account, error) {
+	if tx != nil {
+		return tx.Account.Query().
+			Where(
+				account.HasUserWith(user.IDEQ(userID)),
+				account.EmailEQ(accountEmail),
+			).
+			Only(ctx)
+	}
+	return r.client.Account.Query().
+		Where(
+			account.HasUserWith(user.IDEQ(userID)),
+			account.EmailEQ(accountEmail),
+		).
+		Only(ctx)
 }
 
 func (r *AccountRepositoryImpl) Create(ctx context.Context, tx *ent.Tx, email, googleID string, oauthToken *oauth2.Token, user *ent.User) (*ent.Account, error) {

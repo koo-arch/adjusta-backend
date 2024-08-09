@@ -6,6 +6,7 @@ import (
 	"log"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/koo-arch/adjusta-backend/ent"
 	"github.com/koo-arch/adjusta-backend/internal/apps/account"
 	"github.com/koo-arch/adjusta-backend/internal/apps/user"
@@ -13,7 +14,6 @@ import (
 	"github.com/koo-arch/adjusta-backend/internal/google/userinfo"
 	"github.com/koo-arch/adjusta-backend/internal/models"
 	"golang.org/x/oauth2"
-	"github.com/google/uuid"
 )
 
 type AuthManager struct {
@@ -80,7 +80,7 @@ func (am *AuthManager) CreateUserAndAccount(ctx context.Context, userInfo *useri
 	return u, nil
 }
 
-func (am *AuthManager) CreateAccount(ctx context.Context, userInfo *userinfo.UserInfo, oauthToken *oauth2.Token) (*ent.Account, error) {
+func (am *AuthManager) AddAccountToUser(ctx context.Context, userID uuid.UUID, accountUserInfo *userinfo.UserInfo, oauthToken *oauth2.Token) (*ent.Account, error) {
 	// トランザクションを開始
 	tx, err := am.client.Tx(ctx)
 	if err != nil {
@@ -106,7 +106,7 @@ func (am *AuthManager) CreateAccount(ctx context.Context, userInfo *userinfo.Use
 	}()
 
 	// ユーザーの検索
-	u, err := am.userRepo.FindByEmail(ctx, tx, userInfo.Email)
+	u, err := am.userRepo.Read(ctx, tx, userID)
 	if err != nil {
 		if !ent.IsNotFound(err) {
 			return nil, fmt.Errorf("error querying user: %w", err)
@@ -114,12 +114,18 @@ func (am *AuthManager) CreateAccount(ctx context.Context, userInfo *userinfo.Use
 		return nil, fmt.Errorf("user not found: %w", err)
 	}
 
-	// アカウントを作成
-	a, err := am.accountRepo.Create(ctx, tx, userInfo.Email, userInfo.GoogleID, oauthToken, u)
+	// アカウントが存在するか確認し、存在する場合は更新
+	account, err := am.accountRepo.FindByUserIDAndEmail(ctx, tx, u.ID, accountUserInfo.Email)
 	if err != nil {
-		return nil, fmt.Errorf("error creating account: %w", err)
+		if ent.IsNotFound(err) {
+			// アカウントが存在しない場合は作成
+			return am.accountRepo.Create(ctx, tx, accountUserInfo.Email, accountUserInfo.GoogleID, oauthToken, u)
+		}
+		return nil, fmt.Errorf("error querying account: %w", err)
 	}
-	return a, nil
+
+	// アカウントが存在する場合は更新
+	return am.accountRepo.Update(ctx, tx, account.ID, oauthToken)
 }
 
 func (am *AuthManager) UpdateTokens(ctx context.Context, id uuid.UUID, jwtToken *models.JWTToken, oauthToken *oauth2.Token) (*ent.User, error) {
@@ -128,26 +134,21 @@ func (am *AuthManager) UpdateTokens(ctx context.Context, id uuid.UUID, jwtToken 
 		return nil, fmt.Errorf("error updating refresh token: %w", err)
 	}
 
-	a, err := am.accountRepo.FilterByUserID(ctx, nil, u.ID)
+	account, err := am.accountRepo.FindByUserIDAndEmail(ctx, nil, u.ID, u.Email)
 	if err != nil {
 		return nil, fmt.Errorf("error querying account: %w", err)
 	}
 
-	for _, account := range a {
-		if account.Email == u.Email {
-			_, err = am.accountRepo.Update(ctx, nil, account.ID, oauthToken)
-			if err != nil {
-				return nil, fmt.Errorf("error updating account: %w", err)
-			}
-			return u, nil
-		}
+	_, err = am.accountRepo.Update(ctx, nil, account.ID, oauthToken)
+	if err != nil {
+		return nil, fmt.Errorf("error updating account: %w", err)
 	}
 
-	return nil, fmt.Errorf("account not found")
+	return u, nil
 }
 
-func (am *AuthManager) VerifyOAuthToken(ctx context.Context, email string) (*oauth2.Token, error) {
-	account, err := am.accountRepo.FindByEmail(ctx, nil, email)
+func (am *AuthManager) VerifyOAuthToken(ctx context.Context, userID uuid.UUID, accountEmail string) (*oauth2.Token, error) {
+	account, err := am.accountRepo.FindByUserIDAndEmail(ctx, nil, userID, accountEmail)
 	if err != nil {
 		return nil, fmt.Errorf("error querying account: %w", err)
 	}
