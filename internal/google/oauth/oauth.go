@@ -1,9 +1,6 @@
 package oauth
 
 import (
-	"context"
-	"fmt"
-
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
 	"github.com/koo-arch/adjusta-backend/configs"
@@ -36,13 +33,4 @@ func GetGoogleAuthConfig() *oauth2.Config {
 
 func GetAddAccountAuthConfig() *oauth2.Config {
 	return &AddAccountOAuthConfig
-}
-
-func RefreshOAuthToken(ctx context.Context, token *oauth2.Token) (*oauth2.Token, error) {
-	newToken, err := GoogleOAuthConfig.TokenSource(ctx, token).Token()
-	if err != nil {
-		return nil, fmt.Errorf("error refreshing token: %w", err)
-	}
-
-	return newToken, nil
 }

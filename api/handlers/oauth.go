@@ -90,6 +90,23 @@ func GoogleCallbackHandler(client *ent.Client) gin.HandlerFunc {
 			return
 		}
 
+		// アカウントのoauthトークンを検証
+		accounts, err := accountRepo.FilterByUserID(ctx, nil, u.ID)
+		if err != nil {
+			fmt.Printf("failed to get accounts: %s", err.Error())
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to get accounts"})
+			return
+		}
+
+		for _, account := range accounts {
+			_, err := authManager.VerifyOAuthToken(ctx, u.ID, account.Email)
+			if err != nil {
+				fmt.Printf("failed to reuse token source: %s", err.Error())
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to reuse token source"})
+				return
+			}
+		}
+
 		// クッキーにトークンをセット
 		maxAge := int(jwtToken.RefreshExpiration.Sub(time.Now()).Seconds())
 		cookie.SetCookie(c, "access_token", jwtToken.AccessToken, maxAge)
