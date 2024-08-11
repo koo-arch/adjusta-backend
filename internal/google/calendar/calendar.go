@@ -5,8 +5,9 @@ import (
 	"time"
 
 	"golang.org/x/oauth2"
-	"google.golang.org/api/option"
 	"google.golang.org/api/calendar/v3"
+	"google.golang.org/api/option"
+	"github.com/koo-arch/adjusta-backend/internal/google/oauth"
 )
 
 type Event struct {
@@ -22,7 +23,7 @@ type Calendar struct {
 }
 
 func NewCalendar(ctx context.Context, token *oauth2.Token) (*Calendar, error) {
-	service, err := calendar.NewService(ctx, option.WithTokenSource(oauth2.StaticTokenSource(token)))
+	service, err := calendar.NewService(ctx, option.WithTokenSource(oauth.GoogleOAuthConfig.TokenSource(ctx, token)))
 	if err != nil {
 		return nil, err
 	}

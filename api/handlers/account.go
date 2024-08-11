@@ -13,14 +13,15 @@ import (
 	"github.com/koo-arch/adjusta-backend/internal/google/userinfo"
 )
 
-func GetCurrentUserHandler(client *ent.Client) gin.HandlerFunc {
+type AccountsInfo struct {
+	AccountID string `json:"account_id"`
+	UserInfo *userinfo.UserInfo `json:"user_info"`
+}
+
+
+func FetchAccountsHandler(client *ent.Client) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		email, ok := c.Get("email")
-		if !ok {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "failed to get email from context"})
-			c.Abort()
-			return
-		}
+		ctx := c.Request.Context()
 
 		session := sessions.Default(c)
 		useridStr, ok := session.Get("userid").(string)
@@ -37,27 +38,41 @@ func GetCurrentUserHandler(client *ent.Client) gin.HandlerFunc {
 			return
 		}
 
-		ctx := c.Request.Context()
-		
 		userRepo := user.NewUserRepository(client)
 		accountRepo := account.NewAccountRepository(client)
 		authManager := auth.NewAuthManager(client, userRepo, accountRepo)
-		
-		token, err := authManager.VerifyOAuthToken(ctx, userid, email.(string))
+
+		userAccounts, err := accountRepo.FilterByUserID(ctx, nil, userid)
 		if err != nil {
-			println("oauth期限切れ")
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "failed to verify token"})
-			c.Abort()
-			return
-		}
-		
-		userInfo, err := userinfo.FetchGoogleUserInfo(ctx, token)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch user info"})
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to get user accounts"})
 			c.Abort()
 			return
 		}
 
-		c.JSON(http.StatusOK, userInfo)
+		var accountsInfo []AccountsInfo
+
+		for _, userAccount := range userAccounts {
+			token, err := authManager.VerifyOAuthToken(ctx, userid, userAccount.Email)
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to verify token"})
+				c.Abort()
+				return
+			}
+
+			userInfo, err := userinfo.FetchGoogleUserInfo(ctx, token)
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch user info"})
+				c.Abort()
+				return
+			}
+
+			accountsInfo = append(accountsInfo, AccountsInfo{
+				AccountID: userAccount.ID.String(),
+				UserInfo: userInfo,
+			})
+
+		}
+
+		c.JSON(http.StatusOK, accountsInfo)
 	}
 }

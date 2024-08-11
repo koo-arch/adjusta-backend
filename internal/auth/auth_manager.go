@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"time"
 
+	"github.com/google/uuid"
 	"github.com/koo-arch/adjusta-backend/ent"
 	"github.com/koo-arch/adjusta-backend/internal/apps/account"
 	"github.com/koo-arch/adjusta-backend/internal/apps/user"
@@ -13,7 +13,6 @@ import (
 	"github.com/koo-arch/adjusta-backend/internal/google/userinfo"
 	"github.com/koo-arch/adjusta-backend/internal/models"
 	"golang.org/x/oauth2"
-	"github.com/google/uuid"
 )
 
 type AuthManager struct {
@@ -40,8 +39,9 @@ func (am *AuthManager) ProcessUserSignIn(ctx context.Context, userInfo *userinfo
 		// エラーが発生した場合
 		return nil, fmt.Errorf("error querying user: %w", err)
 	}
-	// ユーザーが存在する場合はリフレッシュトークンを更新
-	return am.UpdateTokens(ctx, u.ID, jwtToken, oauthToken)
+	// ユーザーが存在する場合はトークンを更新
+	println("updating login token")
+	return am.userRepo.Update(ctx, nil, u.ID, jwtToken)
 }
 
 func (am *AuthManager) CreateUserAndAccount(ctx context.Context, userInfo *userinfo.UserInfo, jwtToken *models.JWTToken, oauthToken *oauth2.Token) (*ent.User, error) {
@@ -80,7 +80,7 @@ func (am *AuthManager) CreateUserAndAccount(ctx context.Context, userInfo *useri
 	return u, nil
 }
 
-func (am *AuthManager) CreateAccount(ctx context.Context, userInfo *userinfo.UserInfo, oauthToken *oauth2.Token) (*ent.Account, error) {
+func (am *AuthManager) AddAccountToUser(ctx context.Context, userID uuid.UUID, accountUserInfo *userinfo.UserInfo, oauthToken *oauth2.Token) (*ent.Account, error) {
 	// トランザクションを開始
 	tx, err := am.client.Tx(ctx)
 	if err != nil {
@@ -106,7 +106,7 @@ func (am *AuthManager) CreateAccount(ctx context.Context, userInfo *userinfo.Use
 	}()
 
 	// ユーザーの検索
-	u, err := am.userRepo.FindByEmail(ctx, tx, userInfo.Email)
+	u, err := am.userRepo.Read(ctx, tx, userID)
 	if err != nil {
 		if !ent.IsNotFound(err) {
 			return nil, fmt.Errorf("error querying user: %w", err)
@@ -114,40 +114,22 @@ func (am *AuthManager) CreateAccount(ctx context.Context, userInfo *userinfo.Use
 		return nil, fmt.Errorf("user not found: %w", err)
 	}
 
-	// アカウントを作成
-	a, err := am.accountRepo.Create(ctx, tx, userInfo.Email, userInfo.GoogleID, oauthToken, u)
+	// アカウントが存在するか確認し、存在する場合は更新
+	account, err := am.accountRepo.FindByUserIDAndEmail(ctx, tx, u.ID, accountUserInfo.Email)
 	if err != nil {
-		return nil, fmt.Errorf("error creating account: %w", err)
-	}
-	return a, nil
-}
-
-func (am *AuthManager) UpdateTokens(ctx context.Context, id uuid.UUID, jwtToken *models.JWTToken, oauthToken *oauth2.Token) (*ent.User, error) {
-	u, err := am.userRepo.Update(ctx, nil, id, jwtToken)
-	if err != nil {
-		return nil, fmt.Errorf("error updating refresh token: %w", err)
-	}
-
-	a, err := am.accountRepo.FilterByUserID(ctx, nil, u.ID)
-	if err != nil {
+		if ent.IsNotFound(err) {
+			// アカウントが存在しない場合は作成
+			return am.accountRepo.Create(ctx, tx, accountUserInfo.Email, accountUserInfo.GoogleID, oauthToken, u)
+		}
 		return nil, fmt.Errorf("error querying account: %w", err)
 	}
 
-	for _, account := range a {
-		if account.Email == u.Email {
-			_, err = am.accountRepo.Update(ctx, nil, account.ID, oauthToken)
-			if err != nil {
-				return nil, fmt.Errorf("error updating account: %w", err)
-			}
-			return u, nil
-		}
-	}
-
-	return nil, fmt.Errorf("account not found")
+	// アカウントが存在する場合は更新
+	return am.accountRepo.Update(ctx, tx, account.ID, oauthToken)
 }
 
-func (am *AuthManager) VerifyOAuthToken(ctx context.Context, email string) (*oauth2.Token, error) {
-	account, err := am.accountRepo.FindByEmail(ctx, nil, email)
+func (am *AuthManager) VerifyOAuthToken(ctx context.Context, userID uuid.UUID, accountEmail string) (*oauth2.Token, error) {
+	account, err := am.accountRepo.FindByUserIDAndEmail(ctx, nil, userID, accountEmail)
 	if err != nil {
 		return nil, fmt.Errorf("error querying account: %w", err)
 	}
@@ -159,22 +141,20 @@ func (am *AuthManager) VerifyOAuthToken(ctx context.Context, email string) (*oau
 		Expiry:       account.AccessTokenExpiry,
 	}
 
-	IsAccessTokenExpired := account.AccessTokenExpiry.Before(time.Now())
+	// トークンが期限切れの場合は再取得
+	newToken, err := oauth2.ReuseTokenSource(token, oauth.GoogleOAuthConfig.TokenSource(ctx, token)).Token()
+	if err != nil {
+		return nil, fmt.Errorf("error getting token: %w", err)
+	}
 
-	// アクセストークンが期限切れの場合はリフレッシュ
-	if IsAccessTokenExpired {
-		// トークンのリフレッシュ
-		token, err = oauth.RefreshOAuthToken(ctx, token)
+	// トークンが再発行された場合、データベースを更新
+	if newToken.AccessToken != token.AccessToken {
+		println("updating token")
+		_, err = am.accountRepo.Update(ctx, nil, account.ID, newToken)
 		if err != nil {
-			return nil, fmt.Errorf("error refreshing token: %w", err)
-		}
-
-		// トークンを保存
-		_, err = am.accountRepo.Update(ctx, nil, account.ID, token)
-		if err != nil {
-			return nil, fmt.Errorf("error updating account: %w", err)
+			return nil, fmt.Errorf("error updating token: %w", err)
 		}
 	}
 
-	return token, nil
+	return newToken, nil
 }
