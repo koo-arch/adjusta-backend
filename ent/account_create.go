@@ -12,6 +12,7 @@ import (
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
 	"github.com/koo-arch/adjusta-backend/ent/account"
+	"github.com/koo-arch/adjusta-backend/ent/calendar"
 	"github.com/koo-arch/adjusta-backend/ent/user"
 )
 
@@ -107,6 +108,21 @@ func (ac *AccountCreate) SetNillableUserID(id *uuid.UUID) *AccountCreate {
 // SetUser sets the "user" edge to the User entity.
 func (ac *AccountCreate) SetUser(u *User) *AccountCreate {
 	return ac.SetUserID(u.ID)
+}
+
+// AddCalendarIDs adds the "calendars" edge to the Calendar entity by IDs.
+func (ac *AccountCreate) AddCalendarIDs(ids ...uuid.UUID) *AccountCreate {
+	ac.mutation.AddCalendarIDs(ids...)
+	return ac
+}
+
+// AddCalendars adds the "calendars" edges to the Calendar entity.
+func (ac *AccountCreate) AddCalendars(c ...*Calendar) *AccountCreate {
+	ids := make([]uuid.UUID, len(c))
+	for i := range c {
+		ids[i] = c[i].ID
+	}
+	return ac.AddCalendarIDs(ids...)
 }
 
 // Mutation returns the AccountMutation object of the builder.
@@ -244,6 +260,22 @@ func (ac *AccountCreate) createSpec() (*Account, *sqlgraph.CreateSpec) {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
 		_node.user_accounts = &nodes[0]
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := ac.mutation.CalendarsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   account.CalendarsTable,
+			Columns: []string{account.CalendarsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(calendar.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
 		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec

@@ -13,6 +13,7 @@ import (
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
 	"github.com/koo-arch/adjusta-backend/ent/account"
+	"github.com/koo-arch/adjusta-backend/ent/calendar"
 	"github.com/koo-arch/adjusta-backend/ent/predicate"
 	"github.com/koo-arch/adjusta-backend/ent/user"
 )
@@ -137,6 +138,21 @@ func (au *AccountUpdate) SetUser(u *User) *AccountUpdate {
 	return au.SetUserID(u.ID)
 }
 
+// AddCalendarIDs adds the "calendars" edge to the Calendar entity by IDs.
+func (au *AccountUpdate) AddCalendarIDs(ids ...uuid.UUID) *AccountUpdate {
+	au.mutation.AddCalendarIDs(ids...)
+	return au
+}
+
+// AddCalendars adds the "calendars" edges to the Calendar entity.
+func (au *AccountUpdate) AddCalendars(c ...*Calendar) *AccountUpdate {
+	ids := make([]uuid.UUID, len(c))
+	for i := range c {
+		ids[i] = c[i].ID
+	}
+	return au.AddCalendarIDs(ids...)
+}
+
 // Mutation returns the AccountMutation object of the builder.
 func (au *AccountUpdate) Mutation() *AccountMutation {
 	return au.mutation
@@ -146,6 +162,27 @@ func (au *AccountUpdate) Mutation() *AccountMutation {
 func (au *AccountUpdate) ClearUser() *AccountUpdate {
 	au.mutation.ClearUser()
 	return au
+}
+
+// ClearCalendars clears all "calendars" edges to the Calendar entity.
+func (au *AccountUpdate) ClearCalendars() *AccountUpdate {
+	au.mutation.ClearCalendars()
+	return au
+}
+
+// RemoveCalendarIDs removes the "calendars" edge to Calendar entities by IDs.
+func (au *AccountUpdate) RemoveCalendarIDs(ids ...uuid.UUID) *AccountUpdate {
+	au.mutation.RemoveCalendarIDs(ids...)
+	return au
+}
+
+// RemoveCalendars removes "calendars" edges to Calendar entities.
+func (au *AccountUpdate) RemoveCalendars(c ...*Calendar) *AccountUpdate {
+	ids := make([]uuid.UUID, len(c))
+	for i := range c {
+		ids[i] = c[i].ID
+	}
+	return au.RemoveCalendarIDs(ids...)
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -248,6 +285,51 @@ func (au *AccountUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if au.mutation.CalendarsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   account.CalendarsTable,
+			Columns: []string{account.CalendarsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(calendar.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := au.mutation.RemovedCalendarsIDs(); len(nodes) > 0 && !au.mutation.CalendarsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   account.CalendarsTable,
+			Columns: []string{account.CalendarsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(calendar.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := au.mutation.CalendarsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   account.CalendarsTable,
+			Columns: []string{account.CalendarsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(calendar.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -382,6 +464,21 @@ func (auo *AccountUpdateOne) SetUser(u *User) *AccountUpdateOne {
 	return auo.SetUserID(u.ID)
 }
 
+// AddCalendarIDs adds the "calendars" edge to the Calendar entity by IDs.
+func (auo *AccountUpdateOne) AddCalendarIDs(ids ...uuid.UUID) *AccountUpdateOne {
+	auo.mutation.AddCalendarIDs(ids...)
+	return auo
+}
+
+// AddCalendars adds the "calendars" edges to the Calendar entity.
+func (auo *AccountUpdateOne) AddCalendars(c ...*Calendar) *AccountUpdateOne {
+	ids := make([]uuid.UUID, len(c))
+	for i := range c {
+		ids[i] = c[i].ID
+	}
+	return auo.AddCalendarIDs(ids...)
+}
+
 // Mutation returns the AccountMutation object of the builder.
 func (auo *AccountUpdateOne) Mutation() *AccountMutation {
 	return auo.mutation
@@ -391,6 +488,27 @@ func (auo *AccountUpdateOne) Mutation() *AccountMutation {
 func (auo *AccountUpdateOne) ClearUser() *AccountUpdateOne {
 	auo.mutation.ClearUser()
 	return auo
+}
+
+// ClearCalendars clears all "calendars" edges to the Calendar entity.
+func (auo *AccountUpdateOne) ClearCalendars() *AccountUpdateOne {
+	auo.mutation.ClearCalendars()
+	return auo
+}
+
+// RemoveCalendarIDs removes the "calendars" edge to Calendar entities by IDs.
+func (auo *AccountUpdateOne) RemoveCalendarIDs(ids ...uuid.UUID) *AccountUpdateOne {
+	auo.mutation.RemoveCalendarIDs(ids...)
+	return auo
+}
+
+// RemoveCalendars removes "calendars" edges to Calendar entities.
+func (auo *AccountUpdateOne) RemoveCalendars(c ...*Calendar) *AccountUpdateOne {
+	ids := make([]uuid.UUID, len(c))
+	for i := range c {
+		ids[i] = c[i].ID
+	}
+	return auo.RemoveCalendarIDs(ids...)
 }
 
 // Where appends a list predicates to the AccountUpdate builder.
@@ -523,6 +641,51 @@ func (auo *AccountUpdateOne) sqlSave(ctx context.Context) (_node *Account, err e
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if auo.mutation.CalendarsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   account.CalendarsTable,
+			Columns: []string{account.CalendarsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(calendar.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := auo.mutation.RemovedCalendarsIDs(); len(nodes) > 0 && !auo.mutation.CalendarsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   account.CalendarsTable,
+			Columns: []string{account.CalendarsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(calendar.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := auo.mutation.CalendarsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   account.CalendarsTable,
+			Columns: []string{account.CalendarsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(calendar.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

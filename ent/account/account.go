@@ -26,6 +26,8 @@ const (
 	FieldAccessTokenExpiry = "access_token_expiry"
 	// EdgeUser holds the string denoting the user edge name in mutations.
 	EdgeUser = "user"
+	// EdgeCalendars holds the string denoting the calendars edge name in mutations.
+	EdgeCalendars = "calendars"
 	// Table holds the table name of the account in the database.
 	Table = "accounts"
 	// UserTable is the table that holds the user relation/edge.
@@ -35,6 +37,13 @@ const (
 	UserInverseTable = "users"
 	// UserColumn is the table column denoting the user relation/edge.
 	UserColumn = "user_accounts"
+	// CalendarsTable is the table that holds the calendars relation/edge.
+	CalendarsTable = "calendars"
+	// CalendarsInverseTable is the table name for the Calendar entity.
+	// It exists in this package in order to avoid circular dependency with the "calendar" package.
+	CalendarsInverseTable = "calendars"
+	// CalendarsColumn is the table column denoting the calendars relation/edge.
+	CalendarsColumn = "account_calendars"
 )
 
 // Columns holds all SQL columns for account fields.
@@ -122,10 +131,31 @@ func ByUserField(field string, opts ...sql.OrderTermOption) OrderOption {
 		sqlgraph.OrderByNeighborTerms(s, newUserStep(), sql.OrderByField(field, opts...))
 	}
 }
+
+// ByCalendarsCount orders the results by calendars count.
+func ByCalendarsCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newCalendarsStep(), opts...)
+	}
+}
+
+// ByCalendars orders the results by calendars terms.
+func ByCalendars(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newCalendarsStep(), append([]sql.OrderTerm{term}, terms...)...)
+	}
+}
 func newUserStep() *sqlgraph.Step {
 	return sqlgraph.NewStep(
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(UserInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.M2O, true, UserTable, UserColumn),
+	)
+}
+func newCalendarsStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(CalendarsInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, CalendarsTable, CalendarsColumn),
 	)
 }

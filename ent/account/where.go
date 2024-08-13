@@ -434,6 +434,29 @@ func HasUserWith(preds ...predicate.User) predicate.Account {
 	})
 }
 
+// HasCalendars applies the HasEdge predicate on the "calendars" edge.
+func HasCalendars() predicate.Account {
+	return predicate.Account(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, CalendarsTable, CalendarsColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasCalendarsWith applies the HasEdge predicate on the "calendars" edge with a given conditions (other predicates).
+func HasCalendarsWith(preds ...predicate.Calendar) predicate.Account {
+	return predicate.Account(func(s *sql.Selector) {
+		step := newCalendarsStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
 // And groups predicates with the AND operator between them.
 func And(predicates ...predicate.Account) predicate.Account {
 	return predicate.Account(sql.AndPredicates(predicates...))

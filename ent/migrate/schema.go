@@ -32,6 +32,59 @@ var (
 			},
 		},
 	}
+	// CalendarsColumns holds the columns for the "calendars" table.
+	CalendarsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID, Unique: true},
+		{Name: "calendar_id", Type: field.TypeString},
+		{Name: "summary", Type: field.TypeString},
+		{Name: "account_calendars", Type: field.TypeUUID, Nullable: true},
+	}
+	// CalendarsTable holds the schema information for the "calendars" table.
+	CalendarsTable = &schema.Table{
+		Name:       "calendars",
+		Columns:    CalendarsColumns,
+		PrimaryKey: []*schema.Column{CalendarsColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "calendars_accounts_calendars",
+				Columns:    []*schema.Column{CalendarsColumns[3]},
+				RefColumns: []*schema.Column{AccountsColumns[0]},
+				OnDelete:   schema.SetNull,
+			},
+		},
+		Indexes: []*schema.Index{
+			{
+				Name:    "calendar_calendar_id_account_calendars",
+				Unique:  true,
+				Columns: []*schema.Column{CalendarsColumns[1], CalendarsColumns[3]},
+			},
+		},
+	}
+	// EventsColumns holds the columns for the "events" table.
+	EventsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID, Unique: true},
+		{Name: "event_id", Type: field.TypeString, Unique: true},
+		{Name: "summary", Type: field.TypeString, Nullable: true},
+		{Name: "description", Type: field.TypeString, Nullable: true},
+		{Name: "location", Type: field.TypeString, Nullable: true},
+		{Name: "start_time", Type: field.TypeTime, Nullable: true},
+		{Name: "end_time", Type: field.TypeTime, Nullable: true},
+		{Name: "calendar_events", Type: field.TypeUUID, Nullable: true},
+	}
+	// EventsTable holds the schema information for the "events" table.
+	EventsTable = &schema.Table{
+		Name:       "events",
+		Columns:    EventsColumns,
+		PrimaryKey: []*schema.Column{EventsColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "events_calendars_events",
+				Columns:    []*schema.Column{EventsColumns[7]},
+				RefColumns: []*schema.Column{CalendarsColumns[0]},
+				OnDelete:   schema.SetNull,
+			},
+		},
+	}
 	// JwtKeysColumns holds the columns for the "jwt_keys" table.
 	JwtKeysColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeInt, Increment: true},
@@ -69,6 +122,8 @@ var (
 	// Tables holds all the tables in the schema.
 	Tables = []*schema.Table{
 		AccountsTable,
+		CalendarsTable,
+		EventsTable,
 		JwtKeysTable,
 		UsersTable,
 	}
@@ -76,4 +131,6 @@ var (
 
 func init() {
 	AccountsTable.ForeignKeys[0].RefTable = UsersTable
+	CalendarsTable.ForeignKeys[0].RefTable = AccountsTable
+	EventsTable.ForeignKeys[0].RefTable = CalendarsTable
 }

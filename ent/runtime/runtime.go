@@ -5,6 +5,8 @@ package runtime
 import (
 	"github.com/google/uuid"
 	"github.com/koo-arch/adjusta-backend/ent/account"
+	"github.com/koo-arch/adjusta-backend/ent/calendar"
+	"github.com/koo-arch/adjusta-backend/ent/event"
 	"github.com/koo-arch/adjusta-backend/ent/jwtkey"
 	"github.com/koo-arch/adjusta-backend/ent/schema"
 	"github.com/koo-arch/adjusta-backend/ent/user"
@@ -31,6 +33,18 @@ func init() {
 	accountDescID := accountFields[0].Descriptor()
 	// account.DefaultID holds the default value on creation for the id field.
 	account.DefaultID = accountDescID.Default.(func() uuid.UUID)
+	calendarFields := schema.Calendar{}.Fields()
+	_ = calendarFields
+	// calendarDescID is the schema descriptor for id field.
+	calendarDescID := calendarFields[0].Descriptor()
+	// calendar.DefaultID holds the default value on creation for the id field.
+	calendar.DefaultID = calendarDescID.Default.(func() uuid.UUID)
+	eventFields := schema.Event{}.Fields()
+	_ = eventFields
+	// eventDescID is the schema descriptor for id field.
+	eventDescID := eventFields[0].Descriptor()
+	// event.DefaultID holds the default value on creation for the id field.
+	event.DefaultID = eventDescID.Default.(func() uuid.UUID)
 	jwtkeyFields := schema.JWTKey{}.Fields()
 	_ = jwtkeyFields
 	// jwtkeyDescKey is the schema descriptor for key field.

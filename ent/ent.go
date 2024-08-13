@@ -13,6 +13,8 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/koo-arch/adjusta-backend/ent/account"
+	"github.com/koo-arch/adjusta-backend/ent/calendar"
+	"github.com/koo-arch/adjusta-backend/ent/event"
 	"github.com/koo-arch/adjusta-backend/ent/jwtkey"
 	"github.com/koo-arch/adjusta-backend/ent/user"
 )
@@ -75,9 +77,11 @@ var (
 func checkColumn(table, column string) error {
 	initCheck.Do(func() {
 		columnCheck = sql.NewColumnCheck(map[string]func(string) bool{
-			account.Table: account.ValidColumn,
-			jwtkey.Table:  jwtkey.ValidColumn,
-			user.Table:    user.ValidColumn,
+			account.Table:  account.ValidColumn,
+			calendar.Table: calendar.ValidColumn,
+			event.Table:    event.ValidColumn,
+			jwtkey.Table:   jwtkey.ValidColumn,
+			user.Table:     user.ValidColumn,
 		})
 	})
 	return columnCheck(table, column)

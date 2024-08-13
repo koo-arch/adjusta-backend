@@ -4,6 +4,7 @@ package ent
 
 import (
 	"context"
+	"database/sql/driver"
 	"fmt"
 	"math"
 
@@ -12,6 +13,7 @@ import (
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
 	"github.com/koo-arch/adjusta-backend/ent/account"
+	"github.com/koo-arch/adjusta-backend/ent/calendar"
 	"github.com/koo-arch/adjusta-backend/ent/predicate"
 	"github.com/koo-arch/adjusta-backend/ent/user"
 )
@@ -19,12 +21,13 @@ import (
 // AccountQuery is the builder for querying Account entities.
 type AccountQuery struct {
 	config
-	ctx        *QueryContext
-	order      []account.OrderOption
-	inters     []Interceptor
-	predicates []predicate.Account
-	withUser   *UserQuery
-	withFKs    bool
+	ctx           *QueryContext
+	order         []account.OrderOption
+	inters        []Interceptor
+	predicates    []predicate.Account
+	withUser      *UserQuery
+	withCalendars *CalendarQuery
+	withFKs       bool
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -76,6 +79,28 @@ func (aq *AccountQuery) QueryUser() *UserQuery {
 			sqlgraph.From(account.Table, account.FieldID, selector),
 			sqlgraph.To(user.Table, user.FieldID),
 			sqlgraph.Edge(sqlgraph.M2O, true, account.UserTable, account.UserColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(aq.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryCalendars chains the current query on the "calendars" edge.
+func (aq *AccountQuery) QueryCalendars() *CalendarQuery {
+	query := (&CalendarClient{config: aq.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := aq.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := aq.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(account.Table, account.FieldID, selector),
+			sqlgraph.To(calendar.Table, calendar.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, account.CalendarsTable, account.CalendarsColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(aq.driver.Dialect(), step)
 		return fromU, nil
@@ -270,12 +295,13 @@ func (aq *AccountQuery) Clone() *AccountQuery {
 		return nil
 	}
 	return &AccountQuery{
-		config:     aq.config,
-		ctx:        aq.ctx.Clone(),
-		order:      append([]account.OrderOption{}, aq.order...),
-		inters:     append([]Interceptor{}, aq.inters...),
-		predicates: append([]predicate.Account{}, aq.predicates...),
-		withUser:   aq.withUser.Clone(),
+		config:        aq.config,
+		ctx:           aq.ctx.Clone(),
+		order:         append([]account.OrderOption{}, aq.order...),
+		inters:        append([]Interceptor{}, aq.inters...),
+		predicates:    append([]predicate.Account{}, aq.predicates...),
+		withUser:      aq.withUser.Clone(),
+		withCalendars: aq.withCalendars.Clone(),
 		// clone intermediate query.
 		sql:  aq.sql.Clone(),
 		path: aq.path,
@@ -290,6 +316,17 @@ func (aq *AccountQuery) WithUser(opts ...func(*UserQuery)) *AccountQuery {
 		opt(query)
 	}
 	aq.withUser = query
+	return aq
+}
+
+// WithCalendars tells the query-builder to eager-load the nodes that are connected to
+// the "calendars" edge. The optional arguments are used to configure the query builder of the edge.
+func (aq *AccountQuery) WithCalendars(opts ...func(*CalendarQuery)) *AccountQuery {
+	query := (&CalendarClient{config: aq.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	aq.withCalendars = query
 	return aq
 }
 
@@ -372,8 +409,9 @@ func (aq *AccountQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Acco
 		nodes       = []*Account{}
 		withFKs     = aq.withFKs
 		_spec       = aq.querySpec()
-		loadedTypes = [1]bool{
+		loadedTypes = [2]bool{
 			aq.withUser != nil,
+			aq.withCalendars != nil,
 		}
 	)
 	if aq.withUser != nil {
@@ -403,6 +441,13 @@ func (aq *AccountQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Acco
 	if query := aq.withUser; query != nil {
 		if err := aq.loadUser(ctx, query, nodes, nil,
 			func(n *Account, e *User) { n.Edges.User = e }); err != nil {
+			return nil, err
+		}
+	}
+	if query := aq.withCalendars; query != nil {
+		if err := aq.loadCalendars(ctx, query, nodes,
+			func(n *Account) { n.Edges.Calendars = []*Calendar{} },
+			func(n *Account, e *Calendar) { n.Edges.Calendars = append(n.Edges.Calendars, e) }); err != nil {
 			return nil, err
 		}
 	}
@@ -438,6 +483,37 @@ func (aq *AccountQuery) loadUser(ctx context.Context, query *UserQuery, nodes []
 		for i := range nodes {
 			assign(nodes[i], n)
 		}
+	}
+	return nil
+}
+func (aq *AccountQuery) loadCalendars(ctx context.Context, query *CalendarQuery, nodes []*Account, init func(*Account), assign func(*Account, *Calendar)) error {
+	fks := make([]driver.Value, 0, len(nodes))
+	nodeids := make(map[uuid.UUID]*Account)
+	for i := range nodes {
+		fks = append(fks, nodes[i].ID)
+		nodeids[nodes[i].ID] = nodes[i]
+		if init != nil {
+			init(nodes[i])
+		}
+	}
+	query.withFKs = true
+	query.Where(predicate.Calendar(func(s *sql.Selector) {
+		s.Where(sql.InValues(s.C(account.CalendarsColumn), fks...))
+	}))
+	neighbors, err := query.All(ctx)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		fk := n.account_calendars
+		if fk == nil {
+			return fmt.Errorf(`foreign-key "account_calendars" is nil for node %v`, n.ID)
+		}
+		node, ok := nodeids[*fk]
+		if !ok {
+			return fmt.Errorf(`unexpected referenced foreign-key "account_calendars" returned %v for node %v`, *fk, n.ID)
+		}
+		assign(node, n)
 	}
 	return nil
 }

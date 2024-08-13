@@ -14,6 +14,10 @@ type Tx struct {
 	config
 	// Account is the client for interacting with the Account builders.
 	Account *AccountClient
+	// Calendar is the client for interacting with the Calendar builders.
+	Calendar *CalendarClient
+	// Event is the client for interacting with the Event builders.
+	Event *EventClient
 	// JWTKey is the client for interacting with the JWTKey builders.
 	JWTKey *JWTKeyClient
 	// User is the client for interacting with the User builders.
@@ -150,6 +154,8 @@ func (tx *Tx) Client() *Client {
 
 func (tx *Tx) init() {
 	tx.Account = NewAccountClient(tx.config)
+	tx.Calendar = NewCalendarClient(tx.config)
+	tx.Event = NewEventClient(tx.config)
 	tx.JWTKey = NewJWTKeyClient(tx.config)
 	tx.User = NewUserClient(tx.config)
 }

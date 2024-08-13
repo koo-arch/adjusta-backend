@@ -35,6 +35,7 @@ func (Account) Fields() []ent.Field {
 func (Account) Edges() []ent.Edge {
 	return []ent.Edge{
 		edge.From("user", User.Type).Ref("accounts").Unique(),
+		edge.To("calendars", Calendar.Type),
 	}
 }
 

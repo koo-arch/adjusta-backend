@@ -40,9 +40,11 @@ type Account struct {
 type AccountEdges struct {
 	// User holds the value of the user edge.
 	User *User `json:"user,omitempty"`
+	// Calendars holds the value of the calendars edge.
+	Calendars []*Calendar `json:"calendars,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [1]bool
+	loadedTypes [2]bool
 }
 
 // UserOrErr returns the User value or an error if the edge
@@ -54,6 +56,15 @@ func (e AccountEdges) UserOrErr() (*User, error) {
 		return nil, &NotFoundError{label: user.Label}
 	}
 	return nil, &NotLoadedError{edge: "user"}
+}
+
+// CalendarsOrErr returns the Calendars value or an error if the edge
+// was not loaded in eager-loading.
+func (e AccountEdges) CalendarsOrErr() ([]*Calendar, error) {
+	if e.loadedTypes[1] {
+		return e.Calendars, nil
+	}
+	return nil, &NotLoadedError{edge: "calendars"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -143,6 +154,11 @@ func (a *Account) Value(name string) (ent.Value, error) {
 // QueryUser queries the "user" edge of the Account entity.
 func (a *Account) QueryUser() *UserQuery {
 	return NewAccountClient(a.config).QueryUser(a)
+}
+
+// QueryCalendars queries the "calendars" edge of the Account entity.
+func (a *Account) QueryCalendars() *CalendarQuery {
+	return NewAccountClient(a.config).QueryCalendars(a)
 }
 
 // Update returns a builder for updating this Account.
