@@ -1,28 +1,21 @@
-package handlers
+package middlewares
 
 import (
-	"fmt"
 	"net/http"
 
-	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
+	"github.com/gin-contrib/sessions"
 	"github.com/koo-arch/adjusta-backend/ent"
-	"github.com/koo-arch/adjusta-backend/internal/apps/account"
-	"github.com/koo-arch/adjusta-backend/internal/apps/user"
-	dbCalendar "github.com/koo-arch/adjusta-backend/internal/apps/calendar"
 	"github.com/koo-arch/adjusta-backend/internal/auth"
+	"github.com/koo-arch/adjusta-backend/internal/apps/user"
+	"github.com/koo-arch/adjusta-backend/internal/apps/account"
+	dbCalendar "github.com/koo-arch/adjusta-backend/internal/apps/calendar"
 	"github.com/koo-arch/adjusta-backend/internal/google/calendar"
+	"github.com/google/uuid"
 )
 
-type AccountsEvents struct {
-	AccountID uuid.UUID        `json:"account_id"`
-	Email     string           `json:"email"`
-	Events    []calendar.Event `json:"events"`
-}
-
-func FetchEventListHandler(client *ent.Client) gin.HandlerFunc {
-	return func (c *gin.Context) {
+func CalendarMiddleware(client *ent.Client) gin.HandlerFunc {
+	return func(c *gin.Context) {
 		ctx := c.Request.Context()
 
 		session := sessions.Default(c)
@@ -43,6 +36,7 @@ func FetchEventListHandler(client *ent.Client) gin.HandlerFunc {
 		userRepo := user.NewUserRepository(client)
 		accountRepo := account.NewAccountRepository(client)
 		authManager := auth.NewAuthManager(client, userRepo, accountRepo)
+		calendarRepo := dbCalendar.NewCalendarRepository(client)
 
 		userAccounts, err := accountRepo.FilterByUserID(ctx, nil, userid)
 		if err != nil {
@@ -51,16 +45,14 @@ func FetchEventListHandler(client *ent.Client) gin.HandlerFunc {
 			return
 		}
 
-		calendarRepo := dbCalendar.NewCalendarRepository(client)
-
-		accountsEvents, err := calendar.FetchAllEvents(ctx, authManager, userid, userAccounts, calendarRepo)
+		calendarList, err := calendar.RegisterCalendarList(ctx, authManager, userid, userAccounts, calendarRepo)
 		if err != nil {
-			fmt.Printf("failed to fetch events: %v", err)
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch events"})
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to register calendar list"})
 			c.Abort()
 			return
 		}
 
-		c.JSON(http.StatusOK, accountsEvents)
+		c.Set("calendarList", calendarList)
+		c.Next()
 	}
 }

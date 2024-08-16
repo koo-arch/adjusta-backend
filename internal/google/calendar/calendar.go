@@ -3,12 +3,18 @@ package calendar
 import (
 	"context"
 	"time"
+	"fmt"
 
 	"golang.org/x/oauth2"
 	"google.golang.org/api/calendar/v3"
 	"google.golang.org/api/option"
 	"github.com/koo-arch/adjusta-backend/internal/google/oauth"
 )
+
+type CalendarList struct {
+	CalendarID string `json:"calendar_id"`
+	Summary    string `json:"summary"`
+}
 
 type Event struct {
 	ID 		string `json:"id"`
@@ -31,8 +37,26 @@ func NewCalendar(ctx context.Context, token *oauth2.Token) (*Calendar, error) {
 	return &Calendar{Service: service}, nil
 }
 
-func (c *Calendar) FetchEvents(startTime, endTime time.Time) ([]*Event, error) {
-	events, err := c.Service.Events.List("primary").
+func (c *Calendar) FetchCalendarList() ([]*CalendarList, error) {
+	calendarList, err := c.Service.CalendarList.List().Do()
+	if err != nil {
+		return nil, err
+	}
+
+	var calendars []*CalendarList
+	for _, item := range calendarList.Items {
+		calendar := &CalendarList{
+			CalendarID: item.Id,
+			Summary:    item.Summary,
+		}
+		calendars = append(calendars, calendar)
+	}
+
+	return calendars, nil
+}
+
+func (c *Calendar) FetchEvents(calendarID string, startTime, endTime time.Time) ([]*Event, error) {
+	events, err := c.Service.Events.List(calendarID).
 		TimeMin(startTime.Format(time.RFC3339)).
 		TimeMax(endTime.Format(time.RFC3339)).
 		Do()
@@ -41,13 +65,30 @@ func (c *Calendar) FetchEvents(startTime, endTime time.Time) ([]*Event, error) {
 	}
 
 	var eventsList []*Event
+
+	fmt.Printf("events: %v\n", events)
+
 	for _, item := range events.Items {
+		// nilチェックを追加
+		var start, end string
+		if item.Start != nil {
+			start = item.Start.DateTime
+			if start == "" {
+				start = item.Start.Date
+			}
+		}
+		if item.End != nil {
+			end = item.End.DateTime
+			if end == "" {
+				end = item.End.Date
+			}
+		}
 		event := &Event{
 			ID:      item.Id,
 			Summary: item.Summary,
 			ColorID: item.ColorId,
-			Start:   item.Start.DateTime,
-			End:     item.End.DateTime,
+			Start:   start,
+			End:     end,
 		}
 		eventsList = append(eventsList, event)
 	}

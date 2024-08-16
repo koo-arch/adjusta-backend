@@ -93,13 +93,17 @@ func main() {
 
 
 	// 認証が必要なAPIグループ
-	auth := router.Group("/api").Use(middlewares.SessionRenewalMiddleware(), middlewares.AuthMiddleware(client))
+	auth := router.Group("/api")
+	auth.Use(middlewares.SessionRenewalMiddleware(), middlewares.AuthMiddleware(client))
 	{
 		auth.GET("/google/add-account", handlers.AddAccountHandler)
 		auth.GET("/google/add-account/callback", handlers.AddAccountCallbackHandler(client))
 		auth.GET("/users/me", handlers.GetCurrentUserHandler(client))
 		auth.GET("/account/list", handlers.FetchAccountsHandler(client))
-		auth.GET("/calendar/list", handlers.FetchEventListHandler(client))
+		calendar := auth.Group("/calendar").Use(middlewares.CalendarMiddleware(client))
+		{
+			calendar.GET("/list", handlers.FetchEventListHandler(client))
+		}
 	}
 	
 	// サーバー起動
