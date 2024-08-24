@@ -22,6 +22,8 @@ type Calendar struct {
 	CalendarID string `json:"calendar_id,omitempty"`
 	// Summary holds the value of the "summary" field.
 	Summary string `json:"summary,omitempty"`
+	// IsPrimary holds the value of the "is_primary" field.
+	IsPrimary bool `json:"is_primary,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the CalendarQuery when eager-loading is set.
 	Edges             CalendarEdges `json:"edges"`
@@ -65,6 +67,8 @@ func (*Calendar) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
+		case calendar.FieldIsPrimary:
+			values[i] = new(sql.NullBool)
 		case calendar.FieldCalendarID, calendar.FieldSummary:
 			values[i] = new(sql.NullString)
 		case calendar.FieldID:
@@ -103,6 +107,12 @@ func (c *Calendar) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field summary", values[i])
 			} else if value.Valid {
 				c.Summary = value.String
+			}
+		case calendar.FieldIsPrimary:
+			if value, ok := values[i].(*sql.NullBool); !ok {
+				return fmt.Errorf("unexpected type %T for field is_primary", values[i])
+			} else if value.Valid {
+				c.IsPrimary = value.Bool
 			}
 		case calendar.ForeignKeys[0]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
@@ -162,6 +172,9 @@ func (c *Calendar) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("summary=")
 	builder.WriteString(c.Summary)
+	builder.WriteString(", ")
+	builder.WriteString("is_primary=")
+	builder.WriteString(fmt.Sprintf("%v", c.IsPrimary))
 	builder.WriteByte(')')
 	return builder.String()
 }

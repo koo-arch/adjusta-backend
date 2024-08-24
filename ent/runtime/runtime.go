@@ -8,6 +8,7 @@ import (
 	"github.com/koo-arch/adjusta-backend/ent/calendar"
 	"github.com/koo-arch/adjusta-backend/ent/event"
 	"github.com/koo-arch/adjusta-backend/ent/jwtkey"
+	"github.com/koo-arch/adjusta-backend/ent/proposeddate"
 	"github.com/koo-arch/adjusta-backend/ent/schema"
 	"github.com/koo-arch/adjusta-backend/ent/user"
 )
@@ -35,6 +36,10 @@ func init() {
 	account.DefaultID = accountDescID.Default.(func() uuid.UUID)
 	calendarFields := schema.Calendar{}.Fields()
 	_ = calendarFields
+	// calendarDescIsPrimary is the schema descriptor for is_primary field.
+	calendarDescIsPrimary := calendarFields[3].Descriptor()
+	// calendar.DefaultIsPrimary holds the default value on creation for the is_primary field.
+	calendar.DefaultIsPrimary = calendarDescIsPrimary.Default.(bool)
 	// calendarDescID is the schema descriptor for id field.
 	calendarDescID := calendarFields[0].Descriptor()
 	// calendar.DefaultID holds the default value on creation for the id field.
@@ -57,6 +62,22 @@ func init() {
 	jwtkey.DefaultType = jwtkeyDescType.Default.(string)
 	// jwtkey.TypeValidator is a validator for the "type" field. It is called by the builders before save.
 	jwtkey.TypeValidator = jwtkeyDescType.Validators[0].(func(string) error)
+	proposeddateHooks := schema.ProposedDate{}.Hooks()
+	proposeddate.Hooks[0] = proposeddateHooks[0]
+	proposeddateFields := schema.ProposedDate{}.Fields()
+	_ = proposeddateFields
+	// proposeddateDescIsFinalized is the schema descriptor for is_finalized field.
+	proposeddateDescIsFinalized := proposeddateFields[3].Descriptor()
+	// proposeddate.DefaultIsFinalized holds the default value on creation for the is_finalized field.
+	proposeddate.DefaultIsFinalized = proposeddateDescIsFinalized.Default.(bool)
+	// proposeddateDescPriority is the schema descriptor for priority field.
+	proposeddateDescPriority := proposeddateFields[4].Descriptor()
+	// proposeddate.DefaultPriority holds the default value on creation for the priority field.
+	proposeddate.DefaultPriority = proposeddateDescPriority.Default.(int)
+	// proposeddateDescID is the schema descriptor for id field.
+	proposeddateDescID := proposeddateFields[0].Descriptor()
+	// proposeddate.DefaultID holds the default value on creation for the id field.
+	proposeddate.DefaultID = proposeddateDescID.Default.(func() uuid.UUID)
 	userHooks := schema.User{}.Hooks()
 	user.Hooks[0] = userHooks[0]
 	userFields := schema.User{}.Fields()

@@ -64,6 +64,11 @@ func Summary(v string) predicate.Calendar {
 	return predicate.Calendar(sql.FieldEQ(FieldSummary, v))
 }
 
+// IsPrimary applies equality check predicate on the "is_primary" field. It's identical to IsPrimaryEQ.
+func IsPrimary(v bool) predicate.Calendar {
+	return predicate.Calendar(sql.FieldEQ(FieldIsPrimary, v))
+}
+
 // CalendarIDEQ applies the EQ predicate on the "calendar_id" field.
 func CalendarIDEQ(v string) predicate.Calendar {
 	return predicate.Calendar(sql.FieldEQ(FieldCalendarID, v))
@@ -192,6 +197,16 @@ func SummaryEqualFold(v string) predicate.Calendar {
 // SummaryContainsFold applies the ContainsFold predicate on the "summary" field.
 func SummaryContainsFold(v string) predicate.Calendar {
 	return predicate.Calendar(sql.FieldContainsFold(FieldSummary, v))
+}
+
+// IsPrimaryEQ applies the EQ predicate on the "is_primary" field.
+func IsPrimaryEQ(v bool) predicate.Calendar {
+	return predicate.Calendar(sql.FieldEQ(FieldIsPrimary, v))
+}
+
+// IsPrimaryNEQ applies the NEQ predicate on the "is_primary" field.
+func IsPrimaryNEQ(v bool) predicate.Calendar {
+	return predicate.Calendar(sql.FieldNEQ(FieldIsPrimary, v))
 }
 
 // HasAccount applies the HasEdge predicate on the "account" edge.

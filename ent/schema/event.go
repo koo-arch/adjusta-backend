@@ -20,8 +20,6 @@ func (Event) Fields() []ent.Field {
 		field.String("summary").Optional(),
 		field.String("description").Optional(),
 		field.String("location").Optional(),
-		field.Time("start_time").Optional(),
-		field.Time("end_time").Optional(),
 	}
 }
 
@@ -29,5 +27,6 @@ func (Event) Fields() []ent.Field {
 func (Event) Edges() []ent.Edge {
 	return []ent.Edge{
 		edge.From("calendar", Calendar.Type).Ref("events").Unique(),
+		edge.To("proposed_dates", ProposedDate.Type),
 	}
 }

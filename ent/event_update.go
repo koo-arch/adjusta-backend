@@ -6,7 +6,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"time"
 
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
@@ -15,6 +14,7 @@ import (
 	"github.com/koo-arch/adjusta-backend/ent/calendar"
 	"github.com/koo-arch/adjusta-backend/ent/event"
 	"github.com/koo-arch/adjusta-backend/ent/predicate"
+	"github.com/koo-arch/adjusta-backend/ent/proposeddate"
 )
 
 // EventUpdate is the builder for updating Event entities.
@@ -104,46 +104,6 @@ func (eu *EventUpdate) ClearLocation() *EventUpdate {
 	return eu
 }
 
-// SetStartTime sets the "start_time" field.
-func (eu *EventUpdate) SetStartTime(t time.Time) *EventUpdate {
-	eu.mutation.SetStartTime(t)
-	return eu
-}
-
-// SetNillableStartTime sets the "start_time" field if the given value is not nil.
-func (eu *EventUpdate) SetNillableStartTime(t *time.Time) *EventUpdate {
-	if t != nil {
-		eu.SetStartTime(*t)
-	}
-	return eu
-}
-
-// ClearStartTime clears the value of the "start_time" field.
-func (eu *EventUpdate) ClearStartTime() *EventUpdate {
-	eu.mutation.ClearStartTime()
-	return eu
-}
-
-// SetEndTime sets the "end_time" field.
-func (eu *EventUpdate) SetEndTime(t time.Time) *EventUpdate {
-	eu.mutation.SetEndTime(t)
-	return eu
-}
-
-// SetNillableEndTime sets the "end_time" field if the given value is not nil.
-func (eu *EventUpdate) SetNillableEndTime(t *time.Time) *EventUpdate {
-	if t != nil {
-		eu.SetEndTime(*t)
-	}
-	return eu
-}
-
-// ClearEndTime clears the value of the "end_time" field.
-func (eu *EventUpdate) ClearEndTime() *EventUpdate {
-	eu.mutation.ClearEndTime()
-	return eu
-}
-
 // SetCalendarID sets the "calendar" edge to the Calendar entity by ID.
 func (eu *EventUpdate) SetCalendarID(id uuid.UUID) *EventUpdate {
 	eu.mutation.SetCalendarID(id)
@@ -163,6 +123,21 @@ func (eu *EventUpdate) SetCalendar(c *Calendar) *EventUpdate {
 	return eu.SetCalendarID(c.ID)
 }
 
+// AddProposedDateIDs adds the "proposed_dates" edge to the ProposedDate entity by IDs.
+func (eu *EventUpdate) AddProposedDateIDs(ids ...uuid.UUID) *EventUpdate {
+	eu.mutation.AddProposedDateIDs(ids...)
+	return eu
+}
+
+// AddProposedDates adds the "proposed_dates" edges to the ProposedDate entity.
+func (eu *EventUpdate) AddProposedDates(p ...*ProposedDate) *EventUpdate {
+	ids := make([]uuid.UUID, len(p))
+	for i := range p {
+		ids[i] = p[i].ID
+	}
+	return eu.AddProposedDateIDs(ids...)
+}
+
 // Mutation returns the EventMutation object of the builder.
 func (eu *EventUpdate) Mutation() *EventMutation {
 	return eu.mutation
@@ -172,6 +147,27 @@ func (eu *EventUpdate) Mutation() *EventMutation {
 func (eu *EventUpdate) ClearCalendar() *EventUpdate {
 	eu.mutation.ClearCalendar()
 	return eu
+}
+
+// ClearProposedDates clears all "proposed_dates" edges to the ProposedDate entity.
+func (eu *EventUpdate) ClearProposedDates() *EventUpdate {
+	eu.mutation.ClearProposedDates()
+	return eu
+}
+
+// RemoveProposedDateIDs removes the "proposed_dates" edge to ProposedDate entities by IDs.
+func (eu *EventUpdate) RemoveProposedDateIDs(ids ...uuid.UUID) *EventUpdate {
+	eu.mutation.RemoveProposedDateIDs(ids...)
+	return eu
+}
+
+// RemoveProposedDates removes "proposed_dates" edges to ProposedDate entities.
+func (eu *EventUpdate) RemoveProposedDates(p ...*ProposedDate) *EventUpdate {
+	ids := make([]uuid.UUID, len(p))
+	for i := range p {
+		ids[i] = p[i].ID
+	}
+	return eu.RemoveProposedDateIDs(ids...)
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -231,18 +227,6 @@ func (eu *EventUpdate) sqlSave(ctx context.Context) (n int, err error) {
 	if eu.mutation.LocationCleared() {
 		_spec.ClearField(event.FieldLocation, field.TypeString)
 	}
-	if value, ok := eu.mutation.StartTime(); ok {
-		_spec.SetField(event.FieldStartTime, field.TypeTime, value)
-	}
-	if eu.mutation.StartTimeCleared() {
-		_spec.ClearField(event.FieldStartTime, field.TypeTime)
-	}
-	if value, ok := eu.mutation.EndTime(); ok {
-		_spec.SetField(event.FieldEndTime, field.TypeTime, value)
-	}
-	if eu.mutation.EndTimeCleared() {
-		_spec.ClearField(event.FieldEndTime, field.TypeTime)
-	}
 	if eu.mutation.CalendarCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
@@ -265,6 +249,51 @@ func (eu *EventUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(calendar.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if eu.mutation.ProposedDatesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   event.ProposedDatesTable,
+			Columns: []string{event.ProposedDatesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(proposeddate.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := eu.mutation.RemovedProposedDatesIDs(); len(nodes) > 0 && !eu.mutation.ProposedDatesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   event.ProposedDatesTable,
+			Columns: []string{event.ProposedDatesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(proposeddate.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := eu.mutation.ProposedDatesIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   event.ProposedDatesTable,
+			Columns: []string{event.ProposedDatesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(proposeddate.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -366,46 +395,6 @@ func (euo *EventUpdateOne) ClearLocation() *EventUpdateOne {
 	return euo
 }
 
-// SetStartTime sets the "start_time" field.
-func (euo *EventUpdateOne) SetStartTime(t time.Time) *EventUpdateOne {
-	euo.mutation.SetStartTime(t)
-	return euo
-}
-
-// SetNillableStartTime sets the "start_time" field if the given value is not nil.
-func (euo *EventUpdateOne) SetNillableStartTime(t *time.Time) *EventUpdateOne {
-	if t != nil {
-		euo.SetStartTime(*t)
-	}
-	return euo
-}
-
-// ClearStartTime clears the value of the "start_time" field.
-func (euo *EventUpdateOne) ClearStartTime() *EventUpdateOne {
-	euo.mutation.ClearStartTime()
-	return euo
-}
-
-// SetEndTime sets the "end_time" field.
-func (euo *EventUpdateOne) SetEndTime(t time.Time) *EventUpdateOne {
-	euo.mutation.SetEndTime(t)
-	return euo
-}
-
-// SetNillableEndTime sets the "end_time" field if the given value is not nil.
-func (euo *EventUpdateOne) SetNillableEndTime(t *time.Time) *EventUpdateOne {
-	if t != nil {
-		euo.SetEndTime(*t)
-	}
-	return euo
-}
-
-// ClearEndTime clears the value of the "end_time" field.
-func (euo *EventUpdateOne) ClearEndTime() *EventUpdateOne {
-	euo.mutation.ClearEndTime()
-	return euo
-}
-
 // SetCalendarID sets the "calendar" edge to the Calendar entity by ID.
 func (euo *EventUpdateOne) SetCalendarID(id uuid.UUID) *EventUpdateOne {
 	euo.mutation.SetCalendarID(id)
@@ -425,6 +414,21 @@ func (euo *EventUpdateOne) SetCalendar(c *Calendar) *EventUpdateOne {
 	return euo.SetCalendarID(c.ID)
 }
 
+// AddProposedDateIDs adds the "proposed_dates" edge to the ProposedDate entity by IDs.
+func (euo *EventUpdateOne) AddProposedDateIDs(ids ...uuid.UUID) *EventUpdateOne {
+	euo.mutation.AddProposedDateIDs(ids...)
+	return euo
+}
+
+// AddProposedDates adds the "proposed_dates" edges to the ProposedDate entity.
+func (euo *EventUpdateOne) AddProposedDates(p ...*ProposedDate) *EventUpdateOne {
+	ids := make([]uuid.UUID, len(p))
+	for i := range p {
+		ids[i] = p[i].ID
+	}
+	return euo.AddProposedDateIDs(ids...)
+}
+
 // Mutation returns the EventMutation object of the builder.
 func (euo *EventUpdateOne) Mutation() *EventMutation {
 	return euo.mutation
@@ -434,6 +438,27 @@ func (euo *EventUpdateOne) Mutation() *EventMutation {
 func (euo *EventUpdateOne) ClearCalendar() *EventUpdateOne {
 	euo.mutation.ClearCalendar()
 	return euo
+}
+
+// ClearProposedDates clears all "proposed_dates" edges to the ProposedDate entity.
+func (euo *EventUpdateOne) ClearProposedDates() *EventUpdateOne {
+	euo.mutation.ClearProposedDates()
+	return euo
+}
+
+// RemoveProposedDateIDs removes the "proposed_dates" edge to ProposedDate entities by IDs.
+func (euo *EventUpdateOne) RemoveProposedDateIDs(ids ...uuid.UUID) *EventUpdateOne {
+	euo.mutation.RemoveProposedDateIDs(ids...)
+	return euo
+}
+
+// RemoveProposedDates removes "proposed_dates" edges to ProposedDate entities.
+func (euo *EventUpdateOne) RemoveProposedDates(p ...*ProposedDate) *EventUpdateOne {
+	ids := make([]uuid.UUID, len(p))
+	for i := range p {
+		ids[i] = p[i].ID
+	}
+	return euo.RemoveProposedDateIDs(ids...)
 }
 
 // Where appends a list predicates to the EventUpdate builder.
@@ -523,18 +548,6 @@ func (euo *EventUpdateOne) sqlSave(ctx context.Context) (_node *Event, err error
 	if euo.mutation.LocationCleared() {
 		_spec.ClearField(event.FieldLocation, field.TypeString)
 	}
-	if value, ok := euo.mutation.StartTime(); ok {
-		_spec.SetField(event.FieldStartTime, field.TypeTime, value)
-	}
-	if euo.mutation.StartTimeCleared() {
-		_spec.ClearField(event.FieldStartTime, field.TypeTime)
-	}
-	if value, ok := euo.mutation.EndTime(); ok {
-		_spec.SetField(event.FieldEndTime, field.TypeTime, value)
-	}
-	if euo.mutation.EndTimeCleared() {
-		_spec.ClearField(event.FieldEndTime, field.TypeTime)
-	}
 	if euo.mutation.CalendarCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
@@ -557,6 +570,51 @@ func (euo *EventUpdateOne) sqlSave(ctx context.Context) (_node *Event, err error
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: sqlgraph.NewFieldSpec(calendar.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if euo.mutation.ProposedDatesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   event.ProposedDatesTable,
+			Columns: []string{event.ProposedDatesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(proposeddate.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := euo.mutation.RemovedProposedDatesIDs(); len(nodes) > 0 && !euo.mutation.ProposedDatesCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   event.ProposedDatesTable,
+			Columns: []string{event.ProposedDatesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(proposeddate.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := euo.mutation.ProposedDatesIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   event.ProposedDatesTable,
+			Columns: []string{event.ProposedDatesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(proposeddate.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

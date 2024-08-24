@@ -37,6 +37,7 @@ var (
 		{Name: "id", Type: field.TypeUUID, Unique: true},
 		{Name: "calendar_id", Type: field.TypeString},
 		{Name: "summary", Type: field.TypeString},
+		{Name: "is_primary", Type: field.TypeBool, Default: false},
 		{Name: "account_calendars", Type: field.TypeUUID, Nullable: true},
 	}
 	// CalendarsTable holds the schema information for the "calendars" table.
@@ -47,7 +48,7 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "calendars_accounts_calendars",
-				Columns:    []*schema.Column{CalendarsColumns[3]},
+				Columns:    []*schema.Column{CalendarsColumns[4]},
 				RefColumns: []*schema.Column{AccountsColumns[0]},
 				OnDelete:   schema.SetNull,
 			},
@@ -56,7 +57,7 @@ var (
 			{
 				Name:    "calendar_calendar_id_account_calendars",
 				Unique:  true,
-				Columns: []*schema.Column{CalendarsColumns[1], CalendarsColumns[3]},
+				Columns: []*schema.Column{CalendarsColumns[1], CalendarsColumns[4]},
 			},
 		},
 	}
@@ -67,8 +68,6 @@ var (
 		{Name: "summary", Type: field.TypeString, Nullable: true},
 		{Name: "description", Type: field.TypeString, Nullable: true},
 		{Name: "location", Type: field.TypeString, Nullable: true},
-		{Name: "start_time", Type: field.TypeTime, Nullable: true},
-		{Name: "end_time", Type: field.TypeTime, Nullable: true},
 		{Name: "calendar_events", Type: field.TypeUUID, Nullable: true},
 	}
 	// EventsTable holds the schema information for the "events" table.
@@ -79,7 +78,7 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "events_calendars_events",
-				Columns:    []*schema.Column{EventsColumns[7]},
+				Columns:    []*schema.Column{EventsColumns[5]},
 				RefColumns: []*schema.Column{CalendarsColumns[0]},
 				OnDelete:   schema.SetNull,
 			},
@@ -106,6 +105,29 @@ var (
 			},
 		},
 	}
+	// ProposedDatesColumns holds the columns for the "proposed_dates" table.
+	ProposedDatesColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID, Unique: true},
+		{Name: "start_time", Type: field.TypeTime},
+		{Name: "end_time", Type: field.TypeTime},
+		{Name: "is_finalized", Type: field.TypeBool, Default: false},
+		{Name: "priority", Type: field.TypeInt, Default: 0},
+		{Name: "event_proposed_dates", Type: field.TypeUUID, Nullable: true},
+	}
+	// ProposedDatesTable holds the schema information for the "proposed_dates" table.
+	ProposedDatesTable = &schema.Table{
+		Name:       "proposed_dates",
+		Columns:    ProposedDatesColumns,
+		PrimaryKey: []*schema.Column{ProposedDatesColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "proposed_dates_events_proposed_dates",
+				Columns:    []*schema.Column{ProposedDatesColumns[5]},
+				RefColumns: []*schema.Column{EventsColumns[0]},
+				OnDelete:   schema.SetNull,
+			},
+		},
+	}
 	// UsersColumns holds the columns for the "users" table.
 	UsersColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID, Unique: true},
@@ -125,6 +147,7 @@ var (
 		CalendarsTable,
 		EventsTable,
 		JwtKeysTable,
+		ProposedDatesTable,
 		UsersTable,
 	}
 )
@@ -133,4 +156,5 @@ func init() {
 	AccountsTable.ForeignKeys[0].RefTable = UsersTable
 	CalendarsTable.ForeignKeys[0].RefTable = AccountsTable
 	EventsTable.ForeignKeys[0].RefTable = CalendarsTable
+	ProposedDatesTable.ForeignKeys[0].RefTable = EventsTable
 }

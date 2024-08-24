@@ -19,6 +19,7 @@ func (Calendar) Fields() []ent.Field {
 		field.UUID("id", uuid.UUID{}).Default(uuid.New).Unique().Immutable(),
 		field.String("calendar_id"),
 		field.String("summary"),
+		field.Bool("is_primary").Default(false),
 	}
 }
 

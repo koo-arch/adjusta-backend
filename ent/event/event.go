@@ -21,12 +21,10 @@ const (
 	FieldDescription = "description"
 	// FieldLocation holds the string denoting the location field in the database.
 	FieldLocation = "location"
-	// FieldStartTime holds the string denoting the start_time field in the database.
-	FieldStartTime = "start_time"
-	// FieldEndTime holds the string denoting the end_time field in the database.
-	FieldEndTime = "end_time"
 	// EdgeCalendar holds the string denoting the calendar edge name in mutations.
 	EdgeCalendar = "calendar"
+	// EdgeProposedDates holds the string denoting the proposed_dates edge name in mutations.
+	EdgeProposedDates = "proposed_dates"
 	// Table holds the table name of the event in the database.
 	Table = "events"
 	// CalendarTable is the table that holds the calendar relation/edge.
@@ -36,6 +34,13 @@ const (
 	CalendarInverseTable = "calendars"
 	// CalendarColumn is the table column denoting the calendar relation/edge.
 	CalendarColumn = "calendar_events"
+	// ProposedDatesTable is the table that holds the proposed_dates relation/edge.
+	ProposedDatesTable = "proposed_dates"
+	// ProposedDatesInverseTable is the table name for the ProposedDate entity.
+	// It exists in this package in order to avoid circular dependency with the "proposeddate" package.
+	ProposedDatesInverseTable = "proposed_dates"
+	// ProposedDatesColumn is the table column denoting the proposed_dates relation/edge.
+	ProposedDatesColumn = "event_proposed_dates"
 )
 
 // Columns holds all SQL columns for event fields.
@@ -45,8 +50,6 @@ var Columns = []string{
 	FieldSummary,
 	FieldDescription,
 	FieldLocation,
-	FieldStartTime,
-	FieldEndTime,
 }
 
 // ForeignKeys holds the SQL foreign-keys that are owned by the "events"
@@ -103,20 +106,24 @@ func ByLocation(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldLocation, opts...).ToFunc()
 }
 
-// ByStartTime orders the results by the start_time field.
-func ByStartTime(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldStartTime, opts...).ToFunc()
-}
-
-// ByEndTime orders the results by the end_time field.
-func ByEndTime(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldEndTime, opts...).ToFunc()
-}
-
 // ByCalendarField orders the results by calendar field.
 func ByCalendarField(field string, opts ...sql.OrderTermOption) OrderOption {
 	return func(s *sql.Selector) {
 		sqlgraph.OrderByNeighborTerms(s, newCalendarStep(), sql.OrderByField(field, opts...))
+	}
+}
+
+// ByProposedDatesCount orders the results by proposed_dates count.
+func ByProposedDatesCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newProposedDatesStep(), opts...)
+	}
+}
+
+// ByProposedDates orders the results by proposed_dates terms.
+func ByProposedDates(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newProposedDatesStep(), append([]sql.OrderTerm{term}, terms...)...)
 	}
 }
 func newCalendarStep() *sqlgraph.Step {
@@ -124,5 +131,12 @@ func newCalendarStep() *sqlgraph.Step {
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(CalendarInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.M2O, true, CalendarTable, CalendarColumn),
+	)
+}
+func newProposedDatesStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(ProposedDatesInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.O2M, false, ProposedDatesTable, ProposedDatesColumn),
 	)
 }

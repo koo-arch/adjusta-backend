@@ -20,6 +20,8 @@ type Tx struct {
 	Event *EventClient
 	// JWTKey is the client for interacting with the JWTKey builders.
 	JWTKey *JWTKeyClient
+	// ProposedDate is the client for interacting with the ProposedDate builders.
+	ProposedDate *ProposedDateClient
 	// User is the client for interacting with the User builders.
 	User *UserClient
 
@@ -157,6 +159,7 @@ func (tx *Tx) init() {
 	tx.Calendar = NewCalendarClient(tx.config)
 	tx.Event = NewEventClient(tx.config)
 	tx.JWTKey = NewJWTKeyClient(tx.config)
+	tx.ProposedDate = NewProposedDateClient(tx.config)
 	tx.User = NewUserClient(tx.config)
 }
 

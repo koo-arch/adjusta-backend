@@ -34,6 +34,20 @@ func (cc *CalendarCreate) SetSummary(s string) *CalendarCreate {
 	return cc
 }
 
+// SetIsPrimary sets the "is_primary" field.
+func (cc *CalendarCreate) SetIsPrimary(b bool) *CalendarCreate {
+	cc.mutation.SetIsPrimary(b)
+	return cc
+}
+
+// SetNillableIsPrimary sets the "is_primary" field if the given value is not nil.
+func (cc *CalendarCreate) SetNillableIsPrimary(b *bool) *CalendarCreate {
+	if b != nil {
+		cc.SetIsPrimary(*b)
+	}
+	return cc
+}
+
 // SetID sets the "id" field.
 func (cc *CalendarCreate) SetID(u uuid.UUID) *CalendarCreate {
 	cc.mutation.SetID(u)
@@ -117,6 +131,10 @@ func (cc *CalendarCreate) ExecX(ctx context.Context) {
 
 // defaults sets the default values of the builder before save.
 func (cc *CalendarCreate) defaults() {
+	if _, ok := cc.mutation.IsPrimary(); !ok {
+		v := calendar.DefaultIsPrimary
+		cc.mutation.SetIsPrimary(v)
+	}
 	if _, ok := cc.mutation.ID(); !ok {
 		v := calendar.DefaultID()
 		cc.mutation.SetID(v)
@@ -130,6 +148,9 @@ func (cc *CalendarCreate) check() error {
 	}
 	if _, ok := cc.mutation.Summary(); !ok {
 		return &ValidationError{Name: "summary", err: errors.New(`ent: missing required field "Calendar.summary"`)}
+	}
+	if _, ok := cc.mutation.IsPrimary(); !ok {
+		return &ValidationError{Name: "is_primary", err: errors.New(`ent: missing required field "Calendar.is_primary"`)}
 	}
 	return nil
 }
@@ -173,6 +194,10 @@ func (cc *CalendarCreate) createSpec() (*Calendar, *sqlgraph.CreateSpec) {
 	if value, ok := cc.mutation.Summary(); ok {
 		_spec.SetField(calendar.FieldSummary, field.TypeString, value)
 		_node.Summary = value
+	}
+	if value, ok := cc.mutation.IsPrimary(); ok {
+		_spec.SetField(calendar.FieldIsPrimary, field.TypeBool, value)
+		_node.IsPrimary = value
 	}
 	if nodes := cc.mutation.AccountIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{

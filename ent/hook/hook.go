@@ -57,6 +57,18 @@ func (f JWTKeyFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, erro
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.JWTKeyMutation", m)
 }
 
+// The ProposedDateFunc type is an adapter to allow the use of ordinary
+// function as ProposedDate mutator.
+type ProposedDateFunc func(context.Context, *ent.ProposedDateMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f ProposedDateFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.ProposedDateMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.ProposedDateMutation", m)
+}
+
 // The UserFunc type is an adapter to allow the use of ordinary
 // function as User mutator.
 type UserFunc func(context.Context, *ent.UserMutation) (ent.Value, error)

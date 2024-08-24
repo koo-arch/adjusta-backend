@@ -6,13 +6,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"time"
 
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
 	"github.com/koo-arch/adjusta-backend/ent/calendar"
 	"github.com/koo-arch/adjusta-backend/ent/event"
+	"github.com/koo-arch/adjusta-backend/ent/proposeddate"
 )
 
 // EventCreate is the builder for creating a Event entity.
@@ -70,34 +70,6 @@ func (ec *EventCreate) SetNillableLocation(s *string) *EventCreate {
 	return ec
 }
 
-// SetStartTime sets the "start_time" field.
-func (ec *EventCreate) SetStartTime(t time.Time) *EventCreate {
-	ec.mutation.SetStartTime(t)
-	return ec
-}
-
-// SetNillableStartTime sets the "start_time" field if the given value is not nil.
-func (ec *EventCreate) SetNillableStartTime(t *time.Time) *EventCreate {
-	if t != nil {
-		ec.SetStartTime(*t)
-	}
-	return ec
-}
-
-// SetEndTime sets the "end_time" field.
-func (ec *EventCreate) SetEndTime(t time.Time) *EventCreate {
-	ec.mutation.SetEndTime(t)
-	return ec
-}
-
-// SetNillableEndTime sets the "end_time" field if the given value is not nil.
-func (ec *EventCreate) SetNillableEndTime(t *time.Time) *EventCreate {
-	if t != nil {
-		ec.SetEndTime(*t)
-	}
-	return ec
-}
-
 // SetID sets the "id" field.
 func (ec *EventCreate) SetID(u uuid.UUID) *EventCreate {
 	ec.mutation.SetID(u)
@@ -129,6 +101,21 @@ func (ec *EventCreate) SetNillableCalendarID(id *uuid.UUID) *EventCreate {
 // SetCalendar sets the "calendar" edge to the Calendar entity.
 func (ec *EventCreate) SetCalendar(c *Calendar) *EventCreate {
 	return ec.SetCalendarID(c.ID)
+}
+
+// AddProposedDateIDs adds the "proposed_dates" edge to the ProposedDate entity by IDs.
+func (ec *EventCreate) AddProposedDateIDs(ids ...uuid.UUID) *EventCreate {
+	ec.mutation.AddProposedDateIDs(ids...)
+	return ec
+}
+
+// AddProposedDates adds the "proposed_dates" edges to the ProposedDate entity.
+func (ec *EventCreate) AddProposedDates(p ...*ProposedDate) *EventCreate {
+	ids := make([]uuid.UUID, len(p))
+	for i := range p {
+		ids[i] = p[i].ID
+	}
+	return ec.AddProposedDateIDs(ids...)
 }
 
 // Mutation returns the EventMutation object of the builder.
@@ -228,14 +215,6 @@ func (ec *EventCreate) createSpec() (*Event, *sqlgraph.CreateSpec) {
 		_spec.SetField(event.FieldLocation, field.TypeString, value)
 		_node.Location = value
 	}
-	if value, ok := ec.mutation.StartTime(); ok {
-		_spec.SetField(event.FieldStartTime, field.TypeTime, value)
-		_node.StartTime = value
-	}
-	if value, ok := ec.mutation.EndTime(); ok {
-		_spec.SetField(event.FieldEndTime, field.TypeTime, value)
-		_node.EndTime = value
-	}
 	if nodes := ec.mutation.CalendarIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
@@ -251,6 +230,22 @@ func (ec *EventCreate) createSpec() (*Event, *sqlgraph.CreateSpec) {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
 		_node.calendar_events = &nodes[0]
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := ec.mutation.ProposedDatesIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   event.ProposedDatesTable,
+			Columns: []string{event.ProposedDatesColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(proposeddate.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
 		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec

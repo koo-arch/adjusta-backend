@@ -20,6 +20,7 @@ import (
 	"github.com/koo-arch/adjusta-backend/ent/calendar"
 	"github.com/koo-arch/adjusta-backend/ent/event"
 	"github.com/koo-arch/adjusta-backend/ent/jwtkey"
+	"github.com/koo-arch/adjusta-backend/ent/proposeddate"
 	"github.com/koo-arch/adjusta-backend/ent/user"
 )
 
@@ -36,6 +37,8 @@ type Client struct {
 	Event *EventClient
 	// JWTKey is the client for interacting with the JWTKey builders.
 	JWTKey *JWTKeyClient
+	// ProposedDate is the client for interacting with the ProposedDate builders.
+	ProposedDate *ProposedDateClient
 	// User is the client for interacting with the User builders.
 	User *UserClient
 }
@@ -53,6 +56,7 @@ func (c *Client) init() {
 	c.Calendar = NewCalendarClient(c.config)
 	c.Event = NewEventClient(c.config)
 	c.JWTKey = NewJWTKeyClient(c.config)
+	c.ProposedDate = NewProposedDateClient(c.config)
 	c.User = NewUserClient(c.config)
 }
 
@@ -144,13 +148,14 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 	cfg := c.config
 	cfg.driver = tx
 	return &Tx{
-		ctx:      ctx,
-		config:   cfg,
-		Account:  NewAccountClient(cfg),
-		Calendar: NewCalendarClient(cfg),
-		Event:    NewEventClient(cfg),
-		JWTKey:   NewJWTKeyClient(cfg),
-		User:     NewUserClient(cfg),
+		ctx:          ctx,
+		config:       cfg,
+		Account:      NewAccountClient(cfg),
+		Calendar:     NewCalendarClient(cfg),
+		Event:        NewEventClient(cfg),
+		JWTKey:       NewJWTKeyClient(cfg),
+		ProposedDate: NewProposedDateClient(cfg),
+		User:         NewUserClient(cfg),
 	}, nil
 }
 
@@ -168,13 +173,14 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 	cfg := c.config
 	cfg.driver = &txDriver{tx: tx, drv: c.driver}
 	return &Tx{
-		ctx:      ctx,
-		config:   cfg,
-		Account:  NewAccountClient(cfg),
-		Calendar: NewCalendarClient(cfg),
-		Event:    NewEventClient(cfg),
-		JWTKey:   NewJWTKeyClient(cfg),
-		User:     NewUserClient(cfg),
+		ctx:          ctx,
+		config:       cfg,
+		Account:      NewAccountClient(cfg),
+		Calendar:     NewCalendarClient(cfg),
+		Event:        NewEventClient(cfg),
+		JWTKey:       NewJWTKeyClient(cfg),
+		ProposedDate: NewProposedDateClient(cfg),
+		User:         NewUserClient(cfg),
 	}, nil
 }
 
@@ -203,21 +209,21 @@ func (c *Client) Close() error {
 // Use adds the mutation hooks to all the entity clients.
 // In order to add hooks to a specific client, call: `client.Node.Use(...)`.
 func (c *Client) Use(hooks ...Hook) {
-	c.Account.Use(hooks...)
-	c.Calendar.Use(hooks...)
-	c.Event.Use(hooks...)
-	c.JWTKey.Use(hooks...)
-	c.User.Use(hooks...)
+	for _, n := range []interface{ Use(...Hook) }{
+		c.Account, c.Calendar, c.Event, c.JWTKey, c.ProposedDate, c.User,
+	} {
+		n.Use(hooks...)
+	}
 }
 
 // Intercept adds the query interceptors to all the entity clients.
 // In order to add interceptors to a specific client, call: `client.Node.Intercept(...)`.
 func (c *Client) Intercept(interceptors ...Interceptor) {
-	c.Account.Intercept(interceptors...)
-	c.Calendar.Intercept(interceptors...)
-	c.Event.Intercept(interceptors...)
-	c.JWTKey.Intercept(interceptors...)
-	c.User.Intercept(interceptors...)
+	for _, n := range []interface{ Intercept(...Interceptor) }{
+		c.Account, c.Calendar, c.Event, c.JWTKey, c.ProposedDate, c.User,
+	} {
+		n.Intercept(interceptors...)
+	}
 }
 
 // Mutate implements the ent.Mutator interface.
@@ -231,6 +237,8 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.Event.mutate(ctx, m)
 	case *JWTKeyMutation:
 		return c.JWTKey.mutate(ctx, m)
+	case *ProposedDateMutation:
+		return c.ProposedDate.mutate(ctx, m)
 	case *UserMutation:
 		return c.User.mutate(ctx, m)
 	default:
@@ -693,6 +701,22 @@ func (c *EventClient) QueryCalendar(e *Event) *CalendarQuery {
 	return query
 }
 
+// QueryProposedDates queries the proposed_dates edge of a Event.
+func (c *EventClient) QueryProposedDates(e *Event) *ProposedDateQuery {
+	query := (&ProposedDateClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := e.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(event.Table, event.FieldID, id),
+			sqlgraph.To(proposeddate.Table, proposeddate.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, event.ProposedDatesTable, event.ProposedDatesColumn),
+		)
+		fromV = sqlgraph.Neighbors(e.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
 // Hooks returns the client hooks.
 func (c *EventClient) Hooks() []Hook {
 	return c.hooks.Event
@@ -851,6 +875,156 @@ func (c *JWTKeyClient) mutate(ctx context.Context, m *JWTKeyMutation) (Value, er
 	}
 }
 
+// ProposedDateClient is a client for the ProposedDate schema.
+type ProposedDateClient struct {
+	config
+}
+
+// NewProposedDateClient returns a client for the ProposedDate from the given config.
+func NewProposedDateClient(c config) *ProposedDateClient {
+	return &ProposedDateClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `proposeddate.Hooks(f(g(h())))`.
+func (c *ProposedDateClient) Use(hooks ...Hook) {
+	c.hooks.ProposedDate = append(c.hooks.ProposedDate, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `proposeddate.Intercept(f(g(h())))`.
+func (c *ProposedDateClient) Intercept(interceptors ...Interceptor) {
+	c.inters.ProposedDate = append(c.inters.ProposedDate, interceptors...)
+}
+
+// Create returns a builder for creating a ProposedDate entity.
+func (c *ProposedDateClient) Create() *ProposedDateCreate {
+	mutation := newProposedDateMutation(c.config, OpCreate)
+	return &ProposedDateCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of ProposedDate entities.
+func (c *ProposedDateClient) CreateBulk(builders ...*ProposedDateCreate) *ProposedDateCreateBulk {
+	return &ProposedDateCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *ProposedDateClient) MapCreateBulk(slice any, setFunc func(*ProposedDateCreate, int)) *ProposedDateCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &ProposedDateCreateBulk{err: fmt.Errorf("calling to ProposedDateClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*ProposedDateCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &ProposedDateCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for ProposedDate.
+func (c *ProposedDateClient) Update() *ProposedDateUpdate {
+	mutation := newProposedDateMutation(c.config, OpUpdate)
+	return &ProposedDateUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *ProposedDateClient) UpdateOne(pd *ProposedDate) *ProposedDateUpdateOne {
+	mutation := newProposedDateMutation(c.config, OpUpdateOne, withProposedDate(pd))
+	return &ProposedDateUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *ProposedDateClient) UpdateOneID(id uuid.UUID) *ProposedDateUpdateOne {
+	mutation := newProposedDateMutation(c.config, OpUpdateOne, withProposedDateID(id))
+	return &ProposedDateUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for ProposedDate.
+func (c *ProposedDateClient) Delete() *ProposedDateDelete {
+	mutation := newProposedDateMutation(c.config, OpDelete)
+	return &ProposedDateDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *ProposedDateClient) DeleteOne(pd *ProposedDate) *ProposedDateDeleteOne {
+	return c.DeleteOneID(pd.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *ProposedDateClient) DeleteOneID(id uuid.UUID) *ProposedDateDeleteOne {
+	builder := c.Delete().Where(proposeddate.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &ProposedDateDeleteOne{builder}
+}
+
+// Query returns a query builder for ProposedDate.
+func (c *ProposedDateClient) Query() *ProposedDateQuery {
+	return &ProposedDateQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeProposedDate},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a ProposedDate entity by its id.
+func (c *ProposedDateClient) Get(ctx context.Context, id uuid.UUID) (*ProposedDate, error) {
+	return c.Query().Where(proposeddate.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *ProposedDateClient) GetX(ctx context.Context, id uuid.UUID) *ProposedDate {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// QueryEvent queries the event edge of a ProposedDate.
+func (c *ProposedDateClient) QueryEvent(pd *ProposedDate) *EventQuery {
+	query := (&EventClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := pd.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(proposeddate.Table, proposeddate.FieldID, id),
+			sqlgraph.To(event.Table, event.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, proposeddate.EventTable, proposeddate.EventColumn),
+		)
+		fromV = sqlgraph.Neighbors(pd.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// Hooks returns the client hooks.
+func (c *ProposedDateClient) Hooks() []Hook {
+	hooks := c.hooks.ProposedDate
+	return append(hooks[:len(hooks):len(hooks)], proposeddate.Hooks[:]...)
+}
+
+// Interceptors returns the client interceptors.
+func (c *ProposedDateClient) Interceptors() []Interceptor {
+	return c.inters.ProposedDate
+}
+
+func (c *ProposedDateClient) mutate(ctx context.Context, m *ProposedDateMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&ProposedDateCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&ProposedDateUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&ProposedDateUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&ProposedDateDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown ProposedDate mutation op: %q", m.Op())
+	}
+}
+
 // UserClient is a client for the User schema.
 type UserClient struct {
 	config
@@ -1004,9 +1178,9 @@ func (c *UserClient) mutate(ctx context.Context, m *UserMutation) (Value, error)
 // hooks and interceptors per client, for fast access.
 type (
 	hooks struct {
-		Account, Calendar, Event, JWTKey, User []ent.Hook
+		Account, Calendar, Event, JWTKey, ProposedDate, User []ent.Hook
 	}
 	inters struct {
-		Account, Calendar, Event, JWTKey, User []ent.Interceptor
+		Account, Calendar, Event, JWTKey, ProposedDate, User []ent.Interceptor
 	}
 )

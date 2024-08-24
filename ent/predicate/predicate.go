@@ -18,5 +18,8 @@ type Event func(*sql.Selector)
 // JWTKey is the predicate function for jwtkey builders.
 type JWTKey func(*sql.Selector)
 
+// ProposedDate is the predicate function for proposeddate builders.
+type ProposedDate func(*sql.Selector)
+
 // User is the predicate function for user builders.
 type User func(*sql.Selector)

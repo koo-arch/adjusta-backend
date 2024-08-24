@@ -58,6 +58,20 @@ func (cu *CalendarUpdate) SetNillableSummary(s *string) *CalendarUpdate {
 	return cu
 }
 
+// SetIsPrimary sets the "is_primary" field.
+func (cu *CalendarUpdate) SetIsPrimary(b bool) *CalendarUpdate {
+	cu.mutation.SetIsPrimary(b)
+	return cu
+}
+
+// SetNillableIsPrimary sets the "is_primary" field if the given value is not nil.
+func (cu *CalendarUpdate) SetNillableIsPrimary(b *bool) *CalendarUpdate {
+	if b != nil {
+		cu.SetIsPrimary(*b)
+	}
+	return cu
+}
+
 // SetAccountID sets the "account" edge to the Account entity by ID.
 func (cu *CalendarUpdate) SetAccountID(id uuid.UUID) *CalendarUpdate {
 	cu.mutation.SetAccountID(id)
@@ -165,6 +179,9 @@ func (cu *CalendarUpdate) sqlSave(ctx context.Context) (n int, err error) {
 	}
 	if value, ok := cu.mutation.Summary(); ok {
 		_spec.SetField(calendar.FieldSummary, field.TypeString, value)
+	}
+	if value, ok := cu.mutation.IsPrimary(); ok {
+		_spec.SetField(calendar.FieldIsPrimary, field.TypeBool, value)
 	}
 	if cu.mutation.AccountCleared() {
 		edge := &sqlgraph.EdgeSpec{
@@ -284,6 +301,20 @@ func (cuo *CalendarUpdateOne) SetSummary(s string) *CalendarUpdateOne {
 func (cuo *CalendarUpdateOne) SetNillableSummary(s *string) *CalendarUpdateOne {
 	if s != nil {
 		cuo.SetSummary(*s)
+	}
+	return cuo
+}
+
+// SetIsPrimary sets the "is_primary" field.
+func (cuo *CalendarUpdateOne) SetIsPrimary(b bool) *CalendarUpdateOne {
+	cuo.mutation.SetIsPrimary(b)
+	return cuo
+}
+
+// SetNillableIsPrimary sets the "is_primary" field if the given value is not nil.
+func (cuo *CalendarUpdateOne) SetNillableIsPrimary(b *bool) *CalendarUpdateOne {
+	if b != nil {
+		cuo.SetIsPrimary(*b)
 	}
 	return cuo
 }
@@ -425,6 +456,9 @@ func (cuo *CalendarUpdateOne) sqlSave(ctx context.Context) (_node *Calendar, err
 	}
 	if value, ok := cuo.mutation.Summary(); ok {
 		_spec.SetField(calendar.FieldSummary, field.TypeString, value)
+	}
+	if value, ok := cuo.mutation.IsPrimary(); ok {
+		_spec.SetField(calendar.FieldIsPrimary, field.TypeBool, value)
 	}
 	if cuo.mutation.AccountCleared() {
 		edge := &sqlgraph.EdgeSpec{

@@ -17,6 +17,7 @@ import (
 	"github.com/koo-arch/adjusta-backend/ent/event"
 	"github.com/koo-arch/adjusta-backend/ent/jwtkey"
 	"github.com/koo-arch/adjusta-backend/ent/predicate"
+	"github.com/koo-arch/adjusta-backend/ent/proposeddate"
 	"github.com/koo-arch/adjusta-backend/ent/user"
 )
 
@@ -29,11 +30,12 @@ const (
 	OpUpdateOne = ent.OpUpdateOne
 
 	// Node types.
-	TypeAccount  = "Account"
-	TypeCalendar = "Calendar"
-	TypeEvent    = "Event"
-	TypeJWTKey   = "JWTKey"
-	TypeUser     = "User"
+	TypeAccount      = "Account"
+	TypeCalendar     = "Calendar"
+	TypeEvent        = "Event"
+	TypeJWTKey       = "JWTKey"
+	TypeProposedDate = "ProposedDate"
+	TypeUser         = "User"
 )
 
 // AccountMutation represents an operation that mutates the Account nodes in the graph.
@@ -804,6 +806,7 @@ type CalendarMutation struct {
 	id             *uuid.UUID
 	calendar_id    *string
 	summary        *string
+	is_primary     *bool
 	clearedFields  map[string]struct{}
 	account        *uuid.UUID
 	clearedaccount bool
@@ -991,6 +994,42 @@ func (m *CalendarMutation) ResetSummary() {
 	m.summary = nil
 }
 
+// SetIsPrimary sets the "is_primary" field.
+func (m *CalendarMutation) SetIsPrimary(b bool) {
+	m.is_primary = &b
+}
+
+// IsPrimary returns the value of the "is_primary" field in the mutation.
+func (m *CalendarMutation) IsPrimary() (r bool, exists bool) {
+	v := m.is_primary
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldIsPrimary returns the old "is_primary" field's value of the Calendar entity.
+// If the Calendar object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *CalendarMutation) OldIsPrimary(ctx context.Context) (v bool, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldIsPrimary is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldIsPrimary requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldIsPrimary: %w", err)
+	}
+	return oldValue.IsPrimary, nil
+}
+
+// ResetIsPrimary resets all changes to the "is_primary" field.
+func (m *CalendarMutation) ResetIsPrimary() {
+	m.is_primary = nil
+}
+
 // SetAccountID sets the "account" edge to the Account entity by id.
 func (m *CalendarMutation) SetAccountID(id uuid.UUID) {
 	m.account = &id
@@ -1118,12 +1157,15 @@ func (m *CalendarMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *CalendarMutation) Fields() []string {
-	fields := make([]string, 0, 2)
+	fields := make([]string, 0, 3)
 	if m.calendar_id != nil {
 		fields = append(fields, calendar.FieldCalendarID)
 	}
 	if m.summary != nil {
 		fields = append(fields, calendar.FieldSummary)
+	}
+	if m.is_primary != nil {
+		fields = append(fields, calendar.FieldIsPrimary)
 	}
 	return fields
 }
@@ -1137,6 +1179,8 @@ func (m *CalendarMutation) Field(name string) (ent.Value, bool) {
 		return m.CalendarID()
 	case calendar.FieldSummary:
 		return m.Summary()
+	case calendar.FieldIsPrimary:
+		return m.IsPrimary()
 	}
 	return nil, false
 }
@@ -1150,6 +1194,8 @@ func (m *CalendarMutation) OldField(ctx context.Context, name string) (ent.Value
 		return m.OldCalendarID(ctx)
 	case calendar.FieldSummary:
 		return m.OldSummary(ctx)
+	case calendar.FieldIsPrimary:
+		return m.OldIsPrimary(ctx)
 	}
 	return nil, fmt.Errorf("unknown Calendar field %s", name)
 }
@@ -1172,6 +1218,13 @@ func (m *CalendarMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetSummary(v)
+		return nil
+	case calendar.FieldIsPrimary:
+		v, ok := value.(bool)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetIsPrimary(v)
 		return nil
 	}
 	return fmt.Errorf("unknown Calendar field %s", name)
@@ -1227,6 +1280,9 @@ func (m *CalendarMutation) ResetField(name string) error {
 		return nil
 	case calendar.FieldSummary:
 		m.ResetSummary()
+		return nil
+	case calendar.FieldIsPrimary:
+		m.ResetIsPrimary()
 		return nil
 	}
 	return fmt.Errorf("unknown Calendar field %s", name)
@@ -1337,21 +1393,22 @@ func (m *CalendarMutation) ResetEdge(name string) error {
 // EventMutation represents an operation that mutates the Event nodes in the graph.
 type EventMutation struct {
 	config
-	op              Op
-	typ             string
-	id              *uuid.UUID
-	event_id        *string
-	summary         *string
-	description     *string
-	location        *string
-	start_time      *time.Time
-	end_time        *time.Time
-	clearedFields   map[string]struct{}
-	calendar        *uuid.UUID
-	clearedcalendar bool
-	done            bool
-	oldValue        func(context.Context) (*Event, error)
-	predicates      []predicate.Event
+	op                    Op
+	typ                   string
+	id                    *uuid.UUID
+	event_id              *string
+	summary               *string
+	description           *string
+	location              *string
+	clearedFields         map[string]struct{}
+	calendar              *uuid.UUID
+	clearedcalendar       bool
+	proposed_dates        map[uuid.UUID]struct{}
+	removedproposed_dates map[uuid.UUID]struct{}
+	clearedproposed_dates bool
+	done                  bool
+	oldValue              func(context.Context) (*Event, error)
+	predicates            []predicate.Event
 }
 
 var _ ent.Mutation = (*EventMutation)(nil)
@@ -1641,104 +1698,6 @@ func (m *EventMutation) ResetLocation() {
 	delete(m.clearedFields, event.FieldLocation)
 }
 
-// SetStartTime sets the "start_time" field.
-func (m *EventMutation) SetStartTime(t time.Time) {
-	m.start_time = &t
-}
-
-// StartTime returns the value of the "start_time" field in the mutation.
-func (m *EventMutation) StartTime() (r time.Time, exists bool) {
-	v := m.start_time
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldStartTime returns the old "start_time" field's value of the Event entity.
-// If the Event object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *EventMutation) OldStartTime(ctx context.Context) (v time.Time, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldStartTime is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldStartTime requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldStartTime: %w", err)
-	}
-	return oldValue.StartTime, nil
-}
-
-// ClearStartTime clears the value of the "start_time" field.
-func (m *EventMutation) ClearStartTime() {
-	m.start_time = nil
-	m.clearedFields[event.FieldStartTime] = struct{}{}
-}
-
-// StartTimeCleared returns if the "start_time" field was cleared in this mutation.
-func (m *EventMutation) StartTimeCleared() bool {
-	_, ok := m.clearedFields[event.FieldStartTime]
-	return ok
-}
-
-// ResetStartTime resets all changes to the "start_time" field.
-func (m *EventMutation) ResetStartTime() {
-	m.start_time = nil
-	delete(m.clearedFields, event.FieldStartTime)
-}
-
-// SetEndTime sets the "end_time" field.
-func (m *EventMutation) SetEndTime(t time.Time) {
-	m.end_time = &t
-}
-
-// EndTime returns the value of the "end_time" field in the mutation.
-func (m *EventMutation) EndTime() (r time.Time, exists bool) {
-	v := m.end_time
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldEndTime returns the old "end_time" field's value of the Event entity.
-// If the Event object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *EventMutation) OldEndTime(ctx context.Context) (v time.Time, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldEndTime is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldEndTime requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldEndTime: %w", err)
-	}
-	return oldValue.EndTime, nil
-}
-
-// ClearEndTime clears the value of the "end_time" field.
-func (m *EventMutation) ClearEndTime() {
-	m.end_time = nil
-	m.clearedFields[event.FieldEndTime] = struct{}{}
-}
-
-// EndTimeCleared returns if the "end_time" field was cleared in this mutation.
-func (m *EventMutation) EndTimeCleared() bool {
-	_, ok := m.clearedFields[event.FieldEndTime]
-	return ok
-}
-
-// ResetEndTime resets all changes to the "end_time" field.
-func (m *EventMutation) ResetEndTime() {
-	m.end_time = nil
-	delete(m.clearedFields, event.FieldEndTime)
-}
-
 // SetCalendarID sets the "calendar" edge to the Calendar entity by id.
 func (m *EventMutation) SetCalendarID(id uuid.UUID) {
 	m.calendar = &id
@@ -1778,6 +1737,60 @@ func (m *EventMutation) ResetCalendar() {
 	m.clearedcalendar = false
 }
 
+// AddProposedDateIDs adds the "proposed_dates" edge to the ProposedDate entity by ids.
+func (m *EventMutation) AddProposedDateIDs(ids ...uuid.UUID) {
+	if m.proposed_dates == nil {
+		m.proposed_dates = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		m.proposed_dates[ids[i]] = struct{}{}
+	}
+}
+
+// ClearProposedDates clears the "proposed_dates" edge to the ProposedDate entity.
+func (m *EventMutation) ClearProposedDates() {
+	m.clearedproposed_dates = true
+}
+
+// ProposedDatesCleared reports if the "proposed_dates" edge to the ProposedDate entity was cleared.
+func (m *EventMutation) ProposedDatesCleared() bool {
+	return m.clearedproposed_dates
+}
+
+// RemoveProposedDateIDs removes the "proposed_dates" edge to the ProposedDate entity by IDs.
+func (m *EventMutation) RemoveProposedDateIDs(ids ...uuid.UUID) {
+	if m.removedproposed_dates == nil {
+		m.removedproposed_dates = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		delete(m.proposed_dates, ids[i])
+		m.removedproposed_dates[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedProposedDates returns the removed IDs of the "proposed_dates" edge to the ProposedDate entity.
+func (m *EventMutation) RemovedProposedDatesIDs() (ids []uuid.UUID) {
+	for id := range m.removedproposed_dates {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ProposedDatesIDs returns the "proposed_dates" edge IDs in the mutation.
+func (m *EventMutation) ProposedDatesIDs() (ids []uuid.UUID) {
+	for id := range m.proposed_dates {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetProposedDates resets all changes to the "proposed_dates" edge.
+func (m *EventMutation) ResetProposedDates() {
+	m.proposed_dates = nil
+	m.clearedproposed_dates = false
+	m.removedproposed_dates = nil
+}
+
 // Where appends a list predicates to the EventMutation builder.
 func (m *EventMutation) Where(ps ...predicate.Event) {
 	m.predicates = append(m.predicates, ps...)
@@ -1812,7 +1825,7 @@ func (m *EventMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *EventMutation) Fields() []string {
-	fields := make([]string, 0, 6)
+	fields := make([]string, 0, 4)
 	if m.event_id != nil {
 		fields = append(fields, event.FieldEventID)
 	}
@@ -1824,12 +1837,6 @@ func (m *EventMutation) Fields() []string {
 	}
 	if m.location != nil {
 		fields = append(fields, event.FieldLocation)
-	}
-	if m.start_time != nil {
-		fields = append(fields, event.FieldStartTime)
-	}
-	if m.end_time != nil {
-		fields = append(fields, event.FieldEndTime)
 	}
 	return fields
 }
@@ -1847,10 +1854,6 @@ func (m *EventMutation) Field(name string) (ent.Value, bool) {
 		return m.Description()
 	case event.FieldLocation:
 		return m.Location()
-	case event.FieldStartTime:
-		return m.StartTime()
-	case event.FieldEndTime:
-		return m.EndTime()
 	}
 	return nil, false
 }
@@ -1868,10 +1871,6 @@ func (m *EventMutation) OldField(ctx context.Context, name string) (ent.Value, e
 		return m.OldDescription(ctx)
 	case event.FieldLocation:
 		return m.OldLocation(ctx)
-	case event.FieldStartTime:
-		return m.OldStartTime(ctx)
-	case event.FieldEndTime:
-		return m.OldEndTime(ctx)
 	}
 	return nil, fmt.Errorf("unknown Event field %s", name)
 }
@@ -1908,20 +1907,6 @@ func (m *EventMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetLocation(v)
-		return nil
-	case event.FieldStartTime:
-		v, ok := value.(time.Time)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetStartTime(v)
-		return nil
-	case event.FieldEndTime:
-		v, ok := value.(time.Time)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetEndTime(v)
 		return nil
 	}
 	return fmt.Errorf("unknown Event field %s", name)
@@ -1962,12 +1947,6 @@ func (m *EventMutation) ClearedFields() []string {
 	if m.FieldCleared(event.FieldLocation) {
 		fields = append(fields, event.FieldLocation)
 	}
-	if m.FieldCleared(event.FieldStartTime) {
-		fields = append(fields, event.FieldStartTime)
-	}
-	if m.FieldCleared(event.FieldEndTime) {
-		fields = append(fields, event.FieldEndTime)
-	}
 	return fields
 }
 
@@ -1991,12 +1970,6 @@ func (m *EventMutation) ClearField(name string) error {
 	case event.FieldLocation:
 		m.ClearLocation()
 		return nil
-	case event.FieldStartTime:
-		m.ClearStartTime()
-		return nil
-	case event.FieldEndTime:
-		m.ClearEndTime()
-		return nil
 	}
 	return fmt.Errorf("unknown Event nullable field %s", name)
 }
@@ -2017,21 +1990,18 @@ func (m *EventMutation) ResetField(name string) error {
 	case event.FieldLocation:
 		m.ResetLocation()
 		return nil
-	case event.FieldStartTime:
-		m.ResetStartTime()
-		return nil
-	case event.FieldEndTime:
-		m.ResetEndTime()
-		return nil
 	}
 	return fmt.Errorf("unknown Event field %s", name)
 }
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *EventMutation) AddedEdges() []string {
-	edges := make([]string, 0, 1)
+	edges := make([]string, 0, 2)
 	if m.calendar != nil {
 		edges = append(edges, event.EdgeCalendar)
+	}
+	if m.proposed_dates != nil {
+		edges = append(edges, event.EdgeProposedDates)
 	}
 	return edges
 }
@@ -2044,27 +2014,47 @@ func (m *EventMutation) AddedIDs(name string) []ent.Value {
 		if id := m.calendar; id != nil {
 			return []ent.Value{*id}
 		}
+	case event.EdgeProposedDates:
+		ids := make([]ent.Value, 0, len(m.proposed_dates))
+		for id := range m.proposed_dates {
+			ids = append(ids, id)
+		}
+		return ids
 	}
 	return nil
 }
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *EventMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 1)
+	edges := make([]string, 0, 2)
+	if m.removedproposed_dates != nil {
+		edges = append(edges, event.EdgeProposedDates)
+	}
 	return edges
 }
 
 // RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
 // the given name in this mutation.
 func (m *EventMutation) RemovedIDs(name string) []ent.Value {
+	switch name {
+	case event.EdgeProposedDates:
+		ids := make([]ent.Value, 0, len(m.removedproposed_dates))
+		for id := range m.removedproposed_dates {
+			ids = append(ids, id)
+		}
+		return ids
+	}
 	return nil
 }
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *EventMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 1)
+	edges := make([]string, 0, 2)
 	if m.clearedcalendar {
 		edges = append(edges, event.EdgeCalendar)
+	}
+	if m.clearedproposed_dates {
+		edges = append(edges, event.EdgeProposedDates)
 	}
 	return edges
 }
@@ -2075,6 +2065,8 @@ func (m *EventMutation) EdgeCleared(name string) bool {
 	switch name {
 	case event.EdgeCalendar:
 		return m.clearedcalendar
+	case event.EdgeProposedDates:
+		return m.clearedproposed_dates
 	}
 	return false
 }
@@ -2096,6 +2088,9 @@ func (m *EventMutation) ResetEdge(name string) error {
 	switch name {
 	case event.EdgeCalendar:
 		m.ResetCalendar()
+		return nil
+	case event.EdgeProposedDates:
+		m.ResetProposedDates()
 		return nil
 	}
 	return fmt.Errorf("unknown Event edge %s", name)
@@ -2587,6 +2582,603 @@ func (m *JWTKeyMutation) ClearEdge(name string) error {
 // It returns an error if the edge is not defined in the schema.
 func (m *JWTKeyMutation) ResetEdge(name string) error {
 	return fmt.Errorf("unknown JWTKey edge %s", name)
+}
+
+// ProposedDateMutation represents an operation that mutates the ProposedDate nodes in the graph.
+type ProposedDateMutation struct {
+	config
+	op            Op
+	typ           string
+	id            *uuid.UUID
+	start_time    *time.Time
+	end_time      *time.Time
+	is_finalized  *bool
+	priority      *int
+	addpriority   *int
+	clearedFields map[string]struct{}
+	event         *uuid.UUID
+	clearedevent  bool
+	done          bool
+	oldValue      func(context.Context) (*ProposedDate, error)
+	predicates    []predicate.ProposedDate
+}
+
+var _ ent.Mutation = (*ProposedDateMutation)(nil)
+
+// proposeddateOption allows management of the mutation configuration using functional options.
+type proposeddateOption func(*ProposedDateMutation)
+
+// newProposedDateMutation creates new mutation for the ProposedDate entity.
+func newProposedDateMutation(c config, op Op, opts ...proposeddateOption) *ProposedDateMutation {
+	m := &ProposedDateMutation{
+		config:        c,
+		op:            op,
+		typ:           TypeProposedDate,
+		clearedFields: make(map[string]struct{}),
+	}
+	for _, opt := range opts {
+		opt(m)
+	}
+	return m
+}
+
+// withProposedDateID sets the ID field of the mutation.
+func withProposedDateID(id uuid.UUID) proposeddateOption {
+	return func(m *ProposedDateMutation) {
+		var (
+			err   error
+			once  sync.Once
+			value *ProposedDate
+		)
+		m.oldValue = func(ctx context.Context) (*ProposedDate, error) {
+			once.Do(func() {
+				if m.done {
+					err = errors.New("querying old values post mutation is not allowed")
+				} else {
+					value, err = m.Client().ProposedDate.Get(ctx, id)
+				}
+			})
+			return value, err
+		}
+		m.id = &id
+	}
+}
+
+// withProposedDate sets the old ProposedDate of the mutation.
+func withProposedDate(node *ProposedDate) proposeddateOption {
+	return func(m *ProposedDateMutation) {
+		m.oldValue = func(context.Context) (*ProposedDate, error) {
+			return node, nil
+		}
+		m.id = &node.ID
+	}
+}
+
+// Client returns a new `ent.Client` from the mutation. If the mutation was
+// executed in a transaction (ent.Tx), a transactional client is returned.
+func (m ProposedDateMutation) Client() *Client {
+	client := &Client{config: m.config}
+	client.init()
+	return client
+}
+
+// Tx returns an `ent.Tx` for mutations that were executed in transactions;
+// it returns an error otherwise.
+func (m ProposedDateMutation) Tx() (*Tx, error) {
+	if _, ok := m.driver.(*txDriver); !ok {
+		return nil, errors.New("ent: mutation is not running in a transaction")
+	}
+	tx := &Tx{config: m.config}
+	tx.init()
+	return tx, nil
+}
+
+// SetID sets the value of the id field. Note that this
+// operation is only accepted on creation of ProposedDate entities.
+func (m *ProposedDateMutation) SetID(id uuid.UUID) {
+	m.id = &id
+}
+
+// ID returns the ID value in the mutation. Note that the ID is only available
+// if it was provided to the builder or after it was returned from the database.
+func (m *ProposedDateMutation) ID() (id uuid.UUID, exists bool) {
+	if m.id == nil {
+		return
+	}
+	return *m.id, true
+}
+
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *ProposedDateMutation) IDs(ctx context.Context) ([]uuid.UUID, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []uuid.UUID{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().ProposedDate.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
+// SetStartTime sets the "start_time" field.
+func (m *ProposedDateMutation) SetStartTime(t time.Time) {
+	m.start_time = &t
+}
+
+// StartTime returns the value of the "start_time" field in the mutation.
+func (m *ProposedDateMutation) StartTime() (r time.Time, exists bool) {
+	v := m.start_time
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldStartTime returns the old "start_time" field's value of the ProposedDate entity.
+// If the ProposedDate object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ProposedDateMutation) OldStartTime(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldStartTime is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldStartTime requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldStartTime: %w", err)
+	}
+	return oldValue.StartTime, nil
+}
+
+// ResetStartTime resets all changes to the "start_time" field.
+func (m *ProposedDateMutation) ResetStartTime() {
+	m.start_time = nil
+}
+
+// SetEndTime sets the "end_time" field.
+func (m *ProposedDateMutation) SetEndTime(t time.Time) {
+	m.end_time = &t
+}
+
+// EndTime returns the value of the "end_time" field in the mutation.
+func (m *ProposedDateMutation) EndTime() (r time.Time, exists bool) {
+	v := m.end_time
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldEndTime returns the old "end_time" field's value of the ProposedDate entity.
+// If the ProposedDate object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ProposedDateMutation) OldEndTime(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldEndTime is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldEndTime requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldEndTime: %w", err)
+	}
+	return oldValue.EndTime, nil
+}
+
+// ResetEndTime resets all changes to the "end_time" field.
+func (m *ProposedDateMutation) ResetEndTime() {
+	m.end_time = nil
+}
+
+// SetIsFinalized sets the "is_finalized" field.
+func (m *ProposedDateMutation) SetIsFinalized(b bool) {
+	m.is_finalized = &b
+}
+
+// IsFinalized returns the value of the "is_finalized" field in the mutation.
+func (m *ProposedDateMutation) IsFinalized() (r bool, exists bool) {
+	v := m.is_finalized
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldIsFinalized returns the old "is_finalized" field's value of the ProposedDate entity.
+// If the ProposedDate object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ProposedDateMutation) OldIsFinalized(ctx context.Context) (v bool, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldIsFinalized is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldIsFinalized requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldIsFinalized: %w", err)
+	}
+	return oldValue.IsFinalized, nil
+}
+
+// ResetIsFinalized resets all changes to the "is_finalized" field.
+func (m *ProposedDateMutation) ResetIsFinalized() {
+	m.is_finalized = nil
+}
+
+// SetPriority sets the "priority" field.
+func (m *ProposedDateMutation) SetPriority(i int) {
+	m.priority = &i
+	m.addpriority = nil
+}
+
+// Priority returns the value of the "priority" field in the mutation.
+func (m *ProposedDateMutation) Priority() (r int, exists bool) {
+	v := m.priority
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldPriority returns the old "priority" field's value of the ProposedDate entity.
+// If the ProposedDate object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ProposedDateMutation) OldPriority(ctx context.Context) (v int, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldPriority is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldPriority requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldPriority: %w", err)
+	}
+	return oldValue.Priority, nil
+}
+
+// AddPriority adds i to the "priority" field.
+func (m *ProposedDateMutation) AddPriority(i int) {
+	if m.addpriority != nil {
+		*m.addpriority += i
+	} else {
+		m.addpriority = &i
+	}
+}
+
+// AddedPriority returns the value that was added to the "priority" field in this mutation.
+func (m *ProposedDateMutation) AddedPriority() (r int, exists bool) {
+	v := m.addpriority
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetPriority resets all changes to the "priority" field.
+func (m *ProposedDateMutation) ResetPriority() {
+	m.priority = nil
+	m.addpriority = nil
+}
+
+// SetEventID sets the "event" edge to the Event entity by id.
+func (m *ProposedDateMutation) SetEventID(id uuid.UUID) {
+	m.event = &id
+}
+
+// ClearEvent clears the "event" edge to the Event entity.
+func (m *ProposedDateMutation) ClearEvent() {
+	m.clearedevent = true
+}
+
+// EventCleared reports if the "event" edge to the Event entity was cleared.
+func (m *ProposedDateMutation) EventCleared() bool {
+	return m.clearedevent
+}
+
+// EventID returns the "event" edge ID in the mutation.
+func (m *ProposedDateMutation) EventID() (id uuid.UUID, exists bool) {
+	if m.event != nil {
+		return *m.event, true
+	}
+	return
+}
+
+// EventIDs returns the "event" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// EventID instead. It exists only for internal usage by the builders.
+func (m *ProposedDateMutation) EventIDs() (ids []uuid.UUID) {
+	if id := m.event; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetEvent resets all changes to the "event" edge.
+func (m *ProposedDateMutation) ResetEvent() {
+	m.event = nil
+	m.clearedevent = false
+}
+
+// Where appends a list predicates to the ProposedDateMutation builder.
+func (m *ProposedDateMutation) Where(ps ...predicate.ProposedDate) {
+	m.predicates = append(m.predicates, ps...)
+}
+
+// WhereP appends storage-level predicates to the ProposedDateMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *ProposedDateMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.ProposedDate, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
+// Op returns the operation name.
+func (m *ProposedDateMutation) Op() Op {
+	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *ProposedDateMutation) SetOp(op Op) {
+	m.op = op
+}
+
+// Type returns the node type of this mutation (ProposedDate).
+func (m *ProposedDateMutation) Type() string {
+	return m.typ
+}
+
+// Fields returns all fields that were changed during this mutation. Note that in
+// order to get all numeric fields that were incremented/decremented, call
+// AddedFields().
+func (m *ProposedDateMutation) Fields() []string {
+	fields := make([]string, 0, 4)
+	if m.start_time != nil {
+		fields = append(fields, proposeddate.FieldStartTime)
+	}
+	if m.end_time != nil {
+		fields = append(fields, proposeddate.FieldEndTime)
+	}
+	if m.is_finalized != nil {
+		fields = append(fields, proposeddate.FieldIsFinalized)
+	}
+	if m.priority != nil {
+		fields = append(fields, proposeddate.FieldPriority)
+	}
+	return fields
+}
+
+// Field returns the value of a field with the given name. The second boolean
+// return value indicates that this field was not set, or was not defined in the
+// schema.
+func (m *ProposedDateMutation) Field(name string) (ent.Value, bool) {
+	switch name {
+	case proposeddate.FieldStartTime:
+		return m.StartTime()
+	case proposeddate.FieldEndTime:
+		return m.EndTime()
+	case proposeddate.FieldIsFinalized:
+		return m.IsFinalized()
+	case proposeddate.FieldPriority:
+		return m.Priority()
+	}
+	return nil, false
+}
+
+// OldField returns the old value of the field from the database. An error is
+// returned if the mutation operation is not UpdateOne, or the query to the
+// database failed.
+func (m *ProposedDateMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+	switch name {
+	case proposeddate.FieldStartTime:
+		return m.OldStartTime(ctx)
+	case proposeddate.FieldEndTime:
+		return m.OldEndTime(ctx)
+	case proposeddate.FieldIsFinalized:
+		return m.OldIsFinalized(ctx)
+	case proposeddate.FieldPriority:
+		return m.OldPriority(ctx)
+	}
+	return nil, fmt.Errorf("unknown ProposedDate field %s", name)
+}
+
+// SetField sets the value of a field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *ProposedDateMutation) SetField(name string, value ent.Value) error {
+	switch name {
+	case proposeddate.FieldStartTime:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetStartTime(v)
+		return nil
+	case proposeddate.FieldEndTime:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetEndTime(v)
+		return nil
+	case proposeddate.FieldIsFinalized:
+		v, ok := value.(bool)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetIsFinalized(v)
+		return nil
+	case proposeddate.FieldPriority:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetPriority(v)
+		return nil
+	}
+	return fmt.Errorf("unknown ProposedDate field %s", name)
+}
+
+// AddedFields returns all numeric fields that were incremented/decremented during
+// this mutation.
+func (m *ProposedDateMutation) AddedFields() []string {
+	var fields []string
+	if m.addpriority != nil {
+		fields = append(fields, proposeddate.FieldPriority)
+	}
+	return fields
+}
+
+// AddedField returns the numeric value that was incremented/decremented on a field
+// with the given name. The second boolean return value indicates that this field
+// was not set, or was not defined in the schema.
+func (m *ProposedDateMutation) AddedField(name string) (ent.Value, bool) {
+	switch name {
+	case proposeddate.FieldPriority:
+		return m.AddedPriority()
+	}
+	return nil, false
+}
+
+// AddField adds the value to the field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *ProposedDateMutation) AddField(name string, value ent.Value) error {
+	switch name {
+	case proposeddate.FieldPriority:
+		v, ok := value.(int)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddPriority(v)
+		return nil
+	}
+	return fmt.Errorf("unknown ProposedDate numeric field %s", name)
+}
+
+// ClearedFields returns all nullable fields that were cleared during this
+// mutation.
+func (m *ProposedDateMutation) ClearedFields() []string {
+	return nil
+}
+
+// FieldCleared returns a boolean indicating if a field with the given name was
+// cleared in this mutation.
+func (m *ProposedDateMutation) FieldCleared(name string) bool {
+	_, ok := m.clearedFields[name]
+	return ok
+}
+
+// ClearField clears the value of the field with the given name. It returns an
+// error if the field is not defined in the schema.
+func (m *ProposedDateMutation) ClearField(name string) error {
+	return fmt.Errorf("unknown ProposedDate nullable field %s", name)
+}
+
+// ResetField resets all changes in the mutation for the field with the given name.
+// It returns an error if the field is not defined in the schema.
+func (m *ProposedDateMutation) ResetField(name string) error {
+	switch name {
+	case proposeddate.FieldStartTime:
+		m.ResetStartTime()
+		return nil
+	case proposeddate.FieldEndTime:
+		m.ResetEndTime()
+		return nil
+	case proposeddate.FieldIsFinalized:
+		m.ResetIsFinalized()
+		return nil
+	case proposeddate.FieldPriority:
+		m.ResetPriority()
+		return nil
+	}
+	return fmt.Errorf("unknown ProposedDate field %s", name)
+}
+
+// AddedEdges returns all edge names that were set/added in this mutation.
+func (m *ProposedDateMutation) AddedEdges() []string {
+	edges := make([]string, 0, 1)
+	if m.event != nil {
+		edges = append(edges, proposeddate.EdgeEvent)
+	}
+	return edges
+}
+
+// AddedIDs returns all IDs (to other nodes) that were added for the given edge
+// name in this mutation.
+func (m *ProposedDateMutation) AddedIDs(name string) []ent.Value {
+	switch name {
+	case proposeddate.EdgeEvent:
+		if id := m.event; id != nil {
+			return []ent.Value{*id}
+		}
+	}
+	return nil
+}
+
+// RemovedEdges returns all edge names that were removed in this mutation.
+func (m *ProposedDateMutation) RemovedEdges() []string {
+	edges := make([]string, 0, 1)
+	return edges
+}
+
+// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
+// the given name in this mutation.
+func (m *ProposedDateMutation) RemovedIDs(name string) []ent.Value {
+	return nil
+}
+
+// ClearedEdges returns all edge names that were cleared in this mutation.
+func (m *ProposedDateMutation) ClearedEdges() []string {
+	edges := make([]string, 0, 1)
+	if m.clearedevent {
+		edges = append(edges, proposeddate.EdgeEvent)
+	}
+	return edges
+}
+
+// EdgeCleared returns a boolean which indicates if the edge with the given name
+// was cleared in this mutation.
+func (m *ProposedDateMutation) EdgeCleared(name string) bool {
+	switch name {
+	case proposeddate.EdgeEvent:
+		return m.clearedevent
+	}
+	return false
+}
+
+// ClearEdge clears the value of the edge with the given name. It returns an error
+// if that edge is not defined in the schema.
+func (m *ProposedDateMutation) ClearEdge(name string) error {
+	switch name {
+	case proposeddate.EdgeEvent:
+		m.ClearEvent()
+		return nil
+	}
+	return fmt.Errorf("unknown ProposedDate unique edge %s", name)
+}
+
+// ResetEdge resets all changes to the edge with the given name in this mutation.
+// It returns an error if the edge is not defined in the schema.
+func (m *ProposedDateMutation) ResetEdge(name string) error {
+	switch name {
+	case proposeddate.EdgeEvent:
+		m.ResetEvent()
+		return nil
+	}
+	return fmt.Errorf("unknown ProposedDate edge %s", name)
 }
 
 // UserMutation represents an operation that mutates the User nodes in the graph.

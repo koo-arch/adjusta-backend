@@ -5,7 +5,6 @@ package ent
 import (
 	"fmt"
 	"strings"
-	"time"
 
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
@@ -27,10 +26,6 @@ type Event struct {
 	Description string `json:"description,omitempty"`
 	// Location holds the value of the "location" field.
 	Location string `json:"location,omitempty"`
-	// StartTime holds the value of the "start_time" field.
-	StartTime time.Time `json:"start_time,omitempty"`
-	// EndTime holds the value of the "end_time" field.
-	EndTime time.Time `json:"end_time,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the EventQuery when eager-loading is set.
 	Edges           EventEdges `json:"edges"`
@@ -42,9 +37,11 @@ type Event struct {
 type EventEdges struct {
 	// Calendar holds the value of the calendar edge.
 	Calendar *Calendar `json:"calendar,omitempty"`
+	// ProposedDates holds the value of the proposed_dates edge.
+	ProposedDates []*ProposedDate `json:"proposed_dates,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [1]bool
+	loadedTypes [2]bool
 }
 
 // CalendarOrErr returns the Calendar value or an error if the edge
@@ -58,6 +55,15 @@ func (e EventEdges) CalendarOrErr() (*Calendar, error) {
 	return nil, &NotLoadedError{edge: "calendar"}
 }
 
+// ProposedDatesOrErr returns the ProposedDates value or an error if the edge
+// was not loaded in eager-loading.
+func (e EventEdges) ProposedDatesOrErr() ([]*ProposedDate, error) {
+	if e.loadedTypes[1] {
+		return e.ProposedDates, nil
+	}
+	return nil, &NotLoadedError{edge: "proposed_dates"}
+}
+
 // scanValues returns the types for scanning values from sql.Rows.
 func (*Event) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
@@ -65,8 +71,6 @@ func (*Event) scanValues(columns []string) ([]any, error) {
 		switch columns[i] {
 		case event.FieldEventID, event.FieldSummary, event.FieldDescription, event.FieldLocation:
 			values[i] = new(sql.NullString)
-		case event.FieldStartTime, event.FieldEndTime:
-			values[i] = new(sql.NullTime)
 		case event.FieldID:
 			values[i] = new(uuid.UUID)
 		case event.ForeignKeys[0]: // calendar_events
@@ -116,18 +120,6 @@ func (e *Event) assignValues(columns []string, values []any) error {
 			} else if value.Valid {
 				e.Location = value.String
 			}
-		case event.FieldStartTime:
-			if value, ok := values[i].(*sql.NullTime); !ok {
-				return fmt.Errorf("unexpected type %T for field start_time", values[i])
-			} else if value.Valid {
-				e.StartTime = value.Time
-			}
-		case event.FieldEndTime:
-			if value, ok := values[i].(*sql.NullTime); !ok {
-				return fmt.Errorf("unexpected type %T for field end_time", values[i])
-			} else if value.Valid {
-				e.EndTime = value.Time
-			}
 		case event.ForeignKeys[0]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
 				return fmt.Errorf("unexpected type %T for field calendar_events", values[i])
@@ -151,6 +143,11 @@ func (e *Event) Value(name string) (ent.Value, error) {
 // QueryCalendar queries the "calendar" edge of the Event entity.
 func (e *Event) QueryCalendar() *CalendarQuery {
 	return NewEventClient(e.config).QueryCalendar(e)
+}
+
+// QueryProposedDates queries the "proposed_dates" edge of the Event entity.
+func (e *Event) QueryProposedDates() *ProposedDateQuery {
+	return NewEventClient(e.config).QueryProposedDates(e)
 }
 
 // Update returns a builder for updating this Event.
@@ -187,12 +184,6 @@ func (e *Event) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("location=")
 	builder.WriteString(e.Location)
-	builder.WriteString(", ")
-	builder.WriteString("start_time=")
-	builder.WriteString(e.StartTime.Format(time.ANSIC))
-	builder.WriteString(", ")
-	builder.WriteString("end_time=")
-	builder.WriteString(e.EndTime.Format(time.ANSIC))
 	builder.WriteByte(')')
 	return builder.String()
 }

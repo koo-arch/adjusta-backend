@@ -3,8 +3,6 @@
 package event
 
 import (
-	"time"
-
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/google/uuid"
@@ -74,16 +72,6 @@ func Description(v string) predicate.Event {
 // Location applies equality check predicate on the "location" field. It's identical to LocationEQ.
 func Location(v string) predicate.Event {
 	return predicate.Event(sql.FieldEQ(FieldLocation, v))
-}
-
-// StartTime applies equality check predicate on the "start_time" field. It's identical to StartTimeEQ.
-func StartTime(v time.Time) predicate.Event {
-	return predicate.Event(sql.FieldEQ(FieldStartTime, v))
-}
-
-// EndTime applies equality check predicate on the "end_time" field. It's identical to EndTimeEQ.
-func EndTime(v time.Time) predicate.Event {
-	return predicate.Event(sql.FieldEQ(FieldEndTime, v))
 }
 
 // EventIDEQ applies the EQ predicate on the "event_id" field.
@@ -376,106 +364,6 @@ func LocationContainsFold(v string) predicate.Event {
 	return predicate.Event(sql.FieldContainsFold(FieldLocation, v))
 }
 
-// StartTimeEQ applies the EQ predicate on the "start_time" field.
-func StartTimeEQ(v time.Time) predicate.Event {
-	return predicate.Event(sql.FieldEQ(FieldStartTime, v))
-}
-
-// StartTimeNEQ applies the NEQ predicate on the "start_time" field.
-func StartTimeNEQ(v time.Time) predicate.Event {
-	return predicate.Event(sql.FieldNEQ(FieldStartTime, v))
-}
-
-// StartTimeIn applies the In predicate on the "start_time" field.
-func StartTimeIn(vs ...time.Time) predicate.Event {
-	return predicate.Event(sql.FieldIn(FieldStartTime, vs...))
-}
-
-// StartTimeNotIn applies the NotIn predicate on the "start_time" field.
-func StartTimeNotIn(vs ...time.Time) predicate.Event {
-	return predicate.Event(sql.FieldNotIn(FieldStartTime, vs...))
-}
-
-// StartTimeGT applies the GT predicate on the "start_time" field.
-func StartTimeGT(v time.Time) predicate.Event {
-	return predicate.Event(sql.FieldGT(FieldStartTime, v))
-}
-
-// StartTimeGTE applies the GTE predicate on the "start_time" field.
-func StartTimeGTE(v time.Time) predicate.Event {
-	return predicate.Event(sql.FieldGTE(FieldStartTime, v))
-}
-
-// StartTimeLT applies the LT predicate on the "start_time" field.
-func StartTimeLT(v time.Time) predicate.Event {
-	return predicate.Event(sql.FieldLT(FieldStartTime, v))
-}
-
-// StartTimeLTE applies the LTE predicate on the "start_time" field.
-func StartTimeLTE(v time.Time) predicate.Event {
-	return predicate.Event(sql.FieldLTE(FieldStartTime, v))
-}
-
-// StartTimeIsNil applies the IsNil predicate on the "start_time" field.
-func StartTimeIsNil() predicate.Event {
-	return predicate.Event(sql.FieldIsNull(FieldStartTime))
-}
-
-// StartTimeNotNil applies the NotNil predicate on the "start_time" field.
-func StartTimeNotNil() predicate.Event {
-	return predicate.Event(sql.FieldNotNull(FieldStartTime))
-}
-
-// EndTimeEQ applies the EQ predicate on the "end_time" field.
-func EndTimeEQ(v time.Time) predicate.Event {
-	return predicate.Event(sql.FieldEQ(FieldEndTime, v))
-}
-
-// EndTimeNEQ applies the NEQ predicate on the "end_time" field.
-func EndTimeNEQ(v time.Time) predicate.Event {
-	return predicate.Event(sql.FieldNEQ(FieldEndTime, v))
-}
-
-// EndTimeIn applies the In predicate on the "end_time" field.
-func EndTimeIn(vs ...time.Time) predicate.Event {
-	return predicate.Event(sql.FieldIn(FieldEndTime, vs...))
-}
-
-// EndTimeNotIn applies the NotIn predicate on the "end_time" field.
-func EndTimeNotIn(vs ...time.Time) predicate.Event {
-	return predicate.Event(sql.FieldNotIn(FieldEndTime, vs...))
-}
-
-// EndTimeGT applies the GT predicate on the "end_time" field.
-func EndTimeGT(v time.Time) predicate.Event {
-	return predicate.Event(sql.FieldGT(FieldEndTime, v))
-}
-
-// EndTimeGTE applies the GTE predicate on the "end_time" field.
-func EndTimeGTE(v time.Time) predicate.Event {
-	return predicate.Event(sql.FieldGTE(FieldEndTime, v))
-}
-
-// EndTimeLT applies the LT predicate on the "end_time" field.
-func EndTimeLT(v time.Time) predicate.Event {
-	return predicate.Event(sql.FieldLT(FieldEndTime, v))
-}
-
-// EndTimeLTE applies the LTE predicate on the "end_time" field.
-func EndTimeLTE(v time.Time) predicate.Event {
-	return predicate.Event(sql.FieldLTE(FieldEndTime, v))
-}
-
-// EndTimeIsNil applies the IsNil predicate on the "end_time" field.
-func EndTimeIsNil() predicate.Event {
-	return predicate.Event(sql.FieldIsNull(FieldEndTime))
-}
-
-// EndTimeNotNil applies the NotNil predicate on the "end_time" field.
-func EndTimeNotNil() predicate.Event {
-	return predicate.Event(sql.FieldNotNull(FieldEndTime))
-}
-
 // HasCalendar applies the HasEdge predicate on the "calendar" edge.
 func HasCalendar() predicate.Event {
 	return predicate.Event(func(s *sql.Selector) {
@@ -491,6 +379,29 @@ func HasCalendar() predicate.Event {
 func HasCalendarWith(preds ...predicate.Calendar) predicate.Event {
 	return predicate.Event(func(s *sql.Selector) {
 		step := newCalendarStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasProposedDates applies the HasEdge predicate on the "proposed_dates" edge.
+func HasProposedDates() predicate.Event {
+	return predicate.Event(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, ProposedDatesTable, ProposedDatesColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasProposedDatesWith applies the HasEdge predicate on the "proposed_dates" edge with a given conditions (other predicates).
+func HasProposedDatesWith(preds ...predicate.ProposedDate) predicate.Event {
+	return predicate.Event(func(s *sql.Selector) {
+		step := newProposedDatesStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)
