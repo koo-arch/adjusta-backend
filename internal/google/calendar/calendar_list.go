@@ -72,7 +72,7 @@ func syncCalendar(ctx context.Context, calendars []*CalendarList ,userAccount *e
 
 	// データベースに存在しないカレンダーを追加
 	for _, cal := range calendarMap {
-		if _, err := calendarRepo.Create(ctx, nil, cal.CalendarID, cal.Summary, userAccount); err != nil {
+		if _, err := calendarRepo.Create(ctx, nil, cal.CalendarID, cal.Summary, cal.Primary, userAccount); err != nil {
 			return fmt.Errorf("failed to insert calendar to google calendar: %s, error: %w", cal.Summary, err)
 		}
 	}

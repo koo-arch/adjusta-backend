@@ -9,19 +9,13 @@ import (
 	"google.golang.org/api/calendar/v3"
 	"google.golang.org/api/option"
 	"github.com/koo-arch/adjusta-backend/internal/google/oauth"
+	"github.com/koo-arch/adjusta-backend/internal/models"
 )
 
 type CalendarList struct {
 	CalendarID string `json:"calendar_id"`
 	Summary    string `json:"summary"`
-}
-
-type Event struct {
-	ID 		string `json:"id"`
-	Summary string `json:"summary"`
-	ColorID  string `json:"color"`
-	Start   string `json:"start"`
-	End     string`json:"end"`
+	Primary   bool   `json:"primary"`
 }
 
 type Calendar struct {
@@ -48,6 +42,7 @@ func (c *Calendar) FetchCalendarList() ([]*CalendarList, error) {
 		calendar := &CalendarList{
 			CalendarID: item.Id,
 			Summary:    item.Summary,
+			Primary:   item.Primary,
 		}
 		calendars = append(calendars, calendar)
 	}
@@ -55,7 +50,7 @@ func (c *Calendar) FetchCalendarList() ([]*CalendarList, error) {
 	return calendars, nil
 }
 
-func (c *Calendar) FetchEvents(calendarID string, startTime, endTime time.Time) ([]*Event, error) {
+func (c *Calendar) FetchEvents(calendarID string, startTime, endTime time.Time) ([]*models.Event, error) {
 	events, err := c.Service.Events.List(calendarID).
 		TimeMin(startTime.Format(time.RFC3339)).
 		TimeMax(endTime.Format(time.RFC3339)).
@@ -64,7 +59,7 @@ func (c *Calendar) FetchEvents(calendarID string, startTime, endTime time.Time) 
 		return nil, err
 	}
 
-	var eventsList []*Event
+	var eventsList []*models.Event
 
 	fmt.Printf("events: %v\n", events)
 
@@ -83,7 +78,7 @@ func (c *Calendar) FetchEvents(calendarID string, startTime, endTime time.Time) 
 				end = item.End.Date
 			}
 		}
-		event := &Event{
+		event := &models.Event{
 			ID:      item.Id,
 			Summary: item.Summary,
 			ColorID: item.ColorId,
