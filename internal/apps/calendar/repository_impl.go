@@ -36,20 +36,49 @@ func (r *CalendarRepositoryImpl) FilterByAccountID(ctx context.Context, tx *ent.
 		All(ctx)
 }
 
-func (r *CalendarRepositoryImpl) FindByAccountIDAndCalendarID(ctx context.Context, tx *ent.Tx, accountID uuid.UUID, calendarID string) (*ent.Calendar, error) {
+func (r *CalendarRepositoryImpl) FindByFields(ctx context.Context, tx *ent.Tx, accountID uuid.UUID, calendarID, summary *string, isPrimary *bool) (*ent.Calendar, error) {
 	findCalendar := r.client.Calendar.Query()
 	if tx != nil {
 		findCalendar = tx.Calendar.Query()
 	}
-	return findCalendar.
+	query := findCalendar.
 		Where(
 			calendar.HasAccountWith(account.IDEQ(accountID)),
-			calendar.CalendarIDEQ(calendarID),
-		).
-		Only(ctx)
+		)
+	if calendarID != nil {
+		query = query.Where(calendar.CalendarIDEQ(*calendarID))
+	}
+	if summary != nil {
+		query = query.Where(calendar.SummaryEQ(*summary))
+	}
+	if isPrimary != nil {
+		query = query.Where(calendar.IsPrimaryEQ(*isPrimary))
+	}
+	return query.Only(ctx)
 }
 
-func (r *CalendarRepositoryImpl) Create(ctx context.Context, tx *ent.Tx, calendarID string, summary string, account *ent.Account) (*ent.Calendar, error) {
+func (r *CalendarRepositoryImpl) FilterByFields(ctx context.Context, tx *ent.Tx, accountID uuid.UUID, calendarID, summary *string, isPrimary *bool) ([]*ent.Calendar, error) {
+	filterCalendar := r.client.Calendar.Query()
+	if tx != nil {
+		filterCalendar = tx.Calendar.Query()
+	}
+	query := filterCalendar.
+		Where(
+			calendar.HasAccountWith(account.IDEQ(accountID)),
+		)
+	if calendarID != nil {
+		query = query.Where(calendar.CalendarIDEQ(*calendarID))
+	}
+	if summary != nil {
+		query = query.Where(calendar.SummaryEQ(*summary))
+	}
+	if isPrimary != nil {
+		query = query.Where(calendar.IsPrimaryEQ(*isPrimary))
+	}
+	return query.All(ctx)
+}
+
+func (r *CalendarRepositoryImpl) Create(ctx context.Context, tx *ent.Tx, calendarID string, summary string, is_primary bool, account *ent.Account) (*ent.Calendar, error) {
 	createCalendar := r.client.Calendar.Create()
 	if tx != nil {
 		createCalendar = tx.Calendar.Create()
@@ -58,6 +87,7 @@ func (r *CalendarRepositoryImpl) Create(ctx context.Context, tx *ent.Tx, calenda
 		SetCalendarID(calendarID).
 		SetSummary(summary).
 		SetAccount(account).
+		SetIsPrimary(is_primary).
 		Save(ctx)
 }
 

@@ -2,11 +2,11 @@ package event
 
 import (
 	"context"
-	"time"
 
 	"github.com/google/uuid"
+	"google.golang.org/api/calendar/v3"
 	"github.com/koo-arch/adjusta-backend/ent"
-	"github.com/koo-arch/adjusta-backend/ent/calendar"
+	dbCalendar "github.com/koo-arch/adjusta-backend/ent/calendar"
 	"github.com/koo-arch/adjusta-backend/ent/event"
 )
 
@@ -33,7 +33,7 @@ func (r *EventRepositoryImpl) FilterByCalendarID(ctx context.Context, tx *ent.Tx
 		filterEvent = tx.Event.Query()
 	}
 	return filterEvent.
-		Where(event.HasCalendarWith(calendar.CalendarIDEQ(calendarID))).
+		Where(event.HasCalendarWith(dbCalendar.CalendarIDEQ(calendarID))).
 		All(ctx)
 }
 
@@ -44,56 +44,38 @@ func (r *EventRepositoryImpl) FindByCalendarIDAndEventID(ctx context.Context, tx
 	}
 	return findEvent.
 		Where(
-			event.HasCalendarWith(calendar.CalendarIDEQ(calendarID)),
+			event.HasCalendarWith(dbCalendar.CalendarIDEQ(calendarID)),
 			event.EventIDEQ(eventID),
 		).
 		Only(ctx)
 }
 
-func (r *EventRepositoryImpl) Create(ctx context.Context, tx *ent.Tx, eventID string, summary, description, location *string, calendar *ent.Calendar, startTime, endTime time.Time) (*ent.Event, error) {
+func (r *EventRepositoryImpl) Create(ctx context.Context, tx *ent.Tx, event *calendar.Event, entCalendar *ent.Calendar) (*ent.Event, error) {
 	eventCreate := r.client.Event.Create()
 	if tx != nil {
 		eventCreate = tx.Event.Create()
 	}
 
-	if summary != nil {
-		eventCreate = eventCreate.SetSummary(*summary)
-	}
-
-	if description != nil {
-		eventCreate = eventCreate.SetDescription(*description)
-	}
-
 	eventCreate = eventCreate.
-		SetEventID(eventID).
-		SetStartTime(startTime).
-		SetEndTime(endTime).
-		SetCalendar(calendar)
+		SetEventID(event.Id).
+		SetSummary(event.Summary).
+		SetDescription(event.Description).
+		SetLocation(event.Location).
+		SetCalendar(entCalendar)
 
 	return eventCreate.Save(ctx)
 }
 
-func (r *EventRepositoryImpl) Update(ctx context.Context, tx *ent.Tx, id uuid.UUID, summary, description *string, startTime, endTime *time.Time) (*ent.Event, error) {
+func (r *EventRepositoryImpl) Update(ctx context.Context, tx *ent.Tx, id uuid.UUID, event *calendar.Event) (*ent.Event, error) {
 	eventUpdate := r.client.Event.UpdateOneID(id)
 	if tx != nil {
 		eventUpdate = tx.Event.UpdateOneID(id)
 	}
 
-	if summary != nil {
-		eventUpdate = eventUpdate.SetSummary(*summary)
-	}
-
-	if description != nil {
-		eventUpdate = eventUpdate.SetDescription(*description)
-	}
-
-	if startTime != nil {
-		eventUpdate = eventUpdate.SetStartTime(*startTime)
-	}
-
-	if endTime != nil {
-		eventUpdate = eventUpdate.SetEndTime(*endTime)
-	}
+	eventUpdate = eventUpdate.
+		SetSummary(event.Summary).
+		SetDescription(event.Description).
+		SetLocation(event.Location)
 
 	return eventUpdate.Save(ctx)
 }
