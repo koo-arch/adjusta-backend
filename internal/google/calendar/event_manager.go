@@ -14,6 +14,7 @@ import (
 	"github.com/koo-arch/adjusta-backend/internal/auth"
 	"github.com/koo-arch/adjusta-backend/internal/models"
 	"github.com/koo-arch/adjusta-backend/internal/apps/proposeddate"
+	"github.com/koo-arch/adjusta-backend/internal/transaction"
 )
 
 type EventManager struct {
@@ -103,6 +104,8 @@ func (em *EventManager) CreateDraftedEvents(ctx context.Context, userID, account
 	if err != nil {
 		return fmt.Errorf("failed to create calendar service for account: %s, error: %w", email, err)
 	}
+
+	defer transaction.HandleTransaction(tx, &err)
 
 	isPrimary := true
 	entCalendar, err := em.calendarRepo.FindByFields(ctx, tx, accountID, nil, nil, &isPrimary)
