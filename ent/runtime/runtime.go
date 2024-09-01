@@ -67,11 +67,11 @@ func init() {
 	proposeddateFields := schema.ProposedDate{}.Fields()
 	_ = proposeddateFields
 	// proposeddateDescIsFinalized is the schema descriptor for is_finalized field.
-	proposeddateDescIsFinalized := proposeddateFields[3].Descriptor()
+	proposeddateDescIsFinalized := proposeddateFields[4].Descriptor()
 	// proposeddate.DefaultIsFinalized holds the default value on creation for the is_finalized field.
 	proposeddate.DefaultIsFinalized = proposeddateDescIsFinalized.Default.(bool)
 	// proposeddateDescPriority is the schema descriptor for priority field.
-	proposeddateDescPriority := proposeddateFields[4].Descriptor()
+	proposeddateDescPriority := proposeddateFields[5].Descriptor()
 	// proposeddate.DefaultPriority holds the default value on creation for the priority field.
 	proposeddate.DefaultPriority = proposeddateDescPriority.Default.(int)
 	// proposeddateDescID is the schema descriptor for id field.

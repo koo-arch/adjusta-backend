@@ -21,6 +21,7 @@ type ProposedDate struct {
 func (ProposedDate) Fields() []ent.Field {
 	return []ent.Field{
 		field.UUID("id", uuid.UUID{}).Default(uuid.New).Unique().Immutable(),
+		field.String("google_event_id").Optional(),
 		field.Time("start_time"),
 		field.Time("end_time"),
 		field.Bool("is_finalized").Default(false),

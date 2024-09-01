@@ -101,7 +101,7 @@ func GoogleCallbackHandler(client *ent.Client) gin.HandlerFunc {
 		for _, account := range accounts {
 			_, err := authManager.VerifyOAuthToken(ctx, u.ID, account.Email)
 			if err != nil {
-				fmt.Printf("failed to reuse token source: %s", err.Error())
+				fmt.Printf("failed to reuse token source for account: %s, error: %s", account.Email, err.Error())
 				c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to reuse token source"})
 				return
 			}

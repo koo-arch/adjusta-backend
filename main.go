@@ -103,6 +103,8 @@ func main() {
 		calendar := auth.Group("/calendar").Use(middlewares.CalendarMiddleware(client))
 		{
 			calendar.GET("/list", handlers.FetchEventListHandler(client))
+			calendar.GET("/event/draft/list", handlers.FetchEventDraftListHandler(client))
+			calendar.GET("/event/draft/:eventID", handlers.FetchEventDraftDetailHandler(client))
 			calendar.POST("event/draft", handlers.CreateEventDraftHandler(client))
 		}
 	}

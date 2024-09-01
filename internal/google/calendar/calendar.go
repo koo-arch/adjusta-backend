@@ -91,6 +91,15 @@ func (c *Calendar) FetchEvents(calendarID string, startTime, endTime time.Time) 
 	return eventsList, nil
 }
 
+func (c *Calendar) FetchEvent(eventID string) (*calendar.Event, error) {
+	event, err := c.Service.Events.Get("primary", eventID).Do()
+	if err != nil {
+		return nil, err
+	}
+
+	return event, nil
+}
+
 func (c *Calendar) InsertEvent(event *calendar.Event) (*calendar.Event, error) {
 	event, err := c.Service.Events.Insert("primary", event).Do()
 	if err != nil {

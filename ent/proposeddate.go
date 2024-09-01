@@ -19,6 +19,8 @@ type ProposedDate struct {
 	config `json:"-"`
 	// ID of the ent.
 	ID uuid.UUID `json:"id,omitempty"`
+	// GoogleEventID holds the value of the "google_event_id" field.
+	GoogleEventID string `json:"google_event_id,omitempty"`
 	// StartTime holds the value of the "start_time" field.
 	StartTime time.Time `json:"start_time,omitempty"`
 	// EndTime holds the value of the "end_time" field.
@@ -63,6 +65,8 @@ func (*ProposedDate) scanValues(columns []string) ([]any, error) {
 			values[i] = new(sql.NullBool)
 		case proposeddate.FieldPriority:
 			values[i] = new(sql.NullInt64)
+		case proposeddate.FieldGoogleEventID:
+			values[i] = new(sql.NullString)
 		case proposeddate.FieldStartTime, proposeddate.FieldEndTime:
 			values[i] = new(sql.NullTime)
 		case proposeddate.FieldID:
@@ -89,6 +93,12 @@ func (pd *ProposedDate) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field id", values[i])
 			} else if value != nil {
 				pd.ID = *value
+			}
+		case proposeddate.FieldGoogleEventID:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field google_event_id", values[i])
+			} else if value.Valid {
+				pd.GoogleEventID = value.String
 			}
 		case proposeddate.FieldStartTime:
 			if value, ok := values[i].(*sql.NullTime); !ok {
@@ -162,6 +172,9 @@ func (pd *ProposedDate) String() string {
 	var builder strings.Builder
 	builder.WriteString("ProposedDate(")
 	builder.WriteString(fmt.Sprintf("id=%v, ", pd.ID))
+	builder.WriteString("google_event_id=")
+	builder.WriteString(pd.GoogleEventID)
+	builder.WriteString(", ")
 	builder.WriteString("start_time=")
 	builder.WriteString(pd.StartTime.Format(time.ANSIC))
 	builder.WriteString(", ")

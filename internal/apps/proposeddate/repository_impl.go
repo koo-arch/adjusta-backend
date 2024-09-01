@@ -2,8 +2,10 @@ package proposeddate
 
 import (
 	"context"
+	"time"
 
 	"github.com/google/uuid"
+	"google.golang.org/api/calendar/v3"
 	"github.com/koo-arch/adjusta-backend/ent"
 	"github.com/koo-arch/adjusta-backend/ent/proposeddate"
 	"github.com/koo-arch/adjusta-backend/ent/event"
@@ -37,31 +39,41 @@ func (r *ProposedDateRepositoryImpl) FilterByEventID(ctx context.Context, tx *en
 		All(ctx)
 }
 
-func (r *ProposedDateRepositoryImpl) Create(ctx context.Context, tx *ent.Tx, selectedDates models.SelectedDate, entEvent *ent.Event, priority int) (*ent.ProposedDate, error) {
+func (r *ProposedDateRepositoryImpl) Create(ctx context.Context, tx *ent.Tx, googleEventID *string, startTime, endTime time.Time, priority int, entEvent *ent.Event) (*ent.ProposedDate, error) {
 	proposedDateCreate := r.client.ProposedDate.Create()
 	if tx != nil {
 		proposedDateCreate = tx.ProposedDate.Create()
 	}
 
+	if googleEventID != nil {
+		proposedDateCreate = proposedDateCreate.SetGoogleEventID(*googleEventID)
+	}
+
 	proposedDateCreate = proposedDateCreate.
-		SetStartTime(selectedDates.Start).
-		SetEndTime(selectedDates.End).
+		SetStartTime(startTime).
+		SetEndTime(endTime).
 		SetPriority(priority).
 		SetEvent(entEvent)
 
 	return proposedDateCreate.Save(ctx)
 }
 
-func (r *ProposedDateRepositoryImpl) Update(ctx context.Context, tx *ent.Tx, id uuid.UUID, selectedDates *models.SelectedDate, priority *int, isFinalized *bool) (*ent.ProposedDate, error) {
+func (r *ProposedDateRepositoryImpl) Update(ctx context.Context, tx *ent.Tx, id uuid.UUID, googleEventID *string, startTime, endTime *time.Time, priority *int, isFinalized *bool) (*ent.ProposedDate, error) {
 	proposedDateUpdate := r.client.ProposedDate.UpdateOneID(id)
 	if tx != nil {
 		proposedDateUpdate = tx.ProposedDate.UpdateOneID(id)
 	}
 
-	if selectedDates != nil {
-		proposedDateUpdate = proposedDateUpdate.
-			SetStartTime(selectedDates.Start).
-			SetEndTime(selectedDates.End)
+	if googleEventID != nil {
+		proposedDateUpdate = proposedDateUpdate.SetGoogleEventID(*googleEventID)
+	}
+
+	if startTime != nil {
+		proposedDateUpdate = proposedDateUpdate.SetStartTime(*startTime)
+	}
+
+	if endTime != nil {
+		proposedDateUpdate = proposedDateUpdate.SetEndTime(*endTime)
 	}
 
 	if priority != nil {
@@ -82,24 +94,29 @@ func (r *ProposedDateRepositoryImpl) Delete(ctx context.Context, tx *ent.Tx, id 
 	return r.client.ProposedDate.DeleteOneID(id).Exec(ctx)
 }
 
-func (r *ProposedDateRepositoryImpl) CreateBulk(ctx context.Context, tx *ent.Tx, selectedDates []models.SelectedDate, entEvent *ent.Event) ([]*ent.ProposedDate, error) {
+
+func (r *ProposedDateRepositoryImpl) CreateBulk(ctx context.Context, tx *ent.Tx, selectedDates []models.SelectedDate, googleEvents []*calendar.Event, entEvent *ent.Event) ([]*ent.ProposedDate, error) {
 	var proposedDateCreates []*ent.ProposedDateCreate
 
-	for index, selectedDate := range selectedDates {
+	for i, selectedDate := range selectedDates {
 		proposedDateCreate := r.client.ProposedDate.Create()
 		if tx != nil {
 			proposedDateCreate = tx.ProposedDate.Create()
 		}
-		
-		proposedDateCreate.
+
+		proposedDateCreate = proposedDateCreate.
 			SetStartTime(selectedDate.Start).
 			SetEndTime(selectedDate.End).
-			SetPriority(index+1).
+			SetPriority(selectedDate.Priority).
 			SetEvent(entEvent)
-	
-		proposedDateCreates = append(proposedDateCreates, proposedDateCreate)
 
+		if googleEvents != nil {
+			proposedDateCreate = proposedDateCreate.SetGoogleEventID(googleEvents[i].Id)
+		}
+
+		proposedDateCreates = append(proposedDateCreates, proposedDateCreate)
 	}
+
 	if (tx != nil) {
 		return tx.ProposedDate.CreateBulk(proposedDateCreates...).Save(ctx)
 	}

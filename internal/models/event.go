@@ -7,28 +7,45 @@ import (
 )
 
 type AccountsEvents struct {
-	AccountID uuid.UUID   `json:"account_id"`
-	Email     string      `json:"email"`
-	Events    []*Event    `json:"events"`
+	AccountID uuid.UUID `json:"account_id"`
+	Email     string    `json:"email"`
+	Events    []*Event  `json:"events"`
 }
 
 type Event struct {
-	ID 		string `json:"id"`
+	ID      string `json:"id"`
 	Summary string `json:"summary"`
-	ColorID  string `json:"color"`
+	ColorID string `json:"color"`
 	Start   string `json:"start"`
-	End     string`json:"end"`
+	End     string `json:"end"`
 }
 
-
-type EventDraft struct {
-	Title    string    `json:"title" binding:"required"`
-	Location string    `json:"location"`
-	Description string `json:"description"`
+type EventDraftCreation struct {
+	Title         string         `json:"title" binding:"required"`
+	Location      string         `json:"location"`
+	Description   string         `json:"description"`
 	SelectedDates []SelectedDate `json:"selected_dates" binding:"required"`
 }
 
 type SelectedDate struct {
 	Start time.Time `json:"start"`
 	End   time.Time `json:"end"`
+	Priority int `json:"priority"`
+}
+
+type EventDraftDetail struct {
+	ID            uuid.UUID         `json:"id" binding:"required"`
+	Title         string         `json:"title"`
+	Location      string         `json:"location"`
+	Description   string         `json:"description"`
+	ProposedDates []ProposedDate `json:"Proposed_dates"`
+}
+
+type ProposedDate struct {
+	ID          uuid.UUID `json:"id"`
+	EventID     string `json:"event_id"`
+	Start       *time.Time `json:"start_date"`
+	End         *time.Time `json:"end_date"`
+	Priority    int `json:"priority"`
+	IsFinalized bool `json:"is_finalized"`
 }

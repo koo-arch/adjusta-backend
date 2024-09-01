@@ -56,6 +56,11 @@ func IDLTE(id uuid.UUID) predicate.ProposedDate {
 	return predicate.ProposedDate(sql.FieldLTE(FieldID, id))
 }
 
+// GoogleEventID applies equality check predicate on the "google_event_id" field. It's identical to GoogleEventIDEQ.
+func GoogleEventID(v string) predicate.ProposedDate {
+	return predicate.ProposedDate(sql.FieldEQ(FieldGoogleEventID, v))
+}
+
 // StartTime applies equality check predicate on the "start_time" field. It's identical to StartTimeEQ.
 func StartTime(v time.Time) predicate.ProposedDate {
 	return predicate.ProposedDate(sql.FieldEQ(FieldStartTime, v))
@@ -74,6 +79,81 @@ func IsFinalized(v bool) predicate.ProposedDate {
 // Priority applies equality check predicate on the "priority" field. It's identical to PriorityEQ.
 func Priority(v int) predicate.ProposedDate {
 	return predicate.ProposedDate(sql.FieldEQ(FieldPriority, v))
+}
+
+// GoogleEventIDEQ applies the EQ predicate on the "google_event_id" field.
+func GoogleEventIDEQ(v string) predicate.ProposedDate {
+	return predicate.ProposedDate(sql.FieldEQ(FieldGoogleEventID, v))
+}
+
+// GoogleEventIDNEQ applies the NEQ predicate on the "google_event_id" field.
+func GoogleEventIDNEQ(v string) predicate.ProposedDate {
+	return predicate.ProposedDate(sql.FieldNEQ(FieldGoogleEventID, v))
+}
+
+// GoogleEventIDIn applies the In predicate on the "google_event_id" field.
+func GoogleEventIDIn(vs ...string) predicate.ProposedDate {
+	return predicate.ProposedDate(sql.FieldIn(FieldGoogleEventID, vs...))
+}
+
+// GoogleEventIDNotIn applies the NotIn predicate on the "google_event_id" field.
+func GoogleEventIDNotIn(vs ...string) predicate.ProposedDate {
+	return predicate.ProposedDate(sql.FieldNotIn(FieldGoogleEventID, vs...))
+}
+
+// GoogleEventIDGT applies the GT predicate on the "google_event_id" field.
+func GoogleEventIDGT(v string) predicate.ProposedDate {
+	return predicate.ProposedDate(sql.FieldGT(FieldGoogleEventID, v))
+}
+
+// GoogleEventIDGTE applies the GTE predicate on the "google_event_id" field.
+func GoogleEventIDGTE(v string) predicate.ProposedDate {
+	return predicate.ProposedDate(sql.FieldGTE(FieldGoogleEventID, v))
+}
+
+// GoogleEventIDLT applies the LT predicate on the "google_event_id" field.
+func GoogleEventIDLT(v string) predicate.ProposedDate {
+	return predicate.ProposedDate(sql.FieldLT(FieldGoogleEventID, v))
+}
+
+// GoogleEventIDLTE applies the LTE predicate on the "google_event_id" field.
+func GoogleEventIDLTE(v string) predicate.ProposedDate {
+	return predicate.ProposedDate(sql.FieldLTE(FieldGoogleEventID, v))
+}
+
+// GoogleEventIDContains applies the Contains predicate on the "google_event_id" field.
+func GoogleEventIDContains(v string) predicate.ProposedDate {
+	return predicate.ProposedDate(sql.FieldContains(FieldGoogleEventID, v))
+}
+
+// GoogleEventIDHasPrefix applies the HasPrefix predicate on the "google_event_id" field.
+func GoogleEventIDHasPrefix(v string) predicate.ProposedDate {
+	return predicate.ProposedDate(sql.FieldHasPrefix(FieldGoogleEventID, v))
+}
+
+// GoogleEventIDHasSuffix applies the HasSuffix predicate on the "google_event_id" field.
+func GoogleEventIDHasSuffix(v string) predicate.ProposedDate {
+	return predicate.ProposedDate(sql.FieldHasSuffix(FieldGoogleEventID, v))
+}
+
+// GoogleEventIDIsNil applies the IsNil predicate on the "google_event_id" field.
+func GoogleEventIDIsNil() predicate.ProposedDate {
+	return predicate.ProposedDate(sql.FieldIsNull(FieldGoogleEventID))
+}
+
+// GoogleEventIDNotNil applies the NotNil predicate on the "google_event_id" field.
+func GoogleEventIDNotNil() predicate.ProposedDate {
+	return predicate.ProposedDate(sql.FieldNotNull(FieldGoogleEventID))
+}
+
+// GoogleEventIDEqualFold applies the EqualFold predicate on the "google_event_id" field.
+func GoogleEventIDEqualFold(v string) predicate.ProposedDate {
+	return predicate.ProposedDate(sql.FieldEqualFold(FieldGoogleEventID, v))
+}
+
+// GoogleEventIDContainsFold applies the ContainsFold predicate on the "google_event_id" field.
+func GoogleEventIDContainsFold(v string) predicate.ProposedDate {
+	return predicate.ProposedDate(sql.FieldContainsFold(FieldGoogleEventID, v))
 }
 
 // StartTimeEQ applies the EQ predicate on the "start_time" field.

@@ -299,12 +299,12 @@ func (pdq *ProposedDateQuery) WithEvent(opts ...func(*EventQuery)) *ProposedDate
 // Example:
 //
 //	var v []struct {
-//		StartTime time.Time `json:"start_time,omitempty"`
+//		GoogleEventID string `json:"google_event_id,omitempty"`
 //		Count int `json:"count,omitempty"`
 //	}
 //
 //	client.ProposedDate.Query().
-//		GroupBy(proposeddate.FieldStartTime).
+//		GroupBy(proposeddate.FieldGoogleEventID).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
 func (pdq *ProposedDateQuery) GroupBy(field string, fields ...string) *ProposedDateGroupBy {
@@ -322,11 +322,11 @@ func (pdq *ProposedDateQuery) GroupBy(field string, fields ...string) *ProposedD
 // Example:
 //
 //	var v []struct {
-//		StartTime time.Time `json:"start_time,omitempty"`
+//		GoogleEventID string `json:"google_event_id,omitempty"`
 //	}
 //
 //	client.ProposedDate.Query().
-//		Select(proposeddate.FieldStartTime).
+//		Select(proposeddate.FieldGoogleEventID).
 //		Scan(ctx, &v)
 func (pdq *ProposedDateQuery) Select(fields ...string) *ProposedDateSelect {
 	pdq.ctx.Fields = append(pdq.ctx.Fields, fields...)

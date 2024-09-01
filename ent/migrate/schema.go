@@ -108,6 +108,7 @@ var (
 	// ProposedDatesColumns holds the columns for the "proposed_dates" table.
 	ProposedDatesColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID, Unique: true},
+		{Name: "google_event_id", Type: field.TypeString, Nullable: true},
 		{Name: "start_time", Type: field.TypeTime},
 		{Name: "end_time", Type: field.TypeTime},
 		{Name: "is_finalized", Type: field.TypeBool, Default: false},
@@ -122,7 +123,7 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "proposed_dates_events_proposed_dates",
-				Columns:    []*schema.Column{ProposedDatesColumns[5]},
+				Columns:    []*schema.Column{ProposedDatesColumns[6]},
 				RefColumns: []*schema.Column{EventsColumns[0]},
 				OnDelete:   schema.SetNull,
 			},

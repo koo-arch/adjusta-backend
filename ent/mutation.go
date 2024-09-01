@@ -2587,20 +2587,21 @@ func (m *JWTKeyMutation) ResetEdge(name string) error {
 // ProposedDateMutation represents an operation that mutates the ProposedDate nodes in the graph.
 type ProposedDateMutation struct {
 	config
-	op            Op
-	typ           string
-	id            *uuid.UUID
-	start_time    *time.Time
-	end_time      *time.Time
-	is_finalized  *bool
-	priority      *int
-	addpriority   *int
-	clearedFields map[string]struct{}
-	event         *uuid.UUID
-	clearedevent  bool
-	done          bool
-	oldValue      func(context.Context) (*ProposedDate, error)
-	predicates    []predicate.ProposedDate
+	op              Op
+	typ             string
+	id              *uuid.UUID
+	google_event_id *string
+	start_time      *time.Time
+	end_time        *time.Time
+	is_finalized    *bool
+	priority        *int
+	addpriority     *int
+	clearedFields   map[string]struct{}
+	event           *uuid.UUID
+	clearedevent    bool
+	done            bool
+	oldValue        func(context.Context) (*ProposedDate, error)
+	predicates      []predicate.ProposedDate
 }
 
 var _ ent.Mutation = (*ProposedDateMutation)(nil)
@@ -2705,6 +2706,55 @@ func (m *ProposedDateMutation) IDs(ctx context.Context) ([]uuid.UUID, error) {
 	default:
 		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
 	}
+}
+
+// SetGoogleEventID sets the "google_event_id" field.
+func (m *ProposedDateMutation) SetGoogleEventID(s string) {
+	m.google_event_id = &s
+}
+
+// GoogleEventID returns the value of the "google_event_id" field in the mutation.
+func (m *ProposedDateMutation) GoogleEventID() (r string, exists bool) {
+	v := m.google_event_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldGoogleEventID returns the old "google_event_id" field's value of the ProposedDate entity.
+// If the ProposedDate object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ProposedDateMutation) OldGoogleEventID(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldGoogleEventID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldGoogleEventID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldGoogleEventID: %w", err)
+	}
+	return oldValue.GoogleEventID, nil
+}
+
+// ClearGoogleEventID clears the value of the "google_event_id" field.
+func (m *ProposedDateMutation) ClearGoogleEventID() {
+	m.google_event_id = nil
+	m.clearedFields[proposeddate.FieldGoogleEventID] = struct{}{}
+}
+
+// GoogleEventIDCleared returns if the "google_event_id" field was cleared in this mutation.
+func (m *ProposedDateMutation) GoogleEventIDCleared() bool {
+	_, ok := m.clearedFields[proposeddate.FieldGoogleEventID]
+	return ok
+}
+
+// ResetGoogleEventID resets all changes to the "google_event_id" field.
+func (m *ProposedDateMutation) ResetGoogleEventID() {
+	m.google_event_id = nil
+	delete(m.clearedFields, proposeddate.FieldGoogleEventID)
 }
 
 // SetStartTime sets the "start_time" field.
@@ -2944,7 +2994,10 @@ func (m *ProposedDateMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *ProposedDateMutation) Fields() []string {
-	fields := make([]string, 0, 4)
+	fields := make([]string, 0, 5)
+	if m.google_event_id != nil {
+		fields = append(fields, proposeddate.FieldGoogleEventID)
+	}
 	if m.start_time != nil {
 		fields = append(fields, proposeddate.FieldStartTime)
 	}
@@ -2965,6 +3018,8 @@ func (m *ProposedDateMutation) Fields() []string {
 // schema.
 func (m *ProposedDateMutation) Field(name string) (ent.Value, bool) {
 	switch name {
+	case proposeddate.FieldGoogleEventID:
+		return m.GoogleEventID()
 	case proposeddate.FieldStartTime:
 		return m.StartTime()
 	case proposeddate.FieldEndTime:
@@ -2982,6 +3037,8 @@ func (m *ProposedDateMutation) Field(name string) (ent.Value, bool) {
 // database failed.
 func (m *ProposedDateMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
 	switch name {
+	case proposeddate.FieldGoogleEventID:
+		return m.OldGoogleEventID(ctx)
 	case proposeddate.FieldStartTime:
 		return m.OldStartTime(ctx)
 	case proposeddate.FieldEndTime:
@@ -2999,6 +3056,13 @@ func (m *ProposedDateMutation) OldField(ctx context.Context, name string) (ent.V
 // type.
 func (m *ProposedDateMutation) SetField(name string, value ent.Value) error {
 	switch name {
+	case proposeddate.FieldGoogleEventID:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetGoogleEventID(v)
+		return nil
 	case proposeddate.FieldStartTime:
 		v, ok := value.(time.Time)
 		if !ok {
@@ -3071,7 +3135,11 @@ func (m *ProposedDateMutation) AddField(name string, value ent.Value) error {
 // ClearedFields returns all nullable fields that were cleared during this
 // mutation.
 func (m *ProposedDateMutation) ClearedFields() []string {
-	return nil
+	var fields []string
+	if m.FieldCleared(proposeddate.FieldGoogleEventID) {
+		fields = append(fields, proposeddate.FieldGoogleEventID)
+	}
+	return fields
 }
 
 // FieldCleared returns a boolean indicating if a field with the given name was
@@ -3084,6 +3152,11 @@ func (m *ProposedDateMutation) FieldCleared(name string) bool {
 // ClearField clears the value of the field with the given name. It returns an
 // error if the field is not defined in the schema.
 func (m *ProposedDateMutation) ClearField(name string) error {
+	switch name {
+	case proposeddate.FieldGoogleEventID:
+		m.ClearGoogleEventID()
+		return nil
+	}
 	return fmt.Errorf("unknown ProposedDate nullable field %s", name)
 }
 
@@ -3091,6 +3164,9 @@ func (m *ProposedDateMutation) ClearField(name string) error {
 // It returns an error if the field is not defined in the schema.
 func (m *ProposedDateMutation) ResetField(name string) error {
 	switch name {
+	case proposeddate.FieldGoogleEventID:
+		m.ResetGoogleEventID()
+		return nil
 	case proposeddate.FieldStartTime:
 		m.ResetStartTime()
 		return nil
