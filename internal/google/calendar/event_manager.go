@@ -89,36 +89,49 @@ func (em *EventManager) fetchEventsFromCalendars(calendarService *Calendar, cale
 }
 
 func (em *EventManager) FetchDraftedEvents(ctx context.Context, userID, accountID uuid.UUID, email string) ([]*models.EventDraftDetail, error) {
-	tx, err := em.client.Tx(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("failed starting transaction: %w", err)
-	}
-
-	defer transaction.HandleTransaction(tx, &err)
-
 	isPrimary := true
-	entCalendar, err := em.calendarRepo.FindByFields(ctx, tx, accountID, nil, nil, &isPrimary)
+	findOptions := dbCalendar.CalendarQueryOptions{
+		IsPrimary: &isPrimary,
+		WithEvents: true,
+		WithProposedDates: true,
+	}
+	entCalendar, err := em.calendarRepo.FindByFields(ctx, nil, accountID, findOptions)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get primary calendar for account: %s, error: %w", email, err)
 	}
 
-	entEvents, err := em.eventRepo.FilterByCalendarID(ctx, tx, entCalendar.CalendarID)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get events for account: %s, error: %w", email, err)
+	if entCalendar.Edges.Events == nil {
+		return nil, fmt.Errorf("failed to get events for account: %s", email)
 	}
 
-	var events []*models.EventDraftDetail
-	for _, entEvent := range entEvents {
+	var draftedEvents []*models.EventDraftDetail
+	for _, entEvent := range entCalendar.Edges.Events {
+		var proposedDates []models.ProposedDate
 
-		events = append(events, &models.EventDraftDetail{
+		if entEvent.Edges.ProposedDates == nil {
+			continue
+		}
+		for _, entDate := range entEvent.Edges.ProposedDates {
+			proposedDates = append(proposedDates, models.ProposedDate{
+				ID:          entDate.ID,
+				EventID:     entDate.GoogleEventID,
+				Start:       &entDate.StartTime,
+				End:         &entDate.EndTime,
+				Priority:    entDate.Priority,
+				IsFinalized: entDate.IsFinalized,
+			})
+		}
+
+		draftedEvents = append(draftedEvents, &models.EventDraftDetail{
 			ID:            entEvent.ID,
 			Title:         entEvent.Summary,
 			Location:      entEvent.Location,
 			Description:   entEvent.Description,
+			ProposedDates: proposedDates,
 		})
 	}
 
-	return events, nil
+	return draftedEvents, nil
 }
 
 func (em *EventManager) FetchDraftedEventDetail(ctx context.Context, userID, accountID uuid.UUID, email string, eventID uuid.UUID) (*models.EventDraftDetail, error) {
@@ -129,18 +142,20 @@ func (em *EventManager) FetchDraftedEventDetail(ctx context.Context, userID, acc
 
 	defer transaction.HandleTransaction(tx, &err)
 
-	entEvent, err := em.eventRepo.Read(ctx, tx, eventID)
+	queryOpt := event.EventQueryOptions{
+		WithProposedDates: true,
+	}
+	entEvent, err := em.eventRepo.Read(ctx, tx, eventID, queryOpt)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get event for account: %s, error: %w", email, err)
 	}
 
-	entDates, err := em.dateRepo.FilterByEventID(ctx, tx, eventID)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get proposed dates for account: %s, error: %w", email, err)
+	if entEvent.Edges.ProposedDates == nil {
+		return nil, fmt.Errorf("failed to get proposed dates for account: %s", email)
 	}
 
 	var proposedDates []models.ProposedDate
-	for _, entDate := range entDates {
+	for _, entDate := range entEvent.Edges.ProposedDates {
 		proposedDates = append(proposedDates, models.ProposedDate{
 			ID:          entDate.ID,
 			EventID:     entDate.GoogleEventID,
@@ -180,7 +195,10 @@ func (em *EventManager) CreateDraftedEvents(ctx context.Context, userID, account
 	defer transaction.HandleTransaction(tx, &err)
 
 	isPrimary := true
-	entCalendar, err := em.calendarRepo.FindByFields(ctx, tx, accountID, nil, nil, &isPrimary)
+	findOptions := dbCalendar.CalendarQueryOptions{
+		IsPrimary: &isPrimary,
+	}
+	entCalendar, err := em.calendarRepo.FindByFields(ctx, tx, accountID, findOptions)
 	if err != nil {
 		return fmt.Errorf("failed to get primary calendar for account: %s, error: %w", email, err)
 	}
@@ -232,7 +250,10 @@ func (em *EventManager) UpdateDraftedEvents(ctx context.Context, userID, account
 
 	// プライマリカレンダーを取得
 	isPrimary := true
-	_, err = em.calendarRepo.FindByFields(ctx, tx, accountID, nil, nil, &isPrimary)
+	findOptions := dbCalendar.CalendarQueryOptions{
+		IsPrimary: &isPrimary,
+	}
+	_, err = em.calendarRepo.FindByFields(ctx, tx, accountID, findOptions)
 	if err != nil {
 		return fmt.Errorf("failed to get primary calendar for account: %s, error: %w", email, err)
 	}

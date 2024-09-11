@@ -20,35 +20,50 @@ func NewEventRepository(client *ent.Client) *EventRepositoryImpl {
 	}
 }
 
-func (r *EventRepositoryImpl) Read(ctx context.Context, tx *ent.Tx, id uuid.UUID) (*ent.Event, error) {
+func (r *EventRepositoryImpl) Read(ctx context.Context, tx *ent.Tx, id uuid.UUID, opt EventQueryOptions) (*ent.Event, error) {
+	query := r.client.Event.Query()
 	if tx != nil {
-		return tx.Event.Get(ctx, id)
+		query = tx.Event.Query()
 	}
-	return r.client.Event.Get(ctx, id)
+
+	if opt.WithProposedDates {
+		query = query.WithProposedDates()
+	}
+
+	return query.Where(event.IDEQ(id)).Only(ctx)
 }
 
-func (r *EventRepositoryImpl) FilterByCalendarID(ctx context.Context, tx *ent.Tx, calendarID string) ([]*ent.Event, error) {
+func (r *EventRepositoryImpl) FilterByCalendarID(ctx context.Context, tx *ent.Tx, calendarID string, opt EventQueryOptions) ([]*ent.Event, error) {
 	filterEvent := r.client.Event.Query()
 	if tx != nil {
 		filterEvent = tx.Event.Query()
 	}
-	return filterEvent.
-		Where(event.HasCalendarWith(dbCalendar.CalendarIDEQ(calendarID))).
-		All(ctx)
+
+	filterEvent = filterEvent.Where(event.HasCalendarWith(dbCalendar.CalendarIDEQ(calendarID)))
+
+	// イベントに対するオフセットとリミットを適用
+	if opt.EventOffset > 0 {
+		filterEvent = filterEvent.Offset(opt.EventOffset)
+	}
+	if opt.EventLimit > 0 {
+		filterEvent = filterEvent.Limit(opt.EventLimit)
+	}
+
+	// イベントの提案日に対するオフセットとリミットを適用
+	if opt.WithProposedDates {
+		filterEvent = filterEvent.WithProposedDates(func(query *ent.ProposedDateQuery) {
+			if opt.ProposedDateOffset > 0 {
+				query.Offset(opt.ProposedDateOffset)
+			}
+			if opt.ProposedDateLimit > 0 {
+				query.Limit(opt.ProposedDateLimit)
+			}
+		})
+	}
+
+	return filterEvent.All(ctx)
 }
 
-func (r *EventRepositoryImpl) FindByCalendarIDAndEventID(ctx context.Context, tx *ent.Tx, calendarID, eventID string) (*ent.Event, error) {
-	findEvent := r.client.Event.Query()
-	if tx != nil {
-		findEvent = tx.Event.Query()
-	}
-	return findEvent.
-		Where(
-			event.HasCalendarWith(dbCalendar.CalendarIDEQ(calendarID)),
-			event.EventIDEQ(eventID),
-		).
-		Only(ctx)
-}
 
 func (r *EventRepositoryImpl) Create(ctx context.Context, tx *ent.Tx, event *calendar.Event, entCalendar *ent.Calendar) (*ent.Event, error) {
 	eventCreate := r.client.Event.Create()
