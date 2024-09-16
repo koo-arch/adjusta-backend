@@ -315,7 +315,15 @@ func (em *EventManager) updateProposedDates(ctx context.Context, tx *ent.Tx, eve
 	// 日程候補を更新または削除
 	for _, date := range existingDates {
 		if updateDate, ok := updateDateMap[date.ID]; ok {
-			_, err = em.dateRepo.Update(ctx, tx, date.ID, &updateDate.EventID, updateDate.Start, updateDate.End, &updateDate.Priority, &updateDate.IsFinalized)
+
+			dateOptions := proposeddate.ProposedDateQueryOptions{
+				GoogleEventID: &updateDate.EventID,
+				StartTime:     updateDate.Start,
+				EndTime:       updateDate.End,
+				Priority:      &updateDate.Priority,
+				IsFinalized:   &updateDate.IsFinalized,
+			}
+			_, err = em.dateRepo.Update(ctx, tx, date.ID, dateOptions)
 			if err != nil {
 				return fmt.Errorf("failed to update proposed dates, error: %w", err)
 			}

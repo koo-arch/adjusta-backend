@@ -58,30 +58,30 @@ func (r *ProposedDateRepositoryImpl) Create(ctx context.Context, tx *ent.Tx, goo
 	return proposedDateCreate.Save(ctx)
 }
 
-func (r *ProposedDateRepositoryImpl) Update(ctx context.Context, tx *ent.Tx, id uuid.UUID, googleEventID *string, startTime, endTime *time.Time, priority *int, isFinalized *bool) (*ent.ProposedDate, error) {
+func (r *ProposedDateRepositoryImpl) Update(ctx context.Context, tx *ent.Tx, id uuid.UUID, opt ProposedDateQueryOptions) (*ent.ProposedDate, error) {
 	proposedDateUpdate := r.client.ProposedDate.UpdateOneID(id)
 	if tx != nil {
 		proposedDateUpdate = tx.ProposedDate.UpdateOneID(id)
 	}
 
-	if googleEventID != nil {
-		proposedDateUpdate = proposedDateUpdate.SetGoogleEventID(*googleEventID)
+	if opt.GoogleEventID != nil {
+		proposedDateUpdate = proposedDateUpdate.SetGoogleEventID(*opt.GoogleEventID)
 	}
 
-	if startTime != nil {
-		proposedDateUpdate = proposedDateUpdate.SetStartTime(*startTime)
+	if opt.StartTime!= nil {
+		proposedDateUpdate = proposedDateUpdate.SetStartTime(*opt.StartTime)
 	}
 
-	if endTime != nil {
-		proposedDateUpdate = proposedDateUpdate.SetEndTime(*endTime)
+	if opt.EndTime != nil {
+		proposedDateUpdate = proposedDateUpdate.SetEndTime(*opt.EndTime)
 	}
 
-	if priority != nil {
-		proposedDateUpdate = proposedDateUpdate.SetPriority(*priority)
+	if opt.Priority != nil {
+		proposedDateUpdate = proposedDateUpdate.SetPriority(*opt.Priority)
 	}
 
-	if isFinalized != nil {
-		proposedDateUpdate = proposedDateUpdate.SetIsFinalized(*isFinalized)
+	if opt.IsFinalized != nil {
+		proposedDateUpdate = proposedDateUpdate.SetIsFinalized(*opt.IsFinalized)
 	}
 
 	return proposedDateUpdate.Save(ctx)

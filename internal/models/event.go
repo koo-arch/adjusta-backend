@@ -30,22 +30,22 @@ type EventDraftCreation struct {
 type SelectedDate struct {
 	Start time.Time `json:"start"`
 	End   time.Time `json:"end"`
-	Priority int `json:"priority"`
+	Priority int 	`json:"priority"`
 }
 
 type EventDraftDetail struct {
-	ID            uuid.UUID         `json:"id" binding:"required"`
+	ID            uuid.UUID      `json:"id" binding:"required"`
 	Title         string         `json:"title"`
 	Location      string         `json:"location"`
 	Description   string         `json:"description"`
-	ProposedDates []ProposedDate `json:"Proposed_dates"`
+	ProposedDates []ProposedDate `json:"proposed_dates"`
 }
 
 type ProposedDate struct {
-	ID          uuid.UUID `json:"id"`
-	EventID     string `json:"event_id"`
-	Start       *time.Time `json:"start_date"`
-	End         *time.Time `json:"end_date"`
-	Priority    int `json:"priority"`
-	IsFinalized bool `json:"is_finalized"`
+	ID          uuid.UUID 		`json:"id"`
+	EventID     string 			`json:"event_id"`
+	Start       *time.Time 		`json:"start_date"`
+	End         *time.Time 		`json:"end_date"`
+	Priority    int 			`json:"priority"`
+	IsFinalized bool 			`json:"is_finalized"`
 }
