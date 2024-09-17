@@ -9,13 +9,13 @@ import (
 	"github.com/google/uuid"
 	"github.com/koo-arch/adjusta-backend/ent"
 	"github.com/koo-arch/adjusta-backend/internal/auth"
-	"github.com/koo-arch/adjusta-backend/internal/google/calendar"
 	"github.com/koo-arch/adjusta-backend/internal/models"
 	"github.com/koo-arch/adjusta-backend/internal/repo/account"
 	dbCalendar "github.com/koo-arch/adjusta-backend/internal/repo/calendar"
 	"github.com/koo-arch/adjusta-backend/internal/repo/event"
 	"github.com/koo-arch/adjusta-backend/internal/repo/proposeddate"
 	"github.com/koo-arch/adjusta-backend/internal/repo/user"
+	appEvents "github.com/koo-arch/adjusta-backend/internal/apps/events"
 )
 
 func FetchEventListHandler(client *ent.Client) gin.HandlerFunc {
@@ -52,7 +52,7 @@ func FetchEventListHandler(client *ent.Client) gin.HandlerFunc {
 		eventRepo := event.NewEventRepository(client)
 		dateRepo := proposeddate.NewProposedDateRepository(client)
 
-		eventManager := calendar.NewEventManager(client, authManager, calendarRepo, eventRepo, dateRepo)
+		eventManager := appEvents.NewEventManager(client, authManager, calendarRepo, eventRepo, dateRepo)
 
 		accountsEvents, err := eventManager.FetchAllEvents(ctx, userid, userAccounts)
 		if err != nil {
@@ -109,7 +109,7 @@ func FetchEventDraftListHandler(client *ent.Client) gin.HandlerFunc {
 		eventRepo := event.NewEventRepository(client)
 		dateRepo := proposeddate.NewProposedDateRepository(client)
 
-		eventManager := calendar.NewEventManager(client, authManager, calendarRepo, eventRepo, dateRepo)
+		eventManager := appEvents.NewEventManager(client, authManager, calendarRepo, eventRepo, dateRepo)
 
 		draftedEvents, err := eventManager.FetchDraftedEvents(ctx, userid, userAccount.ID, emailStr)
 		if err != nil {
@@ -180,7 +180,7 @@ func FetchEventDraftDetailHandler(client *ent.Client) gin.HandlerFunc {
 		eventRepo := event.NewEventRepository(client)
 		dateRepo := proposeddate.NewProposedDateRepository(client)
 
-		eventManager := calendar.NewEventManager(client, authManager, calendarRepo, eventRepo, dateRepo)
+		eventManager := appEvents.NewEventManager(client, authManager, calendarRepo, eventRepo, dateRepo)
 
 		draftedEvent, err := eventManager.FetchDraftedEventDetail(ctx, userid, userAccount.ID, emailStr, eventID)
 		if err != nil {
@@ -242,7 +242,7 @@ func CreateEventDraftHandler(client *ent.Client) gin.HandlerFunc {
 		calendarRepo := dbCalendar.NewCalendarRepository(client)
 		eventRepo := event.NewEventRepository(client)
 		dateRepo := proposeddate.NewProposedDateRepository(client)
-		eventManager := calendar.NewEventManager(client, authManager, calendarRepo, eventRepo, dateRepo)
+		eventManager := appEvents.NewEventManager(client, authManager, calendarRepo, eventRepo, dateRepo)
 
 		err = eventManager.CreateDraftedEvents(ctx, userid, a.ID, emailStr, eventDraft)
 		if err != nil {
@@ -322,7 +322,7 @@ func EventFinalizeHandler(client *ent.Client) gin.HandlerFunc {
 		eventRepo := event.NewEventRepository(client)
 		dateRepo := proposeddate.NewProposedDateRepository(client)
 
-		eventManager := calendar.NewEventManager(client, authManager, calendarRepo, eventRepo, dateRepo)
+		eventManager := appEvents.NewEventManager(client, authManager, calendarRepo, eventRepo, dateRepo)
 
 		err = eventManager.FinalizeProposedDate(ctx, userid, userAccount.ID, eventID, emailStr, confirmEvent)
 		if err != nil {

@@ -13,6 +13,7 @@ import (
 	dbCalendar "github.com/koo-arch/adjusta-backend/internal/repo/calendar"
 	"github.com/koo-arch/adjusta-backend/internal/repo/event"
 	"github.com/koo-arch/adjusta-backend/internal/repo/proposeddate"
+	customCalendar "github.com/koo-arch/adjusta-backend/internal/google/calendar"
 	"github.com/koo-arch/adjusta-backend/internal/transaction"
 	"google.golang.org/api/calendar/v3"
 	"google.golang.org/api/googleapi"
@@ -45,7 +46,7 @@ func (em *EventManager) FetchAllEvents(ctx context.Context, userID uuid.UUID, us
 			return nil, fmt.Errorf("failed to verify token for account: %s, error: %w", userAccount.Email, err)
 		}
 
-		calendarService, err := NewCalendar(ctx, token)
+		calendarService, err := customCalendar.NewCalendar(ctx, token)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create calendar service for account: %s, error: %w", userAccount.Email, err)
 		}
@@ -74,7 +75,7 @@ func (em *EventManager) FetchAllEvents(ctx context.Context, userID uuid.UUID, us
 	return accountsEvents, nil
 }
 
-func (em *EventManager) fetchEventsFromCalendars(calendarService *Calendar, calendars []*ent.Calendar, startTime, endTime time.Time) ([]*models.Event, error) {
+func (em *EventManager) fetchEventsFromCalendars(calendarService *customCalendar.Calendar, calendars []*ent.Calendar, startTime, endTime time.Time) ([]*models.Event, error) {
 	var events []*models.Event
 
 	for _, cal := range calendars {
@@ -188,7 +189,7 @@ func (em *EventManager) CreateDraftedEvents(ctx context.Context, userID, account
 		return fmt.Errorf("failed to verify token for account: %s, error: %w", email, err)
 	}
 
-	calendarService, err := NewCalendar(ctx, token)
+	calendarService, err := customCalendar.NewCalendar(ctx, token)
 	if err != nil {
 		return fmt.Errorf("failed to create calendar service for account: %s, error: %w", email, err)
 	}
@@ -241,7 +242,7 @@ func (em *EventManager) UpdateDraftedEvents(ctx context.Context, userID, account
 	}
 
 	// Google Calendarサービスを作成
-	calendarService, err := NewCalendar(ctx, token)
+	calendarService, err := customCalendar.NewCalendar(ctx, token)
 	if err != nil {
 		return fmt.Errorf("failed to create calendar service for account: %s, error: %w", email, err)
 	}
@@ -297,7 +298,7 @@ func (em *EventManager) FinalizeProposedDate(ctx context.Context, userID, accoun
 	}
 
 	// Google Calendarサービスを作成
-	calendarService, err := NewCalendar(ctx, token)
+	calendarService, err := customCalendar.NewCalendar(ctx, token)
 	if err != nil {
 		return fmt.Errorf("failed to create calendar service for account: %s, error: %w", email, err)
 	}
@@ -494,7 +495,7 @@ func (em *EventManager) updateProposedDates(ctx context.Context, tx *ent.Tx, eve
 	return nil
 }
 
-func (em *EventManager) createGoogleEvents(calendarService *Calendar, eventReq *models.EventDraftCreation) ([]*calendar.Event, error) {
+func (em *EventManager) createGoogleEvents(calendarService *customCalendar.Calendar, eventReq *models.EventDraftCreation) ([]*calendar.Event, error) {
 	// Googleカレンダーに登録されたイベントを追跡するスライス
 	insertedGoogleEvents := make([]*calendar.Event, len(eventReq.SelectedDates))
 
@@ -550,7 +551,7 @@ func (em *EventManager) createGoogleEvents(calendarService *Calendar, eventReq *
 	return insertedGoogleEvents, nil
 }
 
-func (em *EventManager) updateGoogleCalendarEvents(calendarService *Calendar, eventReq *models.EventDraftDetail) error {
+func (em *EventManager) updateGoogleCalendarEvents(calendarService *customCalendar.Calendar, eventReq *models.EventDraftDetail) error {
 	// Googleカレンダーに登録されたイベントを追跡するスライス
 	var backupGoogleEvents []*calendar.Event
 
@@ -603,7 +604,7 @@ func (em *EventManager) updateGoogleCalendarEvents(calendarService *Calendar, ev
 	return nil
 }
 
-func (em *EventManager) deleteGoogleEvents(calendarService *Calendar, events []*calendar.Event) error {
+func (em *EventManager) deleteGoogleEvents(calendarService *customCalendar.Calendar, events []*calendar.Event) error {
 	for _, event := range events {
 		if event == nil || event.Id == "" {
 			continue // eventまたはIDがnilの場合はスキップ
