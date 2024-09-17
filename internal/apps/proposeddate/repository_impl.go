@@ -2,7 +2,6 @@ package proposeddate
 
 import (
 	"context"
-	"time"
 
 	"github.com/google/uuid"
 	"google.golang.org/api/calendar/v3"
@@ -39,7 +38,18 @@ func (r *ProposedDateRepositoryImpl) FilterByEventID(ctx context.Context, tx *en
 		All(ctx)
 }
 
-func (r *ProposedDateRepositoryImpl) Create(ctx context.Context, tx *ent.Tx, googleEventID *string, startTime, endTime time.Time, priority int, entEvent *ent.Event) (*ent.ProposedDate, error) {
+func (r *ProposedDateRepositoryImpl) FilterByEventIDWithFinalized(ctx context.Context, tx *ent.Tx, eventID uuid.UUID, isFinalized bool) ([]*ent.ProposedDate, error) {
+	filterProposedDate := r.client.ProposedDate.Query()
+	if tx != nil {
+		filterProposedDate = tx.ProposedDate.Query()
+	}
+	return filterProposedDate.
+		Where(proposeddate.HasEventWith(event.IDEQ(eventID))).
+		Where(proposeddate.IsFinalized(isFinalized)).
+		All(ctx)
+}
+
+func (r *ProposedDateRepositoryImpl) Create(ctx context.Context, tx *ent.Tx, googleEventID *string, opt ProposedDateQueryOptions, entEvent *ent.Event) (*ent.ProposedDate, error) {
 	proposedDateCreate := r.client.ProposedDate.Create()
 	if tx != nil {
 		proposedDateCreate = tx.ProposedDate.Create()
@@ -50,10 +60,14 @@ func (r *ProposedDateRepositoryImpl) Create(ctx context.Context, tx *ent.Tx, goo
 	}
 
 	proposedDateCreate = proposedDateCreate.
-		SetStartTime(startTime).
-		SetEndTime(endTime).
-		SetPriority(priority).
+		SetStartTime(*opt.StartTime).
+		SetEndTime(*opt.EndTime).
+		SetPriority(*opt.Priority).
 		SetEvent(entEvent)
+	
+	if opt.IsFinalized != nil {
+		proposedDateCreate = proposedDateCreate.SetIsFinalized(*opt.IsFinalized)
+	}
 
 	return proposedDateCreate.Save(ctx)
 }
@@ -122,4 +136,18 @@ func (r *ProposedDateRepositoryImpl) CreateBulk(ctx context.Context, tx *ent.Tx,
 	}
 
 	return r.client.ProposedDate.CreateBulk(proposedDateCreates...).Save(ctx)
+}
+
+func (r *ProposedDateRepositoryImpl) ResetFinalized(ctx context.Context, tx *ent.Tx, eventID uuid.UUID) error {
+	reset := r.client.ProposedDate.Update()
+	if tx != nil {
+		reset = tx.ProposedDate.Update()
+	}
+
+	_, err := reset.
+		Where(proposeddate.HasEventWith(event.IDEQ(eventID))).
+		SetIsFinalized(false).
+		Save(ctx)
+	
+	return err
 }

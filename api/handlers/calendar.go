@@ -255,3 +255,83 @@ func CreateEventDraftHandler(client *ent.Client) gin.HandlerFunc {
 		c.JSON(http.StatusOK, gin.H{"message": "success"})
 	}
 }
+
+func EventFinalizeHandler(client *ent.Client) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		ctx := c.Request.Context()
+
+		session := sessions.Default(c)
+		useridStr, ok := session.Get("userid").(string)
+		if !ok {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "failed to get userid from session"})
+			c.Abort()
+			return
+		}
+
+		userid, err := uuid.Parse(useridStr)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid userid format"})
+			c.Abort()
+			return
+		}
+
+		email, ok := c.Get("email")
+		if !ok {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "failed to get email from context"})
+			c.Abort()
+			return
+	}
+	emailStr, ok := email.(string)
+
+	eventIDParam := c.Param("eventID")
+	if eventIDParam == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "missing eventID"})
+		c.Abort()
+		return
+	}
+
+	eventID, err := uuid.Parse(eventIDParam)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid eventID format"})
+		c.Abort()
+		return
+	}
+
+	var confirmEvent *models.ConfrimEvent
+	if err := c.ShouldBindJSON(&confirmEvent); err != nil {
+		fmt.Printf("failed to bind json: %v", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "failed to bind json"})
+		c.Abort()
+		return
+	}
+
+	fmt.Printf("confirmEvent: %v\n", confirmEvent)
+
+	userRepo := user.NewUserRepository(client)
+	accountRepo := account.NewAccountRepository(client)
+	authManager := auth.NewAuthManager(client, userRepo, accountRepo)
+
+	userAccount, err := accountRepo.FindByUserIDAndEmail(ctx, nil, userid, emailStr)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to get user accounts"})
+		c.Abort()
+		return
+	}
+
+	calendarRepo := dbCalendar.NewCalendarRepository(client)
+	eventRepo := event.NewEventRepository(client)
+	dateRepo := proposeddate.NewProposedDateRepository(client)
+
+	eventManager := calendar.NewEventManager(client, authManager, calendarRepo, eventRepo, dateRepo)
+
+	err = eventManager.FinalizeProposedDate(ctx, userid, userAccount.ID, eventID, emailStr, confirmEvent)
+	if err != nil {
+		fmt.Printf("failed to finalize event: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to finalize event"})
+		c.Abort()
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "success"})
+	}
+}

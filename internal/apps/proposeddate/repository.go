@@ -21,8 +21,10 @@ type ProposedDateQueryOptions struct {
 type ProposedDateRepository interface {
 	Read(ctx context.Context, tx *ent.Tx, id uuid.UUID) (*ent.ProposedDate, error)
 	FilterByEventID(ctx context.Context, tx *ent.Tx, eventID uuid.UUID) ([]*ent.ProposedDate, error)
-	Create(ctx context.Context, tx *ent.Tx, googleEventID *string, startTime, endTime time.Time, priority int, entEvent *ent.Event) (*ent.ProposedDate, error)
+	FilterByEventIDWithFinalized(ctx context.Context, tx *ent.Tx, eventID uuid.UUID, isFinalized bool) ([]*ent.ProposedDate, error)
+	Create(ctx context.Context, tx *ent.Tx, googleEventID *string, opt ProposedDateQueryOptions, entEvent *ent.Event) (*ent.ProposedDate, error)
 	Update(ctx context.Context, tx *ent.Tx, id uuid.UUID, opt ProposedDateQueryOptions) (*ent.ProposedDate, error)
 	Delete(ctx context.Context, tx *ent.Tx, id uuid.UUID) error
 	CreateBulk(ctx context.Context, tx *ent.Tx, selectedDates []models.SelectedDate, googleEvents []*calendar.Event, entEvent *ent.Event) ([]*ent.ProposedDate, error)
+	ResetFinalized(ctx context.Context, tx *ent.Tx, eventID uuid.UUID) error
 }

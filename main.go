@@ -71,7 +71,7 @@ func main() {
 
 	router.Use(cors.New(cors.Config{
 		AllowOrigins: allowedOrigins,
-		AllowMethods: []string{"GET", "POST", "PUT", "DELETE"},
+		AllowMethods: []string{"GET", "POST", "PUT","PATCH", "DELETE"},
 		AllowHeaders: []string{"Origin", "Content-Length", "Content-Type", "Authorization"},
 		AllowCredentials: true,
 		MaxAge: 12 * time.Hour,
@@ -105,7 +105,8 @@ func main() {
 			calendar.GET("/list", handlers.FetchEventListHandler(client))
 			calendar.GET("/event/draft/list", handlers.FetchEventDraftListHandler(client))
 			calendar.GET("/event/draft/:eventID", handlers.FetchEventDraftDetailHandler(client))
-			calendar.POST("event/draft", handlers.CreateEventDraftHandler(client))
+			calendar.POST("/event/draft", handlers.CreateEventDraftHandler(client))
+			calendar.PATCH("/event/confirm/:eventID", handlers.EventFinalizeHandler(client))
 		}
 	}
 	
