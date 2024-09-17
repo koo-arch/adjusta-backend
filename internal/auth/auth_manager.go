@@ -6,11 +6,11 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/koo-arch/adjusta-backend/ent"
-	"github.com/koo-arch/adjusta-backend/internal/apps/account"
-	"github.com/koo-arch/adjusta-backend/internal/apps/user"
 	"github.com/koo-arch/adjusta-backend/internal/google/oauth"
 	"github.com/koo-arch/adjusta-backend/internal/google/userinfo"
 	"github.com/koo-arch/adjusta-backend/internal/models"
+	"github.com/koo-arch/adjusta-backend/internal/repo/account"
+	"github.com/koo-arch/adjusta-backend/internal/repo/user"
 	"github.com/koo-arch/adjusta-backend/internal/transaction"
 	"golang.org/x/oauth2"
 )
@@ -51,7 +51,7 @@ func (am *AuthManager) CreateUserAndAccount(ctx context.Context, userInfo *useri
 		return nil, fmt.Errorf("failed starting transaction: %w", err)
 	}
 
-	// 
+	//
 	defer transaction.HandleTransaction(tx, &err)
 
 	u, err := am.userRepo.Create(ctx, tx, userInfo.Email, jwtToken)
@@ -67,7 +67,7 @@ func (am *AuthManager) CreateUserAndAccount(ctx context.Context, userInfo *useri
 	return u, nil
 }
 
-func (am *AuthManager) UpdateJWTAndOAuth(ctx context.Context ,userID uuid.UUID, jwtToken *models.JWTToken, oauthToken *oauth2.Token) (*ent.User, error) {
+func (am *AuthManager) UpdateJWTAndOAuth(ctx context.Context, userID uuid.UUID, jwtToken *models.JWTToken, oauthToken *oauth2.Token) (*ent.User, error) {
 	tx, err := am.client.Tx(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed starting transaction: %w", err)
@@ -95,53 +95,53 @@ func (am *AuthManager) UpdateJWTAndOAuth(ctx context.Context ,userID uuid.UUID, 
 }
 
 func (am *AuthManager) AddAccountToUser(ctx context.Context, userID uuid.UUID, accountUserInfo *userinfo.UserInfo, oauthToken *oauth2.Token) (*ent.Account, error) {
-    // トランザクションを開始
-    tx, err := am.client.Tx(ctx)
-    if err != nil {
-        return nil, fmt.Errorf("failed starting transaction: %w", err)
-    }
+	// トランザクションを開始
+	tx, err := am.client.Tx(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed starting transaction: %w", err)
+	}
 
-    // トランザクションエラー用の変数を別に定義
-    var txErr error
+	// トランザクションエラー用の変数を別に定義
+	var txErr error
 
-    // トランザクションの終了時にコミットまたはロールバックを確実に実行
-   defer transaction.HandleTransaction(tx, &txErr)
+	// トランザクションの終了時にコミットまたはロールバックを確実に実行
+	defer transaction.HandleTransaction(tx, &txErr)
 
-    // ユーザーの検索
-    u, err := am.userRepo.Read(ctx, tx, userID)
-    if err != nil {
-        if !ent.IsNotFound(err) {
-            txErr = err // トランザクションエラーをセット
-            return nil, fmt.Errorf("error querying user: %w", err)
-        }
-        txErr = err // ユーザーが見つからなかった場合もエラーセット
-        return nil, fmt.Errorf("user not found: %w", err)
-    }
+	// ユーザーの検索
+	u, err := am.userRepo.Read(ctx, tx, userID)
+	if err != nil {
+		if !ent.IsNotFound(err) {
+			txErr = err // トランザクションエラーをセット
+			return nil, fmt.Errorf("error querying user: %w", err)
+		}
+		txErr = err // ユーザーが見つからなかった場合もエラーセット
+		return nil, fmt.Errorf("user not found: %w", err)
+	}
 
-    // アカウントが存在するか確認し、存在する場合は更新
-    account, err := am.accountRepo.FindByUserIDAndEmail(ctx, tx, u.ID, accountUserInfo.Email)
-    if err != nil {
-        if ent.IsNotFound(err) {
-            // アカウントが存在しない場合は作成
-            account, createErr := am.accountRepo.Create(ctx, tx, accountUserInfo.Email, accountUserInfo.GoogleID, oauthToken, u)
-            if createErr != nil {
-                txErr = createErr // トランザクションエラーをセット
-                return nil, fmt.Errorf("error creating account: %w", createErr)
-            }
-            return account, nil
-        }
-        txErr = err // その他のエラー
-        return nil, fmt.Errorf("error querying account: %w", err)
-    }
+	// アカウントが存在するか確認し、存在する場合は更新
+	account, err := am.accountRepo.FindByUserIDAndEmail(ctx, tx, u.ID, accountUserInfo.Email)
+	if err != nil {
+		if ent.IsNotFound(err) {
+			// アカウントが存在しない場合は作成
+			account, createErr := am.accountRepo.Create(ctx, tx, accountUserInfo.Email, accountUserInfo.GoogleID, oauthToken, u)
+			if createErr != nil {
+				txErr = createErr // トランザクションエラーをセット
+				return nil, fmt.Errorf("error creating account: %w", createErr)
+			}
+			return account, nil
+		}
+		txErr = err // その他のエラー
+		return nil, fmt.Errorf("error querying account: %w", err)
+	}
 
-    // アカウントが存在する場合は更新
-    account, updateErr := am.accountRepo.Update(ctx, tx, account.ID, oauthToken)
-    if updateErr != nil {
-        txErr = updateErr // トランザクションエラーをセット
-        return nil, fmt.Errorf("error updating account: %w", updateErr)
-    }
+	// アカウントが存在する場合は更新
+	account, updateErr := am.accountRepo.Update(ctx, tx, account.ID, oauthToken)
+	if updateErr != nil {
+		txErr = updateErr // トランザクションエラーをセット
+		return nil, fmt.Errorf("error updating account: %w", updateErr)
+	}
 
-    return account, nil
+	return account, nil
 }
 
 func (am *AuthManager) VerifyOAuthToken(ctx context.Context, userID uuid.UUID, accountEmail string) (*oauth2.Token, error) {

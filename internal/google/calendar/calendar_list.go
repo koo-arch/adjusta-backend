@@ -7,12 +7,12 @@ import (
 	"github.com/google/uuid"
 	"github.com/koo-arch/adjusta-backend/ent"
 	"github.com/koo-arch/adjusta-backend/internal/auth"
-	"github.com/koo-arch/adjusta-backend/internal/apps/calendar"
+	"github.com/koo-arch/adjusta-backend/internal/repo/calendar"
 )
 
 type AccountsCalendars struct {
-	AccountID uuid.UUID   `json:"account_id"`
-	Email     string      `json:"email"`
+	AccountID uuid.UUID       `json:"account_id"`
+	Email     string          `json:"email"`
 	Calendars []*CalendarList `json:"calendars"`
 }
 
@@ -39,19 +39,18 @@ func RegisterCalendarList(ctx context.Context, authManager *auth.AuthManager, us
 			return nil, fmt.Errorf("failed to sync calendars for account: %s, error: %w", userAccount.Email, err)
 		}
 
-			
 		accountsCalendars = append(accountsCalendars, &AccountsCalendars{
 			AccountID: userAccount.ID,
 			Email:     userAccount.Email,
 			Calendars: calendars,
 		})
-			
+
 	}
 
 	return accountsCalendars, nil
 }
 
-func syncCalendar(ctx context.Context, calendars []*CalendarList ,userAccount *ent.Account,  calendarRepo calendar.CalendarRepository) error {
+func syncCalendar(ctx context.Context, calendars []*CalendarList, userAccount *ent.Account, calendarRepo calendar.CalendarRepository) error {
 	dbCalendars, err := calendarRepo.FilterByAccountID(ctx, nil, userAccount.ID)
 	if err != nil {
 		return fmt.Errorf("failed to get calendars from db for account: %s, error: %w", userAccount.Email, err)

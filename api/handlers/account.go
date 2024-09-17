@@ -3,21 +3,20 @@ package handlers
 import (
 	"net/http"
 
-	"github.com/gin-gonic/gin"
 	"github.com/gin-contrib/sessions"
+	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/koo-arch/adjusta-backend/ent"
-	"github.com/koo-arch/adjusta-backend/internal/apps/account"
-	"github.com/koo-arch/adjusta-backend/internal/apps/user"
 	"github.com/koo-arch/adjusta-backend/internal/auth"
 	"github.com/koo-arch/adjusta-backend/internal/google/userinfo"
+	"github.com/koo-arch/adjusta-backend/internal/repo/account"
+	"github.com/koo-arch/adjusta-backend/internal/repo/user"
 )
 
 type AccountsInfo struct {
-	AccountID string `json:"account_id"`
-	UserInfo *userinfo.UserInfo `json:"user_info"`
+	AccountID string             `json:"account_id"`
+	UserInfo  *userinfo.UserInfo `json:"user_info"`
 }
-
 
 func FetchAccountsHandler(client *ent.Client) gin.HandlerFunc {
 	return func(c *gin.Context) {
@@ -68,7 +67,7 @@ func FetchAccountsHandler(client *ent.Client) gin.HandlerFunc {
 
 			accountsInfo = append(accountsInfo, AccountsInfo{
 				AccountID: userAccount.ID.String(),
-				UserInfo: userInfo,
+				UserInfo:  userInfo,
 			})
 
 		}

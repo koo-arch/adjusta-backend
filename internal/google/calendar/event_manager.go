@@ -7,15 +7,15 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"google.golang.org/api/googleapi"
 	"github.com/koo-arch/adjusta-backend/ent"
-	dbCalendar "github.com/koo-arch/adjusta-backend/internal/apps/calendar"
-	"github.com/koo-arch/adjusta-backend/internal/apps/event"
-	"github.com/koo-arch/adjusta-backend/internal/apps/proposeddate"
 	"github.com/koo-arch/adjusta-backend/internal/auth"
 	"github.com/koo-arch/adjusta-backend/internal/models"
+	dbCalendar "github.com/koo-arch/adjusta-backend/internal/repo/calendar"
+	"github.com/koo-arch/adjusta-backend/internal/repo/event"
+	"github.com/koo-arch/adjusta-backend/internal/repo/proposeddate"
 	"github.com/koo-arch/adjusta-backend/internal/transaction"
 	"google.golang.org/api/calendar/v3"
+	"google.golang.org/api/googleapi"
 )
 
 type EventManager struct {
@@ -92,8 +92,8 @@ func (em *EventManager) fetchEventsFromCalendars(calendarService *Calendar, cale
 func (em *EventManager) FetchDraftedEvents(ctx context.Context, userID, accountID uuid.UUID, email string) ([]*models.EventDraftDetail, error) {
 	isPrimary := true
 	findOptions := dbCalendar.CalendarQueryOptions{
-		IsPrimary: &isPrimary,
-		WithEvents: true,
+		IsPrimary:         &isPrimary,
+		WithEvents:        true,
 		WithProposedDates: true,
 	}
 	entCalendar, err := em.calendarRepo.FindByFields(ctx, nil, accountID, findOptions)
@@ -114,12 +114,12 @@ func (em *EventManager) FetchDraftedEvents(ctx context.Context, userID, accountI
 		}
 		for _, entDate := range entEvent.Edges.ProposedDates {
 			proposedDates = append(proposedDates, models.ProposedDate{
-				ID:          entDate.ID,
-				GoogleEventID:     entDate.GoogleEventID,
-				Start:       &entDate.StartTime,
-				End:         &entDate.EndTime,
-				Priority:    entDate.Priority,
-				IsFinalized: entDate.IsFinalized,
+				ID:            entDate.ID,
+				GoogleEventID: entDate.GoogleEventID,
+				Start:         &entDate.StartTime,
+				End:           &entDate.EndTime,
+				Priority:      entDate.Priority,
+				IsFinalized:   entDate.IsFinalized,
 			})
 		}
 
@@ -158,12 +158,12 @@ func (em *EventManager) FetchDraftedEventDetail(ctx context.Context, userID, acc
 	var proposedDates []models.ProposedDate
 	for _, entDate := range entEvent.Edges.ProposedDates {
 		proposedDates = append(proposedDates, models.ProposedDate{
-			ID:          entDate.ID,
-			GoogleEventID:     entDate.GoogleEventID,
-			Start:       &entDate.StartTime,
-			End:         &entDate.EndTime,
-			Priority:    entDate.Priority,
-			IsFinalized: entDate.IsFinalized,
+			ID:            entDate.ID,
+			GoogleEventID: entDate.GoogleEventID,
+			Start:         &entDate.StartTime,
+			End:           &entDate.EndTime,
+			Priority:      entDate.Priority,
+			IsFinalized:   entDate.IsFinalized,
 		})
 	}
 
@@ -216,7 +216,7 @@ func (em *EventManager) CreateDraftedEvents(ctx context.Context, userID, account
 		return fmt.Errorf("failed to insert events for account: %s, error: %w", email, err)
 	}
 
-	_, err = em.dateRepo.CreateBulk(ctx, tx, eventReq.SelectedDates , insertedGoogleEvents, entEvent)
+	_, err = em.dateRepo.CreateBulk(ctx, tx, eventReq.SelectedDates, insertedGoogleEvents, entEvent)
 	if err != nil {
 		if delErr := em.deleteGoogleEvents(calendarService, insertedGoogleEvents); delErr != nil {
 			return fmt.Errorf("failed to delete events from Google Calendar: %w", delErr)
@@ -346,12 +346,12 @@ func (em *EventManager) FinalizeProposedDate(ctx context.Context, userID, accoun
 			return fmt.Errorf("failed to insert events for account: %s, error: %w", email, err)
 		}
 		googleEventID = &googleEvents[0].Id
-		
+
 	} else {
 		// 既存のGoogleカレンダーイベントIDを使用
 		googleEventID = &eventReq.ConfirmDate.GoogleEventID
 	}
-		
+
 	isFinalized := true
 	priority := 0
 	// 優先度が設定されている場合は設定
@@ -362,7 +362,7 @@ func (em *EventManager) FinalizeProposedDate(ctx context.Context, userID, accoun
 		GoogleEventID: googleEventID,
 		StartTime:     eventReq.ConfirmDate.Start,
 		EndTime:       eventReq.ConfirmDate.End,
-		Priority: 	   &priority,
+		Priority:      &priority,
 		IsFinalized:   &isFinalized,
 	}
 
@@ -383,7 +383,7 @@ func (em *EventManager) FinalizeProposedDate(ctx context.Context, userID, accoun
 			return fmt.Errorf("failed to update proposed date for account: %s, error: %w", email, err)
 		}
 	}
-	
+
 	// is_finalizedがfalseの日程候補を検索
 	notFinalizedDates, err := em.dateRepo.FilterByEventIDWithFinalized(ctx, tx, eventID, false)
 	if err != nil {
@@ -391,7 +391,7 @@ func (em *EventManager) FinalizeProposedDate(ctx context.Context, userID, accoun
 	}
 
 	fmt.Printf("notFinalizedDates: %v\n", notFinalizedDates)
-	
+
 	convEvents := make([]*calendar.Event, len(notFinalizedDates))
 	for i, date := range notFinalizedDates {
 		convEvents[i] = em.convertToCalendarEvent(&date.GoogleEventID, "", "", "", date.StartTime, date.EndTime)
@@ -481,9 +481,9 @@ func (em *EventManager) updateProposedDates(ctx context.Context, tx *ent.Tx, eve
 	// DBに存在しない日程候補を追加
 	for _, date := range updateDateMap {
 		dateOptions := proposeddate.ProposedDateQueryOptions{
-			StartTime:    date.Start,
-			EndTime:      date.End,
-			Priority:     &date.Priority,
+			StartTime: date.Start,
+			EndTime:   date.End,
+			Priority:  &date.Priority,
 		}
 		_, err = em.dateRepo.Create(ctx, tx, &date.GoogleEventID, dateOptions, entEvent)
 		if err != nil {
@@ -604,20 +604,20 @@ func (em *EventManager) updateGoogleCalendarEvents(calendarService *Calendar, ev
 }
 
 func (em *EventManager) deleteGoogleEvents(calendarService *Calendar, events []*calendar.Event) error {
-    for _, event := range events {
-        if event == nil || event.Id == "" {
-            continue // eventまたはIDがnilの場合はスキップ
-        }
+	for _, event := range events {
+		if event == nil || event.Id == "" {
+			continue // eventまたはIDがnilの場合はスキップ
+		}
 
-        err := calendarService.DeleteEvent(event.Id)
-        if err != nil {
-            if gErr, ok := err.(*googleapi.Error); ok && gErr.Code == 410 {
-                // 410エラーはリソースが既に削除されているため、無視
-                fmt.Printf("Warning: Event ID %s is already deleted.\n", event.Id)
-                continue
-            }
-            return fmt.Errorf("failed to delete event with ID %s: %w", event.Id, err)
-        }
-    }
-    return nil
+		err := calendarService.DeleteEvent(event.Id)
+		if err != nil {
+			if gErr, ok := err.(*googleapi.Error); ok && gErr.Code == 410 {
+				// 410エラーはリソースが既に削除されているため、無視
+				fmt.Printf("Warning: Event ID %s is already deleted.\n", event.Id)
+				continue
+			}
+			return fmt.Errorf("failed to delete event with ID %s: %w", event.Id, err)
+		}
+	}
+	return nil
 }

@@ -3,15 +3,15 @@ package middlewares
 import (
 	"net/http"
 
-	"github.com/gin-gonic/gin"
 	"github.com/gin-contrib/sessions"
+	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"github.com/koo-arch/adjusta-backend/ent"
 	"github.com/koo-arch/adjusta-backend/internal/auth"
-	"github.com/koo-arch/adjusta-backend/internal/apps/user"
-	"github.com/koo-arch/adjusta-backend/internal/apps/account"
-	dbCalendar "github.com/koo-arch/adjusta-backend/internal/apps/calendar"
 	"github.com/koo-arch/adjusta-backend/internal/google/calendar"
-	"github.com/google/uuid"
+	"github.com/koo-arch/adjusta-backend/internal/repo/account"
+	dbCalendar "github.com/koo-arch/adjusta-backend/internal/repo/calendar"
+	"github.com/koo-arch/adjusta-backend/internal/repo/user"
 )
 
 func CalendarMiddleware(client *ent.Client) gin.HandlerFunc {

@@ -3,14 +3,14 @@ package handlers
 import (
 	"net/http"
 
-	"github.com/gin-gonic/gin"
 	"github.com/gin-contrib/sessions"
+	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/koo-arch/adjusta-backend/ent"
-	"github.com/koo-arch/adjusta-backend/internal/apps/account"
-	"github.com/koo-arch/adjusta-backend/internal/apps/user"
 	"github.com/koo-arch/adjusta-backend/internal/auth"
 	"github.com/koo-arch/adjusta-backend/internal/google/userinfo"
+	"github.com/koo-arch/adjusta-backend/internal/repo/account"
+	"github.com/koo-arch/adjusta-backend/internal/repo/user"
 )
 
 func GetCurrentUserHandler(client *ent.Client) gin.HandlerFunc {
@@ -38,11 +38,11 @@ func GetCurrentUserHandler(client *ent.Client) gin.HandlerFunc {
 		}
 
 		ctx := c.Request.Context()
-		
+
 		userRepo := user.NewUserRepository(client)
 		accountRepo := account.NewAccountRepository(client)
 		authManager := auth.NewAuthManager(client, userRepo, accountRepo)
-		
+
 		token, err := authManager.VerifyOAuthToken(ctx, userid, email.(string))
 		if err != nil {
 			println("oauth期限切れ")
@@ -50,7 +50,7 @@ func GetCurrentUserHandler(client *ent.Client) gin.HandlerFunc {
 			c.Abort()
 			return
 		}
-		
+
 		userInfo, err := userinfo.FetchGoogleUserInfo(ctx, token)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch user info"})

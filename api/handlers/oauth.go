@@ -10,11 +10,11 @@ import (
 	"github.com/google/uuid"
 	"github.com/koo-arch/adjusta-backend/cookie"
 	"github.com/koo-arch/adjusta-backend/ent"
-	"github.com/koo-arch/adjusta-backend/internal/apps/account"
-	"github.com/koo-arch/adjusta-backend/internal/apps/user"
 	"github.com/koo-arch/adjusta-backend/internal/auth"
 	"github.com/koo-arch/adjusta-backend/internal/google/oauth"
 	"github.com/koo-arch/adjusta-backend/internal/google/userinfo"
+	"github.com/koo-arch/adjusta-backend/internal/repo/account"
+	"github.com/koo-arch/adjusta-backend/internal/repo/user"
 	"golang.org/x/oauth2"
 )
 

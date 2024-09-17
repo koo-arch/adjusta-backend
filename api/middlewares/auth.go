@@ -6,14 +6,14 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gin-gonic/gin"
 	"github.com/gin-contrib/sessions"
+	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"github.com/koo-arch/adjusta-backend/cookie"
 	"github.com/koo-arch/adjusta-backend/ent"
-	"github.com/koo-arch/adjusta-backend/internal/apps/user"
 	"github.com/koo-arch/adjusta-backend/internal/auth"
 	"github.com/koo-arch/adjusta-backend/internal/models"
-	"github.com/google/uuid"
+	"github.com/koo-arch/adjusta-backend/internal/repo/user"
 )
 
 func AuthMiddleware(client *ent.Client) gin.HandlerFunc {
@@ -101,7 +101,7 @@ func tokenRefresh(c *gin.Context, client *ent.Client, jwtManager *auth.JWTManage
 
 	maxAge := int(token.RefreshExpiration.Sub(time.Now()).Seconds())
 	cookie.SetCookie(c, "access_token", token.AccessToken, maxAge)
-	
+
 	// リフレッシュトークンの更新
 	_, err = userRepo.Update(ctx, nil, userid, token)
 	if err != nil {
