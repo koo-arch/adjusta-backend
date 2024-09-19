@@ -10,25 +10,22 @@ import (
 	"github.com/google/uuid"
 	"github.com/koo-arch/adjusta-backend/cookie"
 	"github.com/koo-arch/adjusta-backend/ent"
-	"github.com/koo-arch/adjusta-backend/internal/auth"
 	"github.com/koo-arch/adjusta-backend/internal/google/oauth"
 	"github.com/koo-arch/adjusta-backend/internal/google/userinfo"
-	"github.com/koo-arch/adjusta-backend/internal/repo/account"
-	"github.com/koo-arch/adjusta-backend/internal/repo/user"
 	"golang.org/x/oauth2"
 )
 
-func GoogleLoginHandler(c *gin.Context) {
+func (s *Server) GoogleLoginHandler(c *gin.Context) {
 	url := oauth.GetGoogleAuthConfig().AuthCodeURL("state", oauth2.AccessTypeOffline, oauth2.ApprovalForce)
 	c.Redirect(http.StatusTemporaryRedirect, url)
 }
 
-func AddAccountHandler(c *gin.Context) {
+func (s *Server) AddAccountHandler(c *gin.Context) {
 	url := oauth.GetAddAccountAuthConfig().AuthCodeURL("state", oauth2.AccessTypeOffline, oauth2.ApprovalForce)
 	c.Redirect(http.StatusTemporaryRedirect, url)
 }
 
-func LogoutHandler(c *gin.Context) {
+func (s *Server) LogoutHandler(c *gin.Context) {
 	// セッションをクリア
 	session := sessions.Default(c)
 	session.Clear()
@@ -45,7 +42,7 @@ func LogoutHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "logged out"})
 }
 
-func GoogleCallbackHandler(client *ent.Client) gin.HandlerFunc {
+func (s *Server) GoogleCallbackHandler(client *ent.Client) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		session := sessions.Default(c)
 		// クエリパラメータからcodeを取得
@@ -75,15 +72,10 @@ func GoogleCallbackHandler(client *ent.Client) gin.HandlerFunc {
 		}
 
 		// アプリ独自のJWTトークンを生成
-		jwtManager := auth.NewJWTManager(client, auth.NewKeyManager(client))
-		jwtToken, err := jwtManager.GenerateTokens(ctx, client, userInfo.Email)
-
-		userRepo := user.NewUserRepository(client)
-		accountRepo := account.NewAccountRepository(client)
-		authManager := auth.NewAuthManager(client, userRepo, accountRepo)
+		jwtToken, err := s.jwtManager.GenerateTokens(ctx, client, userInfo.Email)
 
 		// ユーザー情報をデータベースに保存
-		u, err := authManager.ProcessUserSignIn(ctx, userInfo, jwtToken, oauthToken)
+		u, err := s.authManager.ProcessUserSignIn(ctx, userInfo, jwtToken, oauthToken)
 		if err != nil {
 			fmt.Printf("failed to create or update user: %s", err.Error())
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create or update user"})
@@ -91,7 +83,7 @@ func GoogleCallbackHandler(client *ent.Client) gin.HandlerFunc {
 		}
 
 		// アカウントのoauthトークンを検証
-		accounts, err := accountRepo.FilterByUserID(ctx, nil, u.ID)
+		accounts, err := s.accountRepo.FilterByUserID(ctx, nil, u.ID)
 		if err != nil {
 			fmt.Printf("failed to get accounts: %s", err.Error())
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to get accounts"})
@@ -99,7 +91,7 @@ func GoogleCallbackHandler(client *ent.Client) gin.HandlerFunc {
 		}
 
 		for _, account := range accounts {
-			_, err := authManager.VerifyOAuthToken(ctx, u.ID, account.Email)
+			_, err := s.authManager.VerifyOAuthToken(ctx, u.ID, account.Email)
 			if err != nil {
 				fmt.Printf("failed to reuse token source for account: %s, error: %s", account.Email, err.Error())
 				c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to reuse token source"})
@@ -125,7 +117,7 @@ func GoogleCallbackHandler(client *ent.Client) gin.HandlerFunc {
 	}
 }
 
-func AddAccountCallbackHandler(client *ent.Client) gin.HandlerFunc {
+func (s *Server) AddAccountCallbackHandler(client *ent.Client) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		session := sessions.Default(c)
 		// クエリパラメータからcodeを取得
@@ -154,10 +146,6 @@ func AddAccountCallbackHandler(client *ent.Client) gin.HandlerFunc {
 			return
 		}
 
-		userRepo := user.NewUserRepository(client)
-		accountRepo := account.NewAccountRepository(client)
-		authManager := auth.NewAuthManager(client, userRepo, accountRepo)
-
 		// 現在のユーザーにアカウントを追加
 		useridStr, ok := session.Get("userid").(string)
 		if !ok {
@@ -173,7 +161,7 @@ func AddAccountCallbackHandler(client *ent.Client) gin.HandlerFunc {
 			return
 		}
 
-		_, err = authManager.AddAccountToUser(ctx, userid, userInfo, oauthToken)
+		_, err = s.authManager.AddAccountToUser(ctx, userid, userInfo, oauthToken)
 		if err != nil {
 			fmt.Printf("failed to add account: %s", err.Error())
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to add account"})

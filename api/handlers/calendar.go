@@ -8,17 +8,10 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/koo-arch/adjusta-backend/ent"
-	"github.com/koo-arch/adjusta-backend/internal/auth"
 	"github.com/koo-arch/adjusta-backend/internal/models"
-	"github.com/koo-arch/adjusta-backend/internal/repo/account"
-	dbCalendar "github.com/koo-arch/adjusta-backend/internal/repo/calendar"
-	"github.com/koo-arch/adjusta-backend/internal/repo/event"
-	"github.com/koo-arch/adjusta-backend/internal/repo/proposeddate"
-	"github.com/koo-arch/adjusta-backend/internal/repo/user"
-	appEvents "github.com/koo-arch/adjusta-backend/internal/apps/events"
 )
 
-func FetchEventListHandler(client *ent.Client) gin.HandlerFunc {
+func (s *Server) FetchEventListHandler(client *ent.Client) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		ctx := c.Request.Context()
 
@@ -37,24 +30,14 @@ func FetchEventListHandler(client *ent.Client) gin.HandlerFunc {
 			return
 		}
 
-		userRepo := user.NewUserRepository(client)
-		accountRepo := account.NewAccountRepository(client)
-		authManager := auth.NewAuthManager(client, userRepo, accountRepo)
-
-		userAccounts, err := accountRepo.FilterByUserID(ctx, nil, userid)
+		userAccounts, err := s.accountRepo.FilterByUserID(ctx, nil, userid)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to get user accounts"})
 			c.Abort()
 			return
 		}
 
-		calendarRepo := dbCalendar.NewCalendarRepository(client)
-		eventRepo := event.NewEventRepository(client)
-		dateRepo := proposeddate.NewProposedDateRepository(client)
-
-		eventManager := appEvents.NewEventManager(client, authManager, calendarRepo, eventRepo, dateRepo)
-
-		accountsEvents, err := eventManager.FetchAllEvents(ctx, userid, userAccounts)
+		accountsEvents, err := s.eventFetchingManager.FetchAllEvents(ctx, userid, userAccounts)
 		if err != nil {
 			fmt.Printf("failed to fetch events: %v", err)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch events"})
@@ -66,7 +49,7 @@ func FetchEventListHandler(client *ent.Client) gin.HandlerFunc {
 	}
 }
 
-func FetchEventDraftListHandler(client *ent.Client) gin.HandlerFunc {
+func (s *Server) FetchEventDraftListHandler(client *ent.Client) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		ctx := c.Request.Context()
 
@@ -94,24 +77,14 @@ func FetchEventDraftListHandler(client *ent.Client) gin.HandlerFunc {
 
 		emailStr, ok := email.(string)
 
-		userRepo := user.NewUserRepository(client)
-		accountRepo := account.NewAccountRepository(client)
-		authManager := auth.NewAuthManager(client, userRepo, accountRepo)
-
-		userAccount, err := accountRepo.FindByUserIDAndEmail(ctx, nil, userid, emailStr)
+		userAccount, err := s.accountRepo.FindByUserIDAndEmail(ctx, nil, userid, emailStr)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to get user accounts"})
 			c.Abort()
 			return
 		}
 
-		calendarRepo := dbCalendar.NewCalendarRepository(client)
-		eventRepo := event.NewEventRepository(client)
-		dateRepo := proposeddate.NewProposedDateRepository(client)
-
-		eventManager := appEvents.NewEventManager(client, authManager, calendarRepo, eventRepo, dateRepo)
-
-		draftedEvents, err := eventManager.FetchDraftedEvents(ctx, userid, userAccount.ID, emailStr)
+		draftedEvents, err := s.eventFetchingManager.FetchDraftedEvents(ctx, userid, userAccount.ID, emailStr)
 		if err != nil {
 			fmt.Printf("failed to fetch events: %v", err)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch events"})
@@ -123,7 +96,7 @@ func FetchEventDraftListHandler(client *ent.Client) gin.HandlerFunc {
 	}
 }
 
-func FetchEventDraftDetailHandler(client *ent.Client) gin.HandlerFunc {
+func (s *Server) FetchEventDraftDetailHandler(client *ent.Client) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		ctx := c.Request.Context()
 
@@ -165,24 +138,14 @@ func FetchEventDraftDetailHandler(client *ent.Client) gin.HandlerFunc {
 			return
 		}
 
-		userRepo := user.NewUserRepository(client)
-		accountRepo := account.NewAccountRepository(client)
-		authManager := auth.NewAuthManager(client, userRepo, accountRepo)
-
-		userAccount, err := accountRepo.FindByUserIDAndEmail(ctx, nil, userid, emailStr)
+		userAccount, err := s.accountRepo.FindByUserIDAndEmail(ctx, nil, userid, emailStr)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to get user accounts"})
 			c.Abort()
 			return
 		}
 
-		calendarRepo := dbCalendar.NewCalendarRepository(client)
-		eventRepo := event.NewEventRepository(client)
-		dateRepo := proposeddate.NewProposedDateRepository(client)
-
-		eventManager := appEvents.NewEventManager(client, authManager, calendarRepo, eventRepo, dateRepo)
-
-		draftedEvent, err := eventManager.FetchDraftedEventDetail(ctx, userid, userAccount.ID, emailStr, eventID)
+		draftedEvent, err := s.eventFetchingManager.FetchDraftedEventDetail(ctx, userid, userAccount.ID, emailStr, eventID)
 		if err != nil {
 			fmt.Printf("failed to fetch events: %v", err)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch events"})
@@ -194,7 +157,7 @@ func FetchEventDraftDetailHandler(client *ent.Client) gin.HandlerFunc {
 	}
 }
 
-func CreateEventDraftHandler(client *ent.Client) gin.HandlerFunc {
+func (s *Server) CreateEventDraftHandler(client *ent.Client) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		ctx := c.Request.Context()
 
@@ -228,23 +191,14 @@ func CreateEventDraftHandler(client *ent.Client) gin.HandlerFunc {
 			return
 		}
 
-		userRepo := user.NewUserRepository(client)
-		accountRepo := account.NewAccountRepository(client)
-		authManager := auth.NewAuthManager(client, userRepo, accountRepo)
-
-		a, err := accountRepo.FindByUserIDAndEmail(ctx, nil, userid, emailStr)
+		a, err := s.accountRepo.FindByUserIDAndEmail(ctx, nil, userid, emailStr)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to get account"})
 			c.Abort()
 			return
 		}
 
-		calendarRepo := dbCalendar.NewCalendarRepository(client)
-		eventRepo := event.NewEventRepository(client)
-		dateRepo := proposeddate.NewProposedDateRepository(client)
-		eventManager := appEvents.NewEventManager(client, authManager, calendarRepo, eventRepo, dateRepo)
-
-		err = eventManager.CreateDraftedEvents(ctx, userid, a.ID, emailStr, eventDraft)
+		err = s.eventCreationManager.CreateDraftedEvents(ctx, userid, a.ID, emailStr, eventDraft)
 		if err != nil {
 			fmt.Printf("failed to fetch events: %v", err)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch events"})
@@ -256,7 +210,7 @@ func CreateEventDraftHandler(client *ent.Client) gin.HandlerFunc {
 	}
 }
 
-func EventFinalizeHandler(client *ent.Client) gin.HandlerFunc {
+func (s *Server) EventFinalizeHandler(client *ent.Client) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		ctx := c.Request.Context()
 
@@ -297,7 +251,7 @@ func EventFinalizeHandler(client *ent.Client) gin.HandlerFunc {
 			return
 		}
 
-		var confirmEvent *models.ConfrimEvent
+		var confirmEvent *models.ConfirmEvent
 		if err := c.ShouldBindJSON(&confirmEvent); err != nil {
 			fmt.Printf("failed to bind json: %v", err)
 			c.JSON(http.StatusBadRequest, gin.H{"error": "failed to bind json"})
@@ -305,26 +259,14 @@ func EventFinalizeHandler(client *ent.Client) gin.HandlerFunc {
 			return
 		}
 
-		fmt.Printf("confirmEvent: %v\n", confirmEvent)
-
-		userRepo := user.NewUserRepository(client)
-		accountRepo := account.NewAccountRepository(client)
-		authManager := auth.NewAuthManager(client, userRepo, accountRepo)
-
-		userAccount, err := accountRepo.FindByUserIDAndEmail(ctx, nil, userid, emailStr)
+		userAccount, err := s.accountRepo.FindByUserIDAndEmail(ctx, nil, userid, emailStr)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to get user accounts"})
 			c.Abort()
 			return
 		}
 
-		calendarRepo := dbCalendar.NewCalendarRepository(client)
-		eventRepo := event.NewEventRepository(client)
-		dateRepo := proposeddate.NewProposedDateRepository(client)
-
-		eventManager := appEvents.NewEventManager(client, authManager, calendarRepo, eventRepo, dateRepo)
-
-		err = eventManager.FinalizeProposedDate(ctx, userid, userAccount.ID, eventID, emailStr, confirmEvent)
+		err = s.eventFinalizationManager.FinalizeProposedDate(ctx, userid, userAccount.ID, eventID, emailStr, confirmEvent)
 		if err != nil {
 			fmt.Printf("failed to finalize event: %v", err)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to finalize event"})
