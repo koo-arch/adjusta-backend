@@ -108,6 +108,7 @@ func main() {
 			calendar.GET("/event/draft/:eventID", server.FetchEventDraftDetailHandler(client))
 			calendar.POST("/event/draft", server.CreateEventDraftHandler(client))
 			calendar.PATCH("/event/confirm/:eventID", server.EventFinalizeHandler(client))
+			calendar.PUT("/event/draft/:eventID", server.UpdateEventDraftHandler(client))
 		}
 	}
 

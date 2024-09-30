@@ -151,3 +151,35 @@ func (r *ProposedDateRepositoryImpl) ResetFinalized(ctx context.Context, tx *ent
 	
 	return err
 }
+
+func (r *ProposedDateRepositoryImpl) UpdateByGoogleEventID(ctx context.Context, tx *ent.Tx, oldGoogleEvent *string, opt ProposedDateQueryOptions) error {
+	update := r.client.ProposedDate.Update()
+	if tx != nil {
+		update = tx.ProposedDate.Update()
+	}
+
+	update = update.Where(proposeddate.GoogleEventIDEQ(*oldGoogleEvent))
+
+	if opt.GoogleEventID != nil {
+		update = update.SetGoogleEventID(*opt.GoogleEventID)
+	}
+
+	if opt.StartTime!= nil {
+		update = update.SetStartTime(*opt.StartTime)
+	}
+
+	if opt.EndTime != nil {
+		update = update.SetEndTime(*opt.EndTime)
+	}
+
+	if opt.Priority != nil {
+		update = update.SetPriority(*opt.Priority)
+	}
+
+	if opt.IsFinalized != nil {
+		update = update.SetIsFinalized(*opt.IsFinalized)
+	}
+
+	_, err := update.Save(ctx)
+	return err
+}

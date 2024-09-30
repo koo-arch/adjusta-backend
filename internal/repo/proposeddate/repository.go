@@ -27,4 +27,5 @@ type ProposedDateRepository interface {
 	Delete(ctx context.Context, tx *ent.Tx, id uuid.UUID) error
 	CreateBulk(ctx context.Context, tx *ent.Tx, selectedDates []models.SelectedDate, googleEvents []*calendar.Event, entEvent *ent.Event) ([]*ent.ProposedDate, error)
 	ResetFinalized(ctx context.Context, tx *ent.Tx, eventID uuid.UUID) error
+	UpdateByGoogleEventID(ctx context.Context, tx *ent.Tx, googleEventID *string, opt ProposedDateQueryOptions) error
 }

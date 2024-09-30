@@ -45,8 +45,8 @@ type EventDraftDetail struct {
 type ProposedDate struct {
 	ID            uuid.UUID  `json:"id"`
 	GoogleEventID string     `json:"event_id"`
-	Start         *time.Time `json:"start_date"`
-	End           *time.Time `json:"end_date"`
+	Start         *time.Time `json:"start"`
+	End           *time.Time `json:"end"`
 	Priority      int        `json:"priority"`
 	IsFinalized   bool       `json:"is_finalized"`
 }
@@ -59,7 +59,7 @@ type ConfirmEvent struct {
 type ConfirmDate struct {
 	ID            *uuid.UUID `json:"id"`
 	GoogleEventID string     `json:"event_id"`
-	Start         *time.Time `json:"start_date"`
-	End           *time.Time `json:"end_date"`
+	Start         *time.Time `json:"start"`
+	End           *time.Time `json:"end"`
 	Priority      int        `json:"priority"`
 }
