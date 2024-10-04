@@ -16,7 +16,6 @@ type Event struct {
 func (Event) Fields() []ent.Field {
 	return []ent.Field{
 		field.UUID("id", uuid.UUID{}).Default(uuid.New).Unique().Immutable(),
-		field.String("event_id").Unique(),
 		field.String("summary").Optional(),
 		field.String("description").Optional(),
 		field.String("location").Optional(),

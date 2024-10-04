@@ -18,8 +18,6 @@ type Event struct {
 	config `json:"-"`
 	// ID of the ent.
 	ID uuid.UUID `json:"id,omitempty"`
-	// EventID holds the value of the "event_id" field.
-	EventID string `json:"event_id,omitempty"`
 	// Summary holds the value of the "summary" field.
 	Summary string `json:"summary,omitempty"`
 	// Description holds the value of the "description" field.
@@ -69,7 +67,7 @@ func (*Event) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case event.FieldEventID, event.FieldSummary, event.FieldDescription, event.FieldLocation:
+		case event.FieldSummary, event.FieldDescription, event.FieldLocation:
 			values[i] = new(sql.NullString)
 		case event.FieldID:
 			values[i] = new(uuid.UUID)
@@ -95,12 +93,6 @@ func (e *Event) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field id", values[i])
 			} else if value != nil {
 				e.ID = *value
-			}
-		case event.FieldEventID:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field event_id", values[i])
-			} else if value.Valid {
-				e.EventID = value.String
 			}
 		case event.FieldSummary:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -173,9 +165,6 @@ func (e *Event) String() string {
 	var builder strings.Builder
 	builder.WriteString("Event(")
 	builder.WriteString(fmt.Sprintf("id=%v, ", e.ID))
-	builder.WriteString("event_id=")
-	builder.WriteString(e.EventID)
-	builder.WriteString(", ")
 	builder.WriteString("summary=")
 	builder.WriteString(e.Summary)
 	builder.WriteString(", ")

@@ -4,7 +4,6 @@ package ent
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"entgo.io/ent/dialect/sql/sqlgraph"
@@ -20,12 +19,6 @@ type EventCreate struct {
 	config
 	mutation *EventMutation
 	hooks    []Hook
-}
-
-// SetEventID sets the "event_id" field.
-func (ec *EventCreate) SetEventID(s string) *EventCreate {
-	ec.mutation.SetEventID(s)
-	return ec
 }
 
 // SetSummary sets the "summary" field.
@@ -161,9 +154,6 @@ func (ec *EventCreate) defaults() {
 
 // check runs all checks and user-defined validators on the builder.
 func (ec *EventCreate) check() error {
-	if _, ok := ec.mutation.EventID(); !ok {
-		return &ValidationError{Name: "event_id", err: errors.New(`ent: missing required field "Event.event_id"`)}
-	}
 	return nil
 }
 
@@ -198,10 +188,6 @@ func (ec *EventCreate) createSpec() (*Event, *sqlgraph.CreateSpec) {
 	if id, ok := ec.mutation.ID(); ok {
 		_node.ID = id
 		_spec.ID.Value = &id
-	}
-	if value, ok := ec.mutation.EventID(); ok {
-		_spec.SetField(event.FieldEventID, field.TypeString, value)
-		_node.EventID = value
 	}
 	if value, ok := ec.mutation.Summary(); ok {
 		_spec.SetField(event.FieldSummary, field.TypeString, value)

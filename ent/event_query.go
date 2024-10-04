@@ -336,12 +336,12 @@ func (eq *EventQuery) WithProposedDates(opts ...func(*ProposedDateQuery)) *Event
 // Example:
 //
 //	var v []struct {
-//		EventID string `json:"event_id,omitempty"`
+//		Summary string `json:"summary,omitempty"`
 //		Count int `json:"count,omitempty"`
 //	}
 //
 //	client.Event.Query().
-//		GroupBy(event.FieldEventID).
+//		GroupBy(event.FieldSummary).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
 func (eq *EventQuery) GroupBy(field string, fields ...string) *EventGroupBy {
@@ -359,11 +359,11 @@ func (eq *EventQuery) GroupBy(field string, fields ...string) *EventGroupBy {
 // Example:
 //
 //	var v []struct {
-//		EventID string `json:"event_id,omitempty"`
+//		Summary string `json:"summary,omitempty"`
 //	}
 //
 //	client.Event.Query().
-//		Select(event.FieldEventID).
+//		Select(event.FieldSummary).
 //		Scan(ctx, &v)
 func (eq *EventQuery) Select(fields ...string) *EventSelect {
 	eq.ctx.Fields = append(eq.ctx.Fields, fields...)

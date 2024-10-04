@@ -1396,7 +1396,6 @@ type EventMutation struct {
 	op                    Op
 	typ                   string
 	id                    *uuid.UUID
-	event_id              *string
 	summary               *string
 	description           *string
 	location              *string
@@ -1513,42 +1512,6 @@ func (m *EventMutation) IDs(ctx context.Context) ([]uuid.UUID, error) {
 	default:
 		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
 	}
-}
-
-// SetEventID sets the "event_id" field.
-func (m *EventMutation) SetEventID(s string) {
-	m.event_id = &s
-}
-
-// EventID returns the value of the "event_id" field in the mutation.
-func (m *EventMutation) EventID() (r string, exists bool) {
-	v := m.event_id
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldEventID returns the old "event_id" field's value of the Event entity.
-// If the Event object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *EventMutation) OldEventID(ctx context.Context) (v string, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldEventID is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldEventID requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldEventID: %w", err)
-	}
-	return oldValue.EventID, nil
-}
-
-// ResetEventID resets all changes to the "event_id" field.
-func (m *EventMutation) ResetEventID() {
-	m.event_id = nil
 }
 
 // SetSummary sets the "summary" field.
@@ -1825,10 +1788,7 @@ func (m *EventMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *EventMutation) Fields() []string {
-	fields := make([]string, 0, 4)
-	if m.event_id != nil {
-		fields = append(fields, event.FieldEventID)
-	}
+	fields := make([]string, 0, 3)
 	if m.summary != nil {
 		fields = append(fields, event.FieldSummary)
 	}
@@ -1846,8 +1806,6 @@ func (m *EventMutation) Fields() []string {
 // schema.
 func (m *EventMutation) Field(name string) (ent.Value, bool) {
 	switch name {
-	case event.FieldEventID:
-		return m.EventID()
 	case event.FieldSummary:
 		return m.Summary()
 	case event.FieldDescription:
@@ -1863,8 +1821,6 @@ func (m *EventMutation) Field(name string) (ent.Value, bool) {
 // database failed.
 func (m *EventMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
 	switch name {
-	case event.FieldEventID:
-		return m.OldEventID(ctx)
 	case event.FieldSummary:
 		return m.OldSummary(ctx)
 	case event.FieldDescription:
@@ -1880,13 +1836,6 @@ func (m *EventMutation) OldField(ctx context.Context, name string) (ent.Value, e
 // type.
 func (m *EventMutation) SetField(name string, value ent.Value) error {
 	switch name {
-	case event.FieldEventID:
-		v, ok := value.(string)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetEventID(v)
-		return nil
 	case event.FieldSummary:
 		v, ok := value.(string)
 		if !ok {
@@ -1978,9 +1927,6 @@ func (m *EventMutation) ClearField(name string) error {
 // It returns an error if the field is not defined in the schema.
 func (m *EventMutation) ResetField(name string) error {
 	switch name {
-	case event.FieldEventID:
-		m.ResetEventID()
-		return nil
 	case event.FieldSummary:
 		m.ResetSummary()
 		return nil

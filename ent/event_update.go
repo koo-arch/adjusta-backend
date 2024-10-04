@@ -30,20 +30,6 @@ func (eu *EventUpdate) Where(ps ...predicate.Event) *EventUpdate {
 	return eu
 }
 
-// SetEventID sets the "event_id" field.
-func (eu *EventUpdate) SetEventID(s string) *EventUpdate {
-	eu.mutation.SetEventID(s)
-	return eu
-}
-
-// SetNillableEventID sets the "event_id" field if the given value is not nil.
-func (eu *EventUpdate) SetNillableEventID(s *string) *EventUpdate {
-	if s != nil {
-		eu.SetEventID(*s)
-	}
-	return eu
-}
-
 // SetSummary sets the "summary" field.
 func (eu *EventUpdate) SetSummary(s string) *EventUpdate {
 	eu.mutation.SetSummary(s)
@@ -206,9 +192,6 @@ func (eu *EventUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			}
 		}
 	}
-	if value, ok := eu.mutation.EventID(); ok {
-		_spec.SetField(event.FieldEventID, field.TypeString, value)
-	}
 	if value, ok := eu.mutation.Summary(); ok {
 		_spec.SetField(event.FieldSummary, field.TypeString, value)
 	}
@@ -319,20 +302,6 @@ type EventUpdateOne struct {
 	fields   []string
 	hooks    []Hook
 	mutation *EventMutation
-}
-
-// SetEventID sets the "event_id" field.
-func (euo *EventUpdateOne) SetEventID(s string) *EventUpdateOne {
-	euo.mutation.SetEventID(s)
-	return euo
-}
-
-// SetNillableEventID sets the "event_id" field if the given value is not nil.
-func (euo *EventUpdateOne) SetNillableEventID(s *string) *EventUpdateOne {
-	if s != nil {
-		euo.SetEventID(*s)
-	}
-	return euo
 }
 
 // SetSummary sets the "summary" field.
@@ -526,9 +495,6 @@ func (euo *EventUpdateOne) sqlSave(ctx context.Context) (_node *Event, err error
 				ps[i](selector)
 			}
 		}
-	}
-	if value, ok := euo.mutation.EventID(); ok {
-		_spec.SetField(event.FieldEventID, field.TypeString, value)
 	}
 	if value, ok := euo.mutation.Summary(); ok {
 		_spec.SetField(event.FieldSummary, field.TypeString, value)

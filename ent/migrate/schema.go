@@ -64,7 +64,6 @@ var (
 	// EventsColumns holds the columns for the "events" table.
 	EventsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID, Unique: true},
-		{Name: "event_id", Type: field.TypeString, Unique: true},
 		{Name: "summary", Type: field.TypeString, Nullable: true},
 		{Name: "description", Type: field.TypeString, Nullable: true},
 		{Name: "location", Type: field.TypeString, Nullable: true},
@@ -78,7 +77,7 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "events_calendars_events",
-				Columns:    []*schema.Column{EventsColumns[5]},
+				Columns:    []*schema.Column{EventsColumns[4]},
 				RefColumns: []*schema.Column{CalendarsColumns[0]},
 				OnDelete:   schema.SetNull,
 			},
