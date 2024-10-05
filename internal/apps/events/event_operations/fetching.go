@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"time"
+	"sort"
+	"sync"
 
 	"github.com/google/uuid"
 	"github.com/koo-arch/adjusta-backend/ent"
@@ -81,30 +83,54 @@ func (efm *EventFetchingManager) FetchDraftedEvents(ctx context.Context, userID,
 	}
 
 	var draftedEvents []*models.EventDraftDetail
+	var wg sync.WaitGroup
+	var mu sync.Mutex
+	errCh := make(chan error, 1)
+
 	for _, entEvent := range entCalendar.Edges.Events {
-		var proposedDates []models.ProposedDate
+		wg.Add(1)
 
-		if entEvent.Edges.ProposedDates == nil {
-			continue
-		}
-		for _, entDate := range entEvent.Edges.ProposedDates {
-			proposedDates = append(proposedDates, models.ProposedDate{
-				ID:            entDate.ID,
-				GoogleEventID: entDate.GoogleEventID,
-				Start:         &entDate.StartTime,
-				End:           &entDate.EndTime,
-				Priority:      entDate.Priority,
-				IsFinalized:   entDate.IsFinalized,
+		go func(entEvent *ent.Event) {
+			defer wg.Done()
+			var proposedDates []models.ProposedDate
+
+			if entEvent.Edges.ProposedDates == nil {
+				return
+			}
+			for _, entDate := range entEvent.Edges.ProposedDates {
+				proposedDates = append(proposedDates, models.ProposedDate{
+					ID:            entDate.ID,
+					GoogleEventID: entDate.GoogleEventID,
+					Start:         &entDate.StartTime,
+					End:           &entDate.EndTime,
+					Priority:      entDate.Priority,
+					IsFinalized:   entDate.IsFinalized,
+				})
+			}
+
+			// Priorityに基づいてProposedDatesを昇順にソート
+			sort.Slice(proposedDates, func(i, j int) bool {
+				return proposedDates[i].Priority < proposedDates[j].Priority
 			})
-		}
 
-		draftedEvents = append(draftedEvents, &models.EventDraftDetail{
-			ID:            entEvent.ID,
-			Title:         entEvent.Summary,
-			Location:      entEvent.Location,
-			Description:   entEvent.Description,
-			ProposedDates: proposedDates,
-		})
+			// 同時に書き込むことがないようにミューテックスを使う
+			mu.Lock()
+			draftedEvents = append(draftedEvents, &models.EventDraftDetail{
+				ID:            entEvent.ID,
+				Title:         entEvent.Summary,
+				Location:      entEvent.Location,
+				Description:   entEvent.Description,
+				ProposedDates: proposedDates,
+			})
+			mu.Unlock()
+		}(entEvent)
+	}
+
+	wg.Wait()
+	close(errCh)
+
+	if len(errCh) > 0 {
+		return nil, <-errCh
 	}
 
 	return draftedEvents, nil
@@ -141,6 +167,11 @@ func (efm *EventFetchingManager) FetchDraftedEventDetail(ctx context.Context, us
 			IsFinalized:   entDate.IsFinalized,
 		})
 	}
+
+		// Priorityに基づいてProposedDatesを昇順にソート
+	sort.Slice(proposedDates, func(i, j int) bool {
+		return proposedDates[i].Priority < proposedDates[j].Priority
+	})
 
 	return &models.EventDraftDetail{
 		ID:            entEvent.ID,
