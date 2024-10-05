@@ -72,7 +72,6 @@ func (r *EventRepositoryImpl) Create(ctx context.Context, tx *ent.Tx, event *cal
 	}
 
 	eventCreate = eventCreate.
-		SetEventID(event.Id).
 		SetSummary(event.Summary).
 		SetDescription(event.Description).
 		SetLocation(event.Location).
