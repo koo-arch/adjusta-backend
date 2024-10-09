@@ -7,11 +7,18 @@ import (
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	"github.com/koo-arch/adjusta-backend/ent"
 	"github.com/koo-arch/adjusta-backend/internal/models"
 )
 
-func (s *Server) FetchEventListHandler(client *ent.Client) gin.HandlerFunc {
+type CalendarHandler struct {
+	handler *Handler
+}
+
+func NewCalendarHandler(handler *Handler) *CalendarHandler {
+	return &CalendarHandler{handler: handler}
+}
+
+func (ch *CalendarHandler) FetchEventListHandler() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		ctx := c.Request.Context()
 
@@ -30,14 +37,17 @@ func (s *Server) FetchEventListHandler(client *ent.Client) gin.HandlerFunc {
 			return
 		}
 
-		userAccounts, err := s.accountRepo.FilterByUserID(ctx, nil, userid)
+		accountRepo := ch.handler.Server.AccountRepo
+		eventFetchingManager := ch.handler.Server.EventFetchingManager
+
+		userAccounts, err := accountRepo.FilterByUserID(ctx, nil, userid)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to get user accounts"})
 			c.Abort()
 			return
 		}
 
-		accountsEvents, err := s.eventFetchingManager.FetchAllEvents(ctx, userid, userAccounts)
+		accountsEvents, err := eventFetchingManager.FetchAllEvents(ctx, userid, userAccounts)
 		if err != nil {
 			fmt.Printf("failed to fetch events: %v", err)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch events"})
@@ -49,7 +59,7 @@ func (s *Server) FetchEventListHandler(client *ent.Client) gin.HandlerFunc {
 	}
 }
 
-func (s *Server) FetchEventDraftListHandler(client *ent.Client) gin.HandlerFunc {
+func (ch *CalendarHandler) FetchEventDraftListHandler() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		ctx := c.Request.Context()
 
@@ -77,14 +87,17 @@ func (s *Server) FetchEventDraftListHandler(client *ent.Client) gin.HandlerFunc 
 
 		emailStr, ok := email.(string)
 
-		userAccount, err := s.accountRepo.FindByUserIDAndEmail(ctx, nil, userid, emailStr)
+		accountRepo := ch.handler.Server.AccountRepo
+		eventFetchingManager := ch.handler.Server.EventFetchingManager
+
+		userAccount, err := accountRepo.FindByUserIDAndEmail(ctx, nil, userid, emailStr)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to get user accounts"})
 			c.Abort()
 			return
 		}
 
-		draftedEvents, err := s.eventFetchingManager.FetchDraftedEvents(ctx, userid, userAccount.ID, emailStr)
+		draftedEvents, err := eventFetchingManager.FetchDraftedEvents(ctx, userid, userAccount.ID, emailStr)
 		if err != nil {
 			fmt.Printf("failed to fetch events: %v", err)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch events"})
@@ -96,7 +109,7 @@ func (s *Server) FetchEventDraftListHandler(client *ent.Client) gin.HandlerFunc 
 	}
 }
 
-func (s *Server) FetchEventDraftDetailHandler(client *ent.Client) gin.HandlerFunc {
+func (ch *CalendarHandler) FetchEventDraftDetailHandler() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		ctx := c.Request.Context()
 
@@ -138,14 +151,17 @@ func (s *Server) FetchEventDraftDetailHandler(client *ent.Client) gin.HandlerFun
 			return
 		}
 
-		userAccount, err := s.accountRepo.FindByUserIDAndEmail(ctx, nil, userid, emailStr)
+		accountRepo := ch.handler.Server.AccountRepo
+		eventFetchingManager := ch.handler.Server.EventFetchingManager
+
+		userAccount, err := accountRepo.FindByUserIDAndEmail(ctx, nil, userid, emailStr)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to get user accounts"})
 			c.Abort()
 			return
 		}
 
-		draftedEvent, err := s.eventFetchingManager.FetchDraftedEventDetail(ctx, userid, userAccount.ID, emailStr, eventID)
+		draftedEvent, err := eventFetchingManager.FetchDraftedEventDetail(ctx, userid, userAccount.ID, emailStr, eventID)
 		if err != nil {
 			fmt.Printf("failed to fetch events: %v", err)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch events"})
@@ -157,7 +173,7 @@ func (s *Server) FetchEventDraftDetailHandler(client *ent.Client) gin.HandlerFun
 	}
 }
 
-func (s *Server) CreateEventDraftHandler(client *ent.Client) gin.HandlerFunc {
+func (ch *CalendarHandler) CreateEventDraftHandler() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		ctx := c.Request.Context()
 
@@ -191,14 +207,17 @@ func (s *Server) CreateEventDraftHandler(client *ent.Client) gin.HandlerFunc {
 			return
 		}
 
-		a, err := s.accountRepo.FindByUserIDAndEmail(ctx, nil, userid, emailStr)
+		accountRepo := ch.handler.Server.AccountRepo
+		eventCreationManager := ch.handler.Server.EventCreationManager
+
+		a, err := accountRepo.FindByUserIDAndEmail(ctx, nil, userid, emailStr)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to get account"})
 			c.Abort()
 			return
 		}
 
-		err = s.eventCreationManager.CreateDraftedEvents(ctx, userid, a.ID, emailStr, eventDraft)
+		err = eventCreationManager.CreateDraftedEvents(ctx, userid, a.ID, emailStr, eventDraft)
 		if err != nil {
 			fmt.Printf("failed to fetch events: %v", err)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch events"})
@@ -210,7 +229,7 @@ func (s *Server) CreateEventDraftHandler(client *ent.Client) gin.HandlerFunc {
 	}
 }
 
-func (s *Server) EventFinalizeHandler(client *ent.Client) gin.HandlerFunc {
+func (ch *CalendarHandler) EventFinalizeHandler() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		ctx := c.Request.Context()
 
@@ -259,14 +278,17 @@ func (s *Server) EventFinalizeHandler(client *ent.Client) gin.HandlerFunc {
 			return
 		}
 
-		userAccount, err := s.accountRepo.FindByUserIDAndEmail(ctx, nil, userid, emailStr)
+		accountRepo := ch.handler.Server.AccountRepo
+		eventFinalizationManager := ch.handler.Server.EventFinalizationManager
+
+		userAccount, err := accountRepo.FindByUserIDAndEmail(ctx, nil, userid, emailStr)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to get user accounts"})
 			c.Abort()
 			return
 		}
 
-		err = s.eventFinalizationManager.FinalizeProposedDate(ctx, userid, userAccount.ID, eventID, emailStr, confirmEvent)
+		err = eventFinalizationManager.FinalizeProposedDate(ctx, userid, userAccount.ID, eventID, emailStr, confirmEvent)
 		if err != nil {
 			fmt.Printf("failed to finalize event: %v", err)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to finalize event"})
@@ -278,7 +300,7 @@ func (s *Server) EventFinalizeHandler(client *ent.Client) gin.HandlerFunc {
 	}
 }
 
-func (s *Server) UpdateEventDraftHandler(client *ent.Client) gin.HandlerFunc {
+func (ch *CalendarHandler) UpdateEventDraftHandler() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		ctx := c.Request.Context()
 
@@ -326,14 +348,17 @@ func (s *Server) UpdateEventDraftHandler(client *ent.Client) gin.HandlerFunc {
 			return
 		}
 
-		userAccount, err := s.accountRepo.FindByUserIDAndEmail(ctx, nil, userid, emailStr)
+		accountRepo := ch.handler.Server.AccountRepo
+		eventUpdateManager := ch.handler.Server.EventUpdateManager
+
+		userAccount, err := accountRepo.FindByUserIDAndEmail(ctx, nil, userid, emailStr)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to get user accounts"})
 			c.Abort()
 			return
 		}
 
-		err = s.eventUpdateManager.UpdateDraftedEvents(ctx, userid, userAccount.ID, eventID, emailStr, eventDraft)
+		err = eventUpdateManager.UpdateDraftedEvents(ctx, userid, userAccount.ID, eventID, emailStr, eventDraft)
 		if err != nil {
 			fmt.Printf("failed to fetch events: %v", err)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch events"})

@@ -2,11 +2,10 @@ package handlers
 
 import (
 	"net/http"
-
+	
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	"github.com/koo-arch/adjusta-backend/ent"
 	"github.com/koo-arch/adjusta-backend/internal/google/userinfo"
 )
 
@@ -15,7 +14,15 @@ type AccountsInfo struct {
 	UserInfo  *userinfo.UserInfo `json:"user_info"`
 }
 
-func (s *Server) FetchAccountsHandler(client *ent.Client) gin.HandlerFunc {
+type AccountHandler struct {
+	handler *Handler
+}
+
+func NewAccountHandler(handler *Handler) *AccountHandler {
+	return &AccountHandler{handler: handler}
+}
+
+func (ah *AccountHandler) FetchAccountsHandler() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		ctx := c.Request.Context()
 
@@ -34,7 +41,9 @@ func (s *Server) FetchAccountsHandler(client *ent.Client) gin.HandlerFunc {
 			return
 		}
 
-		userAccounts, err := s.accountRepo.FilterByUserID(ctx, nil, userid)
+		accountRepo := ah.handler.Server.AccountRepo
+
+		userAccounts, err := accountRepo.FilterByUserID(ctx, nil, userid)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to get user accounts"})
 			c.Abort()
@@ -42,9 +51,10 @@ func (s *Server) FetchAccountsHandler(client *ent.Client) gin.HandlerFunc {
 		}
 
 		var accountsInfo []AccountsInfo
+		authManager := ah.handler.Server.AuthManager
 
 		for _, userAccount := range userAccounts {
-			token, err := s.authManager.VerifyOAuthToken(ctx, userid, userAccount.Email)
+			token, err := authManager.VerifyOAuthToken(ctx, userid, userAccount.Email)
 			if err != nil {
 				c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to verify token"})
 				c.Abort()

@@ -12,10 +12,12 @@ import (
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-contrib/sessions/cookie"
 	"github.com/gin-gonic/gin"
+	"github.com/koo-arch/adjusta-backend/api"
 	"github.com/koo-arch/adjusta-backend/api/handlers"
 	"github.com/koo-arch/adjusta-backend/api/middlewares"
 	"github.com/koo-arch/adjusta-backend/configs"
 	"github.com/koo-arch/adjusta-backend/ent"
+
 	_ "github.com/koo-arch/adjusta-backend/ent/runtime"
 	"github.com/koo-arch/adjusta-backend/internal/auth"
 	"github.com/koo-arch/adjusta-backend/scheduler"
@@ -86,29 +88,40 @@ func main() {
 	})
 	router.Use(sessions.Sessions("session", store))
 
-	server := handlers.NewServer(client)
+	server := api.NewServer(client)
+
+	handler := handlers.NewHandler(server)
+	accountHandler := handlers.NewAccountHandler(handler)
+	userHandler := handlers.NewUserHandler(handler)
+	oauthHandler := handlers.NewOauthHandler(handler)
+	calendarHandler := handlers.NewCalendarHandler(handler)
+
+	middleware := middlewares.NewMiddleware(server)
+	authMiddleware := middlewares.NewAuthMiddleware(middleware)
+	calendarMiddleware := middlewares.NewCalendarMiddleware(middleware)
+	sessionMiddleware := middlewares.NewSessionMiddleware(middleware)
 
 	// ルートハンドラの定義
-	router.GET("/auth/google/login", server.GoogleLoginHandler)
-	router.GET("/auth/google/callback", server.GoogleCallbackHandler(client))
-	router.GET("/auth/logout", server.LogoutHandler)
+	router.GET("/auth/google/login", oauthHandler.GoogleLoginHandler)
+	router.GET("/auth/google/callback", oauthHandler.GoogleCallbackHandler())
+	router.GET("/auth/logout", oauthHandler.LogoutHandler)
 
 	// 認証が必要なAPIグループ
 	auth := router.Group("/api")
-	auth.Use(middlewares.SessionRenewalMiddleware(), middlewares.AuthMiddleware(client))
+	auth.Use(sessionMiddleware.SessionRenewal(), authMiddleware.AuthUser())
 	{
-		auth.GET("/google/add-account", server.AddAccountHandler)
-		auth.GET("/google/add-account/callback", server.AddAccountCallbackHandler(client))
-		auth.GET("/users/me", server.GetCurrentUserHandler(client))
-		auth.GET("/account/list", server.FetchAccountsHandler(client))
-		calendar := auth.Group("/calendar").Use(middlewares.CalendarMiddleware(client))
+		auth.GET("/google/add-account", oauthHandler.AddAccountHandler)
+		auth.GET("/google/add-account/callback", oauthHandler.AddAccountCallbackHandler())
+		auth.GET("/users/me", userHandler.GetCurrentUserHandler())
+		auth.GET("/account/list", accountHandler.FetchAccountsHandler())
+		calendar := auth.Group("/calendar").Use(calendarMiddleware.SyncGoogleCalendars())
 		{
-			calendar.GET("/list", server.FetchEventListHandler(client))
-			calendar.GET("/event/draft/list", server.FetchEventDraftListHandler(client))
-			calendar.GET("/event/draft/:eventID", server.FetchEventDraftDetailHandler(client))
-			calendar.POST("/event/draft", server.CreateEventDraftHandler(client))
-			calendar.PATCH("/event/confirm/:eventID", server.EventFinalizeHandler(client))
-			calendar.PUT("/event/draft/:eventID", server.UpdateEventDraftHandler(client))
+			calendar.GET("/list", calendarHandler.FetchEventListHandler())
+			calendar.GET("/event/draft/list", calendarHandler.FetchEventDraftListHandler())
+			calendar.GET("/event/draft/:eventID", calendarHandler.FetchEventDraftDetailHandler())
+			calendar.POST("/event/draft", calendarHandler.CreateEventDraftHandler())
+			calendar.PATCH("/event/confirm/:eventID", calendarHandler.EventFinalizeHandler())
+			calendar.PUT("/event/draft/:eventID", calendarHandler.UpdateEventDraftHandler())
 		}
 	}
 

@@ -6,11 +6,18 @@ import (
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	"github.com/koo-arch/adjusta-backend/ent"
 	"github.com/koo-arch/adjusta-backend/internal/google/userinfo"
 )
 
-func (s *Server) GetCurrentUserHandler(client *ent.Client) gin.HandlerFunc {
+type UserHandler struct {
+	handler *Handler
+}
+
+func NewUserHandler(handler *Handler) *UserHandler {
+	return &UserHandler{handler: handler}
+}
+
+func (uh *UserHandler) GetCurrentUserHandler() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		email, ok := c.Get("email")
 		if !ok {
@@ -36,7 +43,9 @@ func (s *Server) GetCurrentUserHandler(client *ent.Client) gin.HandlerFunc {
 
 		ctx := c.Request.Context()
 
-		token, err := s.authManager.VerifyOAuthToken(ctx, userid, email.(string))
+		authManager := uh.handler.Server.AuthManager
+
+		token, err := authManager.VerifyOAuthToken(ctx, userid, email.(string))
 		if err != nil {
 			println("oauth期限切れ")
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "failed to verify token"})

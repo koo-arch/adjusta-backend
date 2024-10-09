@@ -6,15 +6,18 @@ import (
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	"github.com/koo-arch/adjusta-backend/ent"
-	"github.com/koo-arch/adjusta-backend/internal/auth"
 	"github.com/koo-arch/adjusta-backend/internal/google/calendar"
-	"github.com/koo-arch/adjusta-backend/internal/repo/account"
-	dbCalendar "github.com/koo-arch/adjusta-backend/internal/repo/calendar"
-	"github.com/koo-arch/adjusta-backend/internal/repo/user"
 )
 
-func CalendarMiddleware(client *ent.Client) gin.HandlerFunc {
+type CalendarMiddleware struct {
+	middleware *Middleware
+}
+
+func NewCalendarMiddleware(middleware *Middleware) *CalendarMiddleware {
+	return &CalendarMiddleware{middleware: middleware}
+}
+
+func (cm *CalendarMiddleware) SyncGoogleCalendars() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		ctx := c.Request.Context()
 
@@ -32,11 +35,9 @@ func CalendarMiddleware(client *ent.Client) gin.HandlerFunc {
 			c.Abort()
 			return
 		}
-
-		userRepo := user.NewUserRepository(client)
-		accountRepo := account.NewAccountRepository(client)
-		authManager := auth.NewAuthManager(client, userRepo, accountRepo)
-		calendarRepo := dbCalendar.NewCalendarRepository(client)
+		accountRepo := cm.middleware.Server.AccountRepo
+		calendarRepo := cm.middleware.Server.CalendarRepo
+		authManager := cm.middleware.Server.AuthManager
 
 		userAccounts, err := accountRepo.FilterByUserID(ctx, nil, userid)
 		if err != nil {

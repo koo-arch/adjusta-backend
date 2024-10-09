@@ -9,23 +9,30 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/koo-arch/adjusta-backend/cookie"
-	"github.com/koo-arch/adjusta-backend/ent"
 	"github.com/koo-arch/adjusta-backend/internal/google/oauth"
 	"github.com/koo-arch/adjusta-backend/internal/google/userinfo"
 	"golang.org/x/oauth2"
 )
 
-func (s *Server) GoogleLoginHandler(c *gin.Context) {
+type OauthHandler struct {
+	handler *Handler
+}
+
+func NewOauthHandler(handler *Handler) *OauthHandler {
+	return &OauthHandler{handler: handler}
+}
+
+func (oh *OauthHandler) GoogleLoginHandler(c *gin.Context) {
 	url := oauth.GetGoogleAuthConfig().AuthCodeURL("state", oauth2.AccessTypeOffline, oauth2.ApprovalForce)
 	c.Redirect(http.StatusTemporaryRedirect, url)
 }
 
-func (s *Server) AddAccountHandler(c *gin.Context) {
+func (oh *OauthHandler) AddAccountHandler(c *gin.Context) {
 	url := oauth.GetAddAccountAuthConfig().AuthCodeURL("state", oauth2.AccessTypeOffline, oauth2.ApprovalForce)
 	c.Redirect(http.StatusTemporaryRedirect, url)
 }
 
-func (s *Server) LogoutHandler(c *gin.Context) {
+func (oh *OauthHandler) LogoutHandler(c *gin.Context) {
 	// セッションをクリア
 	session := sessions.Default(c)
 	session.Clear()
@@ -42,8 +49,9 @@ func (s *Server) LogoutHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "logged out"})
 }
 
-func (s *Server) GoogleCallbackHandler(client *ent.Client) gin.HandlerFunc {
+func (oh *OauthHandler) GoogleCallbackHandler() gin.HandlerFunc {
 	return func(c *gin.Context) {
+		client := oh.handler.Server.Client
 		session := sessions.Default(c)
 		// クエリパラメータからcodeを取得
 		code := c.Query("code")
@@ -71,19 +79,22 @@ func (s *Server) GoogleCallbackHandler(client *ent.Client) gin.HandlerFunc {
 			return
 		}
 
+		jwtManager := oh.handler.Server.JWTManager
+		authManager := oh.handler.Server.AuthManager
 		// アプリ独自のJWTトークンを生成
-		jwtToken, err := s.jwtManager.GenerateTokens(ctx, client, userInfo.Email)
+		jwtToken, err := jwtManager.GenerateTokens(ctx, client, userInfo.Email)
 
 		// ユーザー情報をデータベースに保存
-		u, err := s.authManager.ProcessUserSignIn(ctx, userInfo, jwtToken, oauthToken)
+		u, err := authManager.ProcessUserSignIn(ctx, userInfo, jwtToken, oauthToken)
 		if err != nil {
 			fmt.Printf("failed to create or update user: %s", err.Error())
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create or update user"})
 			return
 		}
 
+		accountRepo := oh.handler.Server.AccountRepo
 		// アカウントのoauthトークンを検証
-		accounts, err := s.accountRepo.FilterByUserID(ctx, nil, u.ID)
+		accounts, err := accountRepo.FilterByUserID(ctx, nil, u.ID)
 		if err != nil {
 			fmt.Printf("failed to get accounts: %s", err.Error())
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to get accounts"})
@@ -91,7 +102,7 @@ func (s *Server) GoogleCallbackHandler(client *ent.Client) gin.HandlerFunc {
 		}
 
 		for _, account := range accounts {
-			_, err := s.authManager.VerifyOAuthToken(ctx, u.ID, account.Email)
+			_, err := authManager.VerifyOAuthToken(ctx, u.ID, account.Email)
 			if err != nil {
 				fmt.Printf("failed to reuse token source for account: %s, error: %s", account.Email, err.Error())
 				c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to reuse token source"})
@@ -117,7 +128,7 @@ func (s *Server) GoogleCallbackHandler(client *ent.Client) gin.HandlerFunc {
 	}
 }
 
-func (s *Server) AddAccountCallbackHandler(client *ent.Client) gin.HandlerFunc {
+func (oh *OauthHandler) AddAccountCallbackHandler() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		session := sessions.Default(c)
 		// クエリパラメータからcodeを取得
@@ -161,7 +172,9 @@ func (s *Server) AddAccountCallbackHandler(client *ent.Client) gin.HandlerFunc {
 			return
 		}
 
-		_, err = s.authManager.AddAccountToUser(ctx, userid, userInfo, oauthToken)
+		authManager := oh.handler.Server.AuthManager
+
+		_, err = authManager.AddAccountToUser(ctx, userid, userInfo, oauthToken)
 		if err != nil {
 			fmt.Printf("failed to add account: %s", err.Error())
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to add account"})

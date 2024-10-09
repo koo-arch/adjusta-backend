@@ -10,14 +10,20 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/koo-arch/adjusta-backend/cookie"
-	"github.com/koo-arch/adjusta-backend/ent"
-	"github.com/koo-arch/adjusta-backend/internal/auth"
 	"github.com/koo-arch/adjusta-backend/internal/models"
-	"github.com/koo-arch/adjusta-backend/internal/repo/user"
 )
 
-func AuthMiddleware(client *ent.Client) gin.HandlerFunc {
+type AuthMiddleware struct {
+	middleware *Middleware
+}
+
+func NewAuthMiddleware(middleware *Middleware) *AuthMiddleware {
+	return &AuthMiddleware{middleware: middleware}
+}
+
+func (am *AuthMiddleware) AuthUser() gin.HandlerFunc {
 	return func(c *gin.Context) {
+		client := am.middleware.Server.Client
 		accessToken, err := c.Cookie("access_token")
 		if err != nil {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "failed to get access token"})
@@ -31,13 +37,14 @@ func AuthMiddleware(client *ent.Client) gin.HandlerFunc {
 
 		ctx := c.Request.Context()
 
+		jwtManager := am.middleware.Server.JWTManager
+
 		// トークンの有効性を確認
-		jwtManager := auth.NewJWTManager(client, auth.NewKeyManager(client))
 		email, err := jwtManager.VerifyToken(ctx, client, accessToken, "access")
 		if err != nil {
 			// トークンの有効期限が切れている場合はリフレッシュトークンを利用してトークンを再発行
 			if strings.Contains(err.Error(), "token is expired") {
-				token, err := tokenRefresh(c, client, jwtManager)
+				token, err := am.tokenRefresh(c)
 				if err != nil {
 					c.JSON(http.StatusUnauthorized, gin.H{"error": "failed to refresh token"})
 					c.Abort()
@@ -67,8 +74,9 @@ func AuthMiddleware(client *ent.Client) gin.HandlerFunc {
 	}
 }
 
-func tokenRefresh(c *gin.Context, client *ent.Client, jwtManager *auth.JWTManager) (*models.JWTToken, error) {
+func (am *AuthMiddleware) tokenRefresh(c *gin.Context) (*models.JWTToken, error) {
 	ctx := c.Request.Context()
+	client := am.middleware.Server.Client
 	session := sessions.Default(c)
 	useridStr, ok := session.Get("userid").(string)
 	if !ok {
@@ -80,8 +88,10 @@ func tokenRefresh(c *gin.Context, client *ent.Client, jwtManager *auth.JWTManage
 		return nil, err
 	}
 
+	jwtManager := am.middleware.Server.JWTManager
+	userRepo := am.middleware.Server.UserRepo
+
 	// リフレッシュトークンの取得
-	userRepo := user.NewUserRepository(client)
 	u, err := userRepo.Read(ctx, nil, userid)
 	if err != nil {
 		return nil, err
