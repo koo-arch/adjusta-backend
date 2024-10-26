@@ -25,14 +25,36 @@ func NewGoogleCalendarManager(client *ent.Client) *GoogleCalendarManager {
 
 func (gcm *GoogleCalendarManager) FetchEventsFromCalendars(calendarService *customCalendar.Calendar, calendars []*ent.Calendar, startTime, endTime time.Time) ([]*models.Event, error) {
 	var events []*models.Event
+	var wg sync.WaitGroup
+	var mu sync.Mutex
+	errCh := make(chan error, len(calendars))
 
 	for _, cal := range calendars {
-		calEvents, err := calendarService.FetchEvents(cal.CalendarID, startTime, endTime)
-		if err != nil {
-			return nil, fmt.Errorf("failed to fetch events from calendar: %s, error: %w", cal.Summary, err)
-		}
+		wg.Add(1)
+		go func(cal *ent.Calendar) {
+			defer wg.Done()
 
-		events = append(events, calEvents...)
+			calEvents, err := calendarService.FetchEvents(cal.CalendarID, startTime, endTime)
+			if err != nil {
+				errCh <- fmt.Errorf("failed to fetch events from calendar: %s, error: %w", cal.Summary, err)
+				return
+			}
+
+			mu.Lock()
+			events = append(events, calEvents...)
+			mu.Unlock()
+		}(cal)
+	}
+
+	wg.Wait()
+	close(errCh)
+
+	if len(errCh) > 0 {
+		var errList []error
+		for err := range errCh {
+			errList = append(errList, err)
+		}
+		return nil, fmt.Errorf("multiple errors occurred: %v", errList)
 	}
 
 	return events, nil

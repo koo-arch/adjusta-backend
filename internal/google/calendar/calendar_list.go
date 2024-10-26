@@ -2,7 +2,9 @@ package calendar
 
 import (
 	"context"
+	"strings"
 	"fmt"
+	"sync"
 
 	"github.com/google/uuid"
 	"github.com/koo-arch/adjusta-backend/ent"
@@ -18,33 +20,59 @@ type AccountsCalendars struct {
 
 func RegisterCalendarList(ctx context.Context, authManager *auth.AuthManager, userID uuid.UUID, userAccounts []*ent.Account, calendarRepo calendar.CalendarRepository) ([]*AccountsCalendars, error) {
 	var accountsCalendars []*AccountsCalendars
+	var wg sync.WaitGroup
+	var mu sync.Mutex
+	errCh := make(chan error, len(userAccounts))
 
 	for _, userAccount := range userAccounts {
-		token, err := authManager.VerifyOAuthToken(ctx, userID, userAccount.Email)
-		if err != nil {
-			return nil, fmt.Errorf("failed to verify token for account: %s, error: %w", userAccount.Email, err)
+		wg.Add(1)
+		go func(userAccount *ent.Account) {
+			defer wg.Done()
+
+			token, err := authManager.VerifyOAuthToken(ctx, userID, userAccount.Email)
+			if err != nil {
+				errCh <- fmt.Errorf("failed to verify token for account: %s, error: %w", userAccount.Email, err)
+				return
+			}
+
+			calendarService, err := NewCalendar(ctx, token)
+			if err != nil {
+				errCh <- fmt.Errorf("failed to create calendar service for account: %s, error: %w", userAccount.Email, err)
+				return
+			}
+
+			calendars, err := calendarService.FetchCalendarList()
+			if err != nil {
+				errCh <- fmt.Errorf("failed to fetch calendars for account: %s, error: %w", userAccount.Email, err)
+				return
+			}
+
+			if err := syncCalendar(ctx, calendars, userAccount, calendarRepo); err != nil {
+				errCh <- fmt.Errorf("failed to sync calendars for account: %s, error: %w", userAccount.Email, err)
+				return
+			}
+
+			mu.Lock() // accountsCalendarsにアクセスするためにロック
+			accountsCalendars = append(accountsCalendars, &AccountsCalendars{
+				AccountID: userAccount.ID,
+				Email:     userAccount.Email,
+				Calendars: calendars,
+			})
+			mu.Unlock()
+		}(userAccount)
+	}
+
+	// 全てのgoroutineが終了するまで待機
+	wg.Wait()
+	close(errCh)
+	
+	// エラーが発生した場合はエラーを返す
+	if len(errCh) > 0 {
+		var errList []error
+		for err := range errCh {
+			errList = append(errList, err)
 		}
-
-		calendarService, err := NewCalendar(ctx, token)
-		if err != nil {
-			return nil, fmt.Errorf("failed to create calendar service for account: %s, error: %w", userAccount.Email, err)
-		}
-
-		calendars, err := calendarService.FetchCalendarList()
-		if err != nil {
-			return nil, fmt.Errorf("failed to fetch calendars for account: %s, error: %w", userAccount.Email, err)
-		}
-
-		if err := syncCalendar(ctx, calendars, userAccount, calendarRepo); err != nil {
-			return nil, fmt.Errorf("failed to sync calendars for account: %s, error: %w", userAccount.Email, err)
-		}
-
-		accountsCalendars = append(accountsCalendars, &AccountsCalendars{
-			AccountID: userAccount.ID,
-			Email:     userAccount.Email,
-			Calendars: calendars,
-		})
-
+		return nil, fmt.Errorf("multiple errors occurred: %v", errList)
 	}
 
 	return accountsCalendars, nil
@@ -72,6 +100,10 @@ func syncCalendar(ctx context.Context, calendars []*CalendarList, userAccount *e
 	// データベースに存在しないカレンダーを追加
 	for _, cal := range calendarMap {
 		if _, err := calendarRepo.Create(ctx, nil, cal.CalendarID, cal.Summary, cal.Primary, userAccount); err != nil {
+			if strings.Contains(err.Error(), "is already in use by another account of the same user") {
+				fmt.Printf("calendar already exists: %s\n", cal.Summary)
+				continue
+			}
 			return fmt.Errorf("failed to insert calendar to google calendar: %s, error: %w", cal.Summary, err)
 		}
 	}
