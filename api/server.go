@@ -2,19 +2,21 @@ package api
 
 import (
 	"github.com/koo-arch/adjusta-backend/ent"
+	"github.com/koo-arch/adjusta-backend/cache"
+	appCalendar "github.com/koo-arch/adjusta-backend/internal/apps/calendar"
+	appEvents "github.com/koo-arch/adjusta-backend/internal/apps/events"
+	"github.com/koo-arch/adjusta-backend/internal/apps/events/event_operations"
 	"github.com/koo-arch/adjusta-backend/internal/auth"
 	"github.com/koo-arch/adjusta-backend/internal/repo/account"
 	dbCalendar "github.com/koo-arch/adjusta-backend/internal/repo/calendar"
 	"github.com/koo-arch/adjusta-backend/internal/repo/event"
 	"github.com/koo-arch/adjusta-backend/internal/repo/proposeddate"
 	"github.com/koo-arch/adjusta-backend/internal/repo/user"
-	appEvents "github.com/koo-arch/adjusta-backend/internal/apps/events"
-	"github.com/koo-arch/adjusta-backend/internal/apps/events/event_operations"
-	appCalendar "github.com/koo-arch/adjusta-backend/internal/apps/calendar"
 )
 
 type Server struct {
 	Client 	      			 *ent.Client
+	Cache 	   			 	 *cache.Cache
 	UserRepo      			 user.UserRepository
 	AccountRepo   			 account.AccountRepository
 	CalendarRepo  			 dbCalendar.CalendarRepository
@@ -30,13 +32,15 @@ type Server struct {
 }
 
 func NewServer(client *ent.Client) *Server {
+	cache := cache.NewCache()
+
 	userRepo := user.NewUserRepository(client)
 	accountRepo := account.NewAccountRepository(client)
 	calendarRepo := dbCalendar.NewCalendarRepository(client)
 	eventRepo := event.NewEventRepository(client)
 	dateRepo := proposeddate.NewProposedDateRepository(client)
 	calendarApp := appCalendar.NewGoogleCalendarManager(client) // Google Calendar API manager
-	keyManager := auth.NewKeyManager(client)
+	keyManager := auth.NewKeyManager(client, cache)
 	jwtManager := auth.NewJWTManager(client, keyManager)
 	authManager := auth.NewAuthManager(client, userRepo, accountRepo)
 
@@ -44,6 +48,7 @@ func NewServer(client *ent.Client) *Server {
 
 	return &Server{
 		Client:        			  client,
+		Cache:         			  cache,
 		UserRepo:      			  userRepo,
 		AccountRepo:   			  accountRepo,
 		CalendarRepo:  			  calendarRepo,
