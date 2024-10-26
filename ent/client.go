@@ -554,7 +554,8 @@ func (c *CalendarClient) QueryEvents(ca *Calendar) *EventQuery {
 
 // Hooks returns the client hooks.
 func (c *CalendarClient) Hooks() []Hook {
-	return c.hooks.Calendar
+	hooks := c.hooks.Calendar
+	return append(hooks[:len(hooks):len(hooks)], calendar.Hooks[:]...)
 }
 
 // Interceptors returns the client interceptors.

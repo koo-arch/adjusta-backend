@@ -53,13 +53,6 @@ var (
 				OnDelete:   schema.SetNull,
 			},
 		},
-		Indexes: []*schema.Index{
-			{
-				Name:    "calendar_calendar_id_account_calendars",
-				Unique:  true,
-				Columns: []*schema.Column{CalendarsColumns[1], CalendarsColumns[4]},
-			},
-		},
 	}
 	// EventsColumns holds the columns for the "events" table.
 	EventsColumns = []*schema.Column{

@@ -34,6 +34,8 @@ func init() {
 	accountDescID := accountFields[0].Descriptor()
 	// account.DefaultID holds the default value on creation for the id field.
 	account.DefaultID = accountDescID.Default.(func() uuid.UUID)
+	calendarHooks := schema.Calendar{}.Hooks()
+	calendar.Hooks[0] = calendarHooks[0]
 	calendarFields := schema.Calendar{}.Fields()
 	_ = calendarFields
 	// calendarDescIsPrimary is the schema descriptor for is_primary field.

@@ -103,7 +103,9 @@ func (cc *CalendarCreate) Mutation() *CalendarMutation {
 
 // Save creates the Calendar in the database.
 func (cc *CalendarCreate) Save(ctx context.Context) (*Calendar, error) {
-	cc.defaults()
+	if err := cc.defaults(); err != nil {
+		return nil, err
+	}
 	return withHooks(ctx, cc.sqlSave, cc.mutation, cc.hooks)
 }
 
@@ -130,15 +132,19 @@ func (cc *CalendarCreate) ExecX(ctx context.Context) {
 }
 
 // defaults sets the default values of the builder before save.
-func (cc *CalendarCreate) defaults() {
+func (cc *CalendarCreate) defaults() error {
 	if _, ok := cc.mutation.IsPrimary(); !ok {
 		v := calendar.DefaultIsPrimary
 		cc.mutation.SetIsPrimary(v)
 	}
 	if _, ok := cc.mutation.ID(); !ok {
+		if calendar.DefaultID == nil {
+			return fmt.Errorf("ent: uninitialized calendar.DefaultID (forgotten import ent/runtime?)")
+		}
 		v := calendar.DefaultID()
 		cc.mutation.SetID(v)
 	}
+	return nil
 }
 
 // check runs all checks and user-defined validators on the builder.
