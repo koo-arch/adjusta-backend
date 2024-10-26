@@ -19,7 +19,6 @@ import (
 	"github.com/koo-arch/adjusta-backend/ent"
 
 	_ "github.com/koo-arch/adjusta-backend/ent/runtime"
-	"github.com/koo-arch/adjusta-backend/internal/auth"
 	"github.com/koo-arch/adjusta-backend/scheduler"
 	_ "github.com/lib/pq"
 )
@@ -53,14 +52,19 @@ func main() {
 		log.Fatalf("failed creating schema resources: %v", err)
 	}
 
+	server := api.NewServer(client)
+
+	// cache
+	cache := server.Cache
+
 	// JWTキーの起動時生成
-	keyManager := auth.NewKeyManager(client)
+	keyManager := server.KeyManager
 	if err := keyManager.InitializeJWTKeys(ctx); err != nil {
 		log.Fatalf("failed to initialize JWT")
 	}
 
 	// スケジューラーのセットアップ
-	s := scheduler.NewScheduler(client)
+	s := scheduler.NewScheduler(client, cache)
 	s.SetupJobs(ctx)
 	s.Start()
 	defer s.Stop()
@@ -88,7 +92,6 @@ func main() {
 	})
 	router.Use(sessions.Sessions("session", store))
 
-	server := api.NewServer(client)
 
 	handler := handlers.NewHandler(server)
 	accountHandler := handlers.NewAccountHandler(handler)
