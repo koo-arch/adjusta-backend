@@ -8,7 +8,7 @@ import (
 	"github.com/koo-arch/adjusta-backend/internal/apps/events"
 	customCalendar "github.com/koo-arch/adjusta-backend/internal/google/calendar"
 	"github.com/koo-arch/adjusta-backend/internal/models"
-	dbCalendar "github.com/koo-arch/adjusta-backend/internal/repo/calendar"
+	repoCalendar "github.com/koo-arch/adjusta-backend/internal/repo/calendar"
 	"github.com/koo-arch/adjusta-backend/internal/transaction"
 )
 
@@ -42,7 +42,7 @@ func (ecm *EventCreationManager) CreateDraftedEvents(ctx context.Context, userID
 	defer transaction.HandleTransaction(tx, &err)
 
 	isPrimary := true
-	findOptions := dbCalendar.CalendarQueryOptions{
+	findOptions := repoCalendar.CalendarQueryOptions{
 		IsPrimary: &isPrimary,
 	}
 	entCalendar, err := ecm.event.CalendarRepo.FindByFields(ctx, tx, accountID, findOptions)

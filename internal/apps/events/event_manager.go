@@ -4,7 +4,7 @@ import (
 	"github.com/koo-arch/adjusta-backend/ent"
 	appCalendar "github.com/koo-arch/adjusta-backend/internal/apps/calendar"
 	"github.com/koo-arch/adjusta-backend/internal/auth"
-	dbCalendar "github.com/koo-arch/adjusta-backend/internal/repo/calendar"
+	repoCalendar "github.com/koo-arch/adjusta-backend/internal/repo/calendar"
 	"github.com/koo-arch/adjusta-backend/internal/repo/event"
 	"github.com/koo-arch/adjusta-backend/internal/repo/proposeddate"
 )
@@ -12,7 +12,7 @@ import (
 type EventManager struct {
 	Client       *ent.Client
 	AuthManager  *auth.AuthManager
-	CalendarRepo dbCalendar.CalendarRepository
+	CalendarRepo repoCalendar.CalendarRepository
 	EventRepo    event.EventRepository
 	DateRepo     proposeddate.ProposedDateRepository
 	CalendarApp  *appCalendar.GoogleCalendarManager
@@ -21,7 +21,7 @@ type EventManager struct {
 func NewEventManager(
 	client *ent.Client,
 	authManager *auth.AuthManager,
-	calendarRepo dbCalendar.CalendarRepository,
+	calendarRepo repoCalendar.CalendarRepository,
 	eventRepo event.EventRepository,
 	dateRepo proposeddate.ProposedDateRepository,
 	calendarApp *appCalendar.GoogleCalendarManager,

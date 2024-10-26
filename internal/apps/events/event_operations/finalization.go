@@ -9,7 +9,7 @@ import (
 	"github.com/koo-arch/adjusta-backend/internal/apps/events"
 	customCalendar "github.com/koo-arch/adjusta-backend/internal/google/calendar"
 	"github.com/koo-arch/adjusta-backend/internal/models"
-	dbCalendar "github.com/koo-arch/adjusta-backend/internal/repo/calendar"
+	repoCalendar "github.com/koo-arch/adjusta-backend/internal/repo/calendar"
 	"github.com/koo-arch/adjusta-backend/internal/repo/event"
 	"github.com/koo-arch/adjusta-backend/internal/repo/proposeddate"
 	"github.com/koo-arch/adjusta-backend/internal/transaction"
@@ -80,7 +80,7 @@ func (efm *EventFinalizationManager) FinalizeProposedDate(ctx context.Context, u
 func (efm *EventFinalizationManager) resetAllFinalized(ctx context.Context, tx *ent.Tx, eventID, accountID uuid.UUID, email string) error {
 	// プライマリカレンダーを取得
 	isPrimary := true
-	findOptions := dbCalendar.CalendarQueryOptions{
+	findOptions := repoCalendar.CalendarQueryOptions{
 		IsPrimary: &isPrimary,
 	}
 	_, err := efm.event.CalendarRepo.FindByFields(ctx, tx, accountID, findOptions)

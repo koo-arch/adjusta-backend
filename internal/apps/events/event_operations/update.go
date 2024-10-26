@@ -2,21 +2,21 @@ package event_operations
 
 import (
 	"context"
-	"log"
 	"fmt"
-	"time"
+	"log"
 	"sync"
+	"time"
 
 	"github.com/google/uuid"
-	"google.golang.org/api/calendar/v3"
-	"google.golang.org/api/googleapi"
 	"github.com/koo-arch/adjusta-backend/ent"
 	"github.com/koo-arch/adjusta-backend/internal/apps/events"
 	customCalendar "github.com/koo-arch/adjusta-backend/internal/google/calendar"
 	"github.com/koo-arch/adjusta-backend/internal/models"
-	dbCalendar "github.com/koo-arch/adjusta-backend/internal/repo/calendar"
+	repoCalendar "github.com/koo-arch/adjusta-backend/internal/repo/calendar"
 	"github.com/koo-arch/adjusta-backend/internal/repo/proposeddate"
 	"github.com/koo-arch/adjusta-backend/internal/transaction"
+	"google.golang.org/api/calendar/v3"
+	"google.golang.org/api/googleapi"
 )
 
 type EventUpdateManager struct {
@@ -52,7 +52,7 @@ func (eum *EventUpdateManager) UpdateDraftedEvents(ctx context.Context, userID, 
 
 	// プライマリカレンダーを取得
 	isPrimary := true
-	findOptions := dbCalendar.CalendarQueryOptions{
+	findOptions := repoCalendar.CalendarQueryOptions{
 		IsPrimary: &isPrimary,
 	}
 	_, err = eum.event.CalendarRepo.FindByFields(ctx, tx, accountID, findOptions)
@@ -256,9 +256,9 @@ func (eum *EventUpdateManager) updateProposedDates(ctx context.Context, tx *ent.
 
 		// 新しい日程候補をDBに追加
 		dateOptions := proposeddate.ProposedDateQueryOptions{
-			StartTime: date.Start,
-			EndTime:   date.End,
-			Priority:  &date.Priority,
+			StartTime:     date.Start,
+			EndTime:       date.End,
+			Priority:      &date.Priority,
 			GoogleEventID: &date.GoogleEventID,
 		}
 		_, err := eum.event.DateRepo.Create(ctx, tx, &date.GoogleEventID, dateOptions, entEvent)

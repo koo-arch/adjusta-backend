@@ -3,9 +3,9 @@ package event_operations
 import (
 	"context"
 	"fmt"
-	"time"
 	"sort"
 	"sync"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/koo-arch/adjusta-backend/ent"
@@ -13,7 +13,7 @@ import (
 	"github.com/koo-arch/adjusta-backend/internal/apps/events"
 	customCalendar "github.com/koo-arch/adjusta-backend/internal/google/calendar"
 	"github.com/koo-arch/adjusta-backend/internal/models"
-	dbCalendar "github.com/koo-arch/adjusta-backend/internal/repo/calendar"
+	repoCalendar "github.com/koo-arch/adjusta-backend/internal/repo/calendar"
 	"github.com/koo-arch/adjusta-backend/internal/repo/event"
 	"github.com/koo-arch/adjusta-backend/internal/transaction"
 )
@@ -68,7 +68,7 @@ func (efm *EventFetchingManager) FetchAllEvents(ctx context.Context, userID uuid
 
 func (efm *EventFetchingManager) FetchDraftedEvents(ctx context.Context, userID, accountID uuid.UUID, email string) ([]*models.EventDraftDetail, error) {
 	isPrimary := true
-	findOptions := dbCalendar.CalendarQueryOptions{
+	findOptions := repoCalendar.CalendarQueryOptions{
 		IsPrimary:         &isPrimary,
 		WithEvents:        true,
 		WithProposedDates: true,
@@ -168,7 +168,7 @@ func (efm *EventFetchingManager) FetchDraftedEventDetail(ctx context.Context, us
 		})
 	}
 
-		// Priorityに基づいてProposedDatesを昇順にソート
+	// Priorityに基づいてProposedDatesを昇順にソート
 	sort.Slice(proposedDates, func(i, j int) bool {
 		return proposedDates[i].Priority < proposedDates[j].Priority
 	})

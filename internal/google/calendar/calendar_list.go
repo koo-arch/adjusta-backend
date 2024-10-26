@@ -2,8 +2,8 @@ package calendar
 
 import (
 	"context"
-	"strings"
 	"fmt"
+	"strings"
 	"sync"
 
 	"github.com/google/uuid"
@@ -65,7 +65,7 @@ func RegisterCalendarList(ctx context.Context, authManager *auth.AuthManager, us
 	// 全てのgoroutineが終了するまで待機
 	wg.Wait()
 	close(errCh)
-	
+
 	// エラーが発生した場合はエラーを返す
 	if len(errCh) > 0 {
 		var errList []error
@@ -79,7 +79,7 @@ func RegisterCalendarList(ctx context.Context, authManager *auth.AuthManager, us
 }
 
 func syncCalendar(ctx context.Context, calendars []*CalendarList, userAccount *ent.Account, calendarRepo calendar.CalendarRepository) error {
-	dbCalendars, err := calendarRepo.FilterByAccountID(ctx, nil, userAccount.ID)
+	repoCalendars, err := calendarRepo.FilterByAccountID(ctx, nil, userAccount.ID)
 	if err != nil {
 		return fmt.Errorf("failed to get calendars from db for account: %s, error: %w", userAccount.Email, err)
 	}
@@ -91,7 +91,7 @@ func syncCalendar(ctx context.Context, calendars []*CalendarList, userAccount *e
 	}
 
 	// データベースに存在するカレンダーをマップから削除
-	for _, dbCal := range dbCalendars {
+	for _, dbCal := range repoCalendars {
 		if _, ok := calendarMap[dbCal.CalendarID]; ok {
 			delete(calendarMap, dbCal.CalendarID)
 		}
