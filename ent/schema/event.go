@@ -4,6 +4,7 @@ import (
 	"entgo.io/ent"
 	"entgo.io/ent/schema/field"
 	"entgo.io/ent/schema/edge"
+	"entgo.io/ent/dialect/entsql"
 	"github.com/google/uuid"
 )
 
@@ -26,6 +27,6 @@ func (Event) Fields() []ent.Field {
 func (Event) Edges() []ent.Edge {
 	return []ent.Edge{
 		edge.From("calendar", Calendar.Type).Ref("events").Unique(),
-		edge.To("proposed_dates", ProposedDate.Type),
+		edge.To("proposed_dates", ProposedDate.Type).Annotations(entsql.OnDelete(entsql.Cascade)),
 	}
 }

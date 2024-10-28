@@ -9,6 +9,7 @@ import (
 	"entgo.io/ent"
 	"entgo.io/ent/schema/field"
 	"entgo.io/ent/schema/edge"
+	"entgo.io/ent/dialect/entsql"
 	"github.com/koo-arch/adjusta-backend/ent/hook"
 	"github.com/google/uuid"
 )
@@ -34,7 +35,7 @@ func (User) Fields() []ent.Field {
 // Edges of the User.
 func (User) Edges() []ent.Edge {
 	return []ent.Edge{
-		edge.To("accounts", Account.Type),
+		edge.To("accounts", Account.Type).Annotations(entsql.OnDelete(entsql.Cascade)),
 	}
 }
 

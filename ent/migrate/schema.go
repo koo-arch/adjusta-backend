@@ -28,7 +28,7 @@ var (
 				Symbol:     "accounts_users_accounts",
 				Columns:    []*schema.Column{AccountsColumns[6]},
 				RefColumns: []*schema.Column{UsersColumns[0]},
-				OnDelete:   schema.SetNull,
+				OnDelete:   schema.Cascade,
 			},
 		},
 	}
@@ -50,7 +50,7 @@ var (
 				Symbol:     "calendars_accounts_calendars",
 				Columns:    []*schema.Column{CalendarsColumns[4]},
 				RefColumns: []*schema.Column{AccountsColumns[0]},
-				OnDelete:   schema.SetNull,
+				OnDelete:   schema.Cascade,
 			},
 		},
 	}
@@ -72,7 +72,7 @@ var (
 				Symbol:     "events_calendars_events",
 				Columns:    []*schema.Column{EventsColumns[4]},
 				RefColumns: []*schema.Column{CalendarsColumns[0]},
-				OnDelete:   schema.SetNull,
+				OnDelete:   schema.Cascade,
 			},
 		},
 	}
@@ -117,7 +117,7 @@ var (
 				Symbol:     "proposed_dates_events_proposed_dates",
 				Columns:    []*schema.Column{ProposedDatesColumns[6]},
 				RefColumns: []*schema.Column{EventsColumns[0]},
-				OnDelete:   schema.SetNull,
+				OnDelete:   schema.Cascade,
 			},
 		},
 	}

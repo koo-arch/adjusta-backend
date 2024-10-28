@@ -7,6 +7,7 @@ import (
 	"entgo.io/ent"
 	"entgo.io/ent/schema/edge"
 	"entgo.io/ent/schema/field"
+	"entgo.io/ent/dialect/entsql"
 	gen "github.com/koo-arch/adjusta-backend/ent"
 	"github.com/koo-arch/adjusta-backend/ent/account"
 	"github.com/koo-arch/adjusta-backend/ent/hook"
@@ -35,7 +36,7 @@ func (Account) Fields() []ent.Field {
 func (Account) Edges() []ent.Edge {
 	return []ent.Edge{
 		edge.From("user", User.Type).Ref("accounts").Unique(),
-		edge.To("calendars", Calendar.Type),
+		edge.To("calendars", Calendar.Type).Annotations(entsql.OnDelete(entsql.Cascade)),
 	}
 }
 
