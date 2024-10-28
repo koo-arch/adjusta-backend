@@ -29,6 +29,7 @@ type Server struct {
 	EventFetchingManager     *event_operations.EventFetchingManager
 	EventFinalizationManager *event_operations.EventFinalizationManager
 	EventUpdateManager       *event_operations.EventUpdateManager
+	EventDeleteManager 	 	 *event_operations.EventDeleteManager
 }
 
 func NewServer(client *ent.Client) *Server {
@@ -61,5 +62,6 @@ func NewServer(client *ent.Client) *Server {
 		EventFetchingManager:     event_operations.NewEventFetchingManager(eventManager),
 		EventFinalizationManager: event_operations.NewEventFinalizationManager(eventManager),
 		EventUpdateManager:       event_operations.NewEventUpdateManager(eventManager),
+		EventDeleteManager:       event_operations.NewEventDeleteManager(eventManager),
 	}
 }

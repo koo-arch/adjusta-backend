@@ -195,10 +195,8 @@ func (eum *EventUpdateManager) SyncUpdateGoogleEvents(ctx context.Context, tx *e
 	}
 
 	// 全てのゴルーチンの終了を待機
-	go func() {
-		wg.Wait()
-		close(errCh)
-	}()
+	wg.Wait()
+	close(errCh)
 
 	// エラーがあれば返す
 	for err := range errCh {

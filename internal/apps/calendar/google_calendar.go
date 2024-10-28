@@ -169,6 +169,61 @@ func (gcm *GoogleCalendarManager) UpdateGoogleCalendarEvents(calendarService *cu
 	return nil
 }
 
+func (gcm *GoogleCalendarManager) DeleteGoogleCalendarEvents(calendarService *customCalendar.Calendar, eventReq *models.EventDraftDetail) ([]*calendar.Event, error) {
+	var backupGoogleEvents []*calendar.Event // 削除前のイベントをバックアップするためのスライス
+
+	// 並列処理でイベントを削除
+	var wg sync.WaitGroup
+	var mu sync.Mutex
+	errCh := make(chan error, len(eventReq.ProposedDates))
+
+	wg.Add(len(eventReq.ProposedDates))
+	for _, date := range eventReq.ProposedDates {
+		go func(date models.ProposedDate) {
+			defer wg.Done()
+
+			// 削除前にイベントをバックアップできるように、Googleカレンダーからイベントを取得
+			backupEvent, err := calendarService.FetchEvent(date.GoogleEventID)
+			if err != nil {
+				errCh <- fmt.Errorf("failed to fetch event from Google Calendar: %w", err)
+				return
+			}
+
+			err = calendarService.DeleteEvent(date.GoogleEventID)
+			if err != nil {
+				errCh <- fmt.Errorf("failed to delete event from Google Calendar: %w", err)
+				return
+			}
+
+			mu.Lock()
+			backupGoogleEvents = append(backupGoogleEvents, backupEvent)
+			mu.Unlock()
+		}(date)
+	}
+
+	wg.Wait()
+	close(errCh)
+
+	// エラーが発生していた場合、削除したイベントを元に戻す
+	var errList []error
+	for err := range errCh {
+		if err != nil {
+			for _, event := range backupGoogleEvents {
+				if _, err := calendarService.InsertEvent(event); err != nil {
+					return nil, fmt.Errorf("failed to insert event to Google Calendar: %w", err)
+				}
+			}
+			errList = append(errList, err)
+		}
+	}
+
+	if len(errList) > 0 {
+		return nil, fmt.Errorf("multiple errors occurred: %v", errList)
+	}
+
+	return backupGoogleEvents, nil
+}
+
 func (gcm *GoogleCalendarManager) DeleteGoogleEvents(calendarService *customCalendar.Calendar, events []*calendar.Event) error {
 	for _, event := range events {
 		if event == nil || event.Id == "" {

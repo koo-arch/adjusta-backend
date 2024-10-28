@@ -125,6 +125,7 @@ func main() {
 			calendar.POST("/event/draft", calendarHandler.CreateEventDraftHandler())
 			calendar.PATCH("/event/confirm/:eventID", calendarHandler.EventFinalizeHandler())
 			calendar.PUT("/event/draft/:eventID", calendarHandler.UpdateEventDraftHandler())
+			calendar.DELETE("/event/draft/:eventID", calendarHandler.DeleteEventDraftHandler())
 		}
 	}
 
