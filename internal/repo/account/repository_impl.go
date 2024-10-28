@@ -28,37 +28,34 @@ func (r *AccountRepositoryImpl) Read(ctx context.Context, tx *ent.Tx, id uuid.UU
 }
 
 func (r *AccountRepositoryImpl) FindByEmail(ctx context.Context, tx *ent.Tx, email string) (*ent.Account, error) {
+	findAccount := r.client.Account.Query()
 	if tx != nil {
-		return tx.Account.Query().
-			Where(account.EmailEQ(email)).
-			Only(ctx)
+		findAccount = tx.Account.Query()
 	}
-	return r.client.Account.Query().
+	
+	return findAccount.
 		Where(account.EmailEQ(email)).
 		Only(ctx)
 }
 
 func (r *AccountRepositoryImpl) FilterByUserID(ctx context.Context, tx *ent.Tx, userID uuid.UUID) ([]*ent.Account, error) {
+	filterAccount := r.client.Account.Query()
 	if tx != nil {
-		return tx.Account.Query().
-			Where(account.HasUserWith(user.ID(userID))).
-			All(ctx)
+		filterAccount = tx.Account.Query()
 	}
-	return r.client.Account.Query().
-		Where(account.HasUserWith(user.ID(userID))).
+
+	return filterAccount.
+		Where(account.HasUserWith(user.IDEQ(userID))).
 		All(ctx)
 }
 
 func (r *AccountRepositoryImpl) FindByUserIDAndEmail(ctx context.Context, tx *ent.Tx, userID uuid.UUID, accountEmail string) (*ent.Account, error) {
+	findAccount := r.client.Account.Query()
 	if tx != nil {
-		return tx.Account.Query().
-			Where(
-				account.HasUserWith(user.IDEQ(userID)),
-				account.EmailEQ(accountEmail),
-			).
-			Only(ctx)
+		findAccount = tx.Account.Query()
 	}
-	return r.client.Account.Query().
+
+	return findAccount.
 		Where(
 			account.HasUserWith(user.IDEQ(userID)),
 			account.EmailEQ(accountEmail),
@@ -67,17 +64,12 @@ func (r *AccountRepositoryImpl) FindByUserIDAndEmail(ctx context.Context, tx *en
 }
 
 func (r *AccountRepositoryImpl) Create(ctx context.Context, tx *ent.Tx, email, googleID string, oauthToken *oauth2.Token, user *ent.User) (*ent.Account, error) {
+	accountCreate := r.client.Account.Create()
 	if tx != nil {
-		return tx.Account.Create().
-			SetEmail(email).
-			SetGoogleID(googleID).
-			SetAccessToken(oauthToken.AccessToken).
-			SetRefreshToken(oauthToken.RefreshToken).
-			SetAccessTokenExpiry(oauthToken.Expiry).
-			SetUser(user).
-			Save(ctx)
+		accountCreate = tx.Account.Create()
 	}
-	return r.client.Account.Create().
+
+	return accountCreate.
 		SetEmail(email).
 		SetGoogleID(googleID).
 		SetAccessToken(oauthToken.AccessToken).
@@ -88,17 +80,15 @@ func (r *AccountRepositoryImpl) Create(ctx context.Context, tx *ent.Tx, email, g
 }
 
 func (r *AccountRepositoryImpl) Update(ctx context.Context, tx *ent.Tx, id uuid.UUID, oauthToken *oauth2.Token) (*ent.Account, error) {
+	accountUpdate := r.client.Account.UpdateOneID(id)
 	if tx != nil {
-		return tx.Account.UpdateOneID(id).
-			SetNillableAccessToken(&oauthToken.AccessToken).
-			SetNillableRefreshToken(&oauthToken.RefreshToken).
-			SetNillableAccessTokenExpiry(&oauthToken.Expiry).
-			Save(ctx)
+		accountUpdate = tx.Account.UpdateOneID(id)
 	}
-	return r.client.Account.UpdateOneID(id).
-		SetNillableAccessToken(&oauthToken.AccessToken).
-		SetNillableRefreshToken(&oauthToken.RefreshToken).
-		SetNillableAccessTokenExpiry(&oauthToken.Expiry).
+
+	return accountUpdate.
+		SetAccessToken(oauthToken.AccessToken).
+		SetRefreshToken(oauthToken.RefreshToken).
+		SetAccessTokenExpiry(oauthToken.Expiry).
 		Save(ctx)
 }
 

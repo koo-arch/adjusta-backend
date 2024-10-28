@@ -27,25 +27,21 @@ func (r *UserRepositoryImpl) Read(ctx context.Context, tx *ent.Tx, id uuid.UUID)
 }
 
 func (r *UserRepositoryImpl) FindByEmail(ctx context.Context, tx *ent.Tx, email string) (*ent.User, error) {
+	findUser := r.client.User.Query()
 	if tx != nil {
-		return tx.User.Query().
-			Where(user.EmailEQ(email)).
-			Only(ctx)
+		findUser = tx.User.Query()
 	}
-	return r.client.User.Query().
+	return findUser.
 		Where(user.EmailEQ(email)).
 		Only(ctx)
 }
 
 func (r *UserRepositoryImpl) Create(ctx context.Context, tx *ent.Tx, email string, jwtToken *models.JWTToken) (*ent.User, error) {
+	userCreate := r.client.User.Create()
 	if tx != nil {
-		return tx.User.Create().
-			SetEmail(email).
-			SetNillableRefreshToken(&jwtToken.RefreshToken).
-			SetNillableRefreshTokenExpiry(&jwtToken.RefreshExpiration).
-			Save(ctx)
+		userCreate = tx.User.Create()
 	}
-	return r.client.User.Create().
+	return userCreate.
 		SetEmail(email).
 		SetNillableRefreshToken(&jwtToken.RefreshToken).
 		SetNillableRefreshTokenExpiry(&jwtToken.RefreshExpiration).
@@ -53,13 +49,11 @@ func (r *UserRepositoryImpl) Create(ctx context.Context, tx *ent.Tx, email strin
 }
 
 func (r *UserRepositoryImpl) Update(ctx context.Context,tx *ent.Tx, id uuid.UUID, jwtToken *models.JWTToken) (*ent.User, error) {
+	userUpdate := r.client.User.UpdateOneID(id)
 	if tx != nil {
-		return tx.User.UpdateOneID(id).
-			SetNillableRefreshToken(&jwtToken.RefreshToken).
-			SetNillableRefreshTokenExpiry(&jwtToken.RefreshExpiration).
-			Save(ctx)
+		userUpdate = tx.User.UpdateOneID(id)
 	}
-	return r.client.User.UpdateOneID(id).
+	return userUpdate.
 		SetNillableRefreshToken(&jwtToken.RefreshToken).
 		SetNillableRefreshTokenExpiry(&jwtToken.RefreshExpiration).
 		Save(ctx)
