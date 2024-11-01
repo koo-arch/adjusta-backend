@@ -209,21 +209,21 @@ func IsPrimaryNEQ(v bool) predicate.Calendar {
 	return predicate.Calendar(sql.FieldNEQ(FieldIsPrimary, v))
 }
 
-// HasAccount applies the HasEdge predicate on the "account" edge.
-func HasAccount() predicate.Calendar {
+// HasUser applies the HasEdge predicate on the "user" edge.
+func HasUser() predicate.Calendar {
 	return predicate.Calendar(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, AccountTable, AccountColumn),
+			sqlgraph.Edge(sqlgraph.M2O, true, UserTable, UserColumn),
 		)
 		sqlgraph.HasNeighbors(s, step)
 	})
 }
 
-// HasAccountWith applies the HasEdge predicate on the "account" edge with a given conditions (other predicates).
-func HasAccountWith(preds ...predicate.Account) predicate.Calendar {
+// HasUserWith applies the HasEdge predicate on the "user" edge with a given conditions (other predicates).
+func HasUserWith(preds ...predicate.User) predicate.Calendar {
 	return predicate.Calendar(func(s *sql.Selector) {
-		step := newAccountStep()
+		step := newUserStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)

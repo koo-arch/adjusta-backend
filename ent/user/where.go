@@ -261,21 +261,44 @@ func RefreshTokenExpiryNotNil() predicate.User {
 	return predicate.User(sql.FieldNotNull(FieldRefreshTokenExpiry))
 }
 
-// HasAccounts applies the HasEdge predicate on the "accounts" edge.
-func HasAccounts() predicate.User {
+// HasOauthToken applies the HasEdge predicate on the "oauth_token" edge.
+func HasOauthToken() predicate.User {
 	return predicate.User(func(s *sql.Selector) {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, AccountsTable, AccountsColumn),
+			sqlgraph.Edge(sqlgraph.O2O, false, OauthTokenTable, OauthTokenColumn),
 		)
 		sqlgraph.HasNeighbors(s, step)
 	})
 }
 
-// HasAccountsWith applies the HasEdge predicate on the "accounts" edge with a given conditions (other predicates).
-func HasAccountsWith(preds ...predicate.Account) predicate.User {
+// HasOauthTokenWith applies the HasEdge predicate on the "oauth_token" edge with a given conditions (other predicates).
+func HasOauthTokenWith(preds ...predicate.OAuthToken) predicate.User {
 	return predicate.User(func(s *sql.Selector) {
-		step := newAccountsStep()
+		step := newOauthTokenStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasCalendars applies the HasEdge predicate on the "calendars" edge.
+func HasCalendars() predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, CalendarsTable, CalendarsColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasCalendarsWith applies the HasEdge predicate on the "calendars" edge with a given conditions (other predicates).
+func HasCalendarsWith(preds ...predicate.Calendar) predicate.User {
+	return predicate.User(func(s *sql.Selector) {
+		step := newCalendarsStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)

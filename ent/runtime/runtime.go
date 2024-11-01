@@ -4,10 +4,10 @@ package runtime
 
 import (
 	"github.com/google/uuid"
-	"github.com/koo-arch/adjusta-backend/ent/account"
 	"github.com/koo-arch/adjusta-backend/ent/calendar"
 	"github.com/koo-arch/adjusta-backend/ent/event"
 	"github.com/koo-arch/adjusta-backend/ent/jwtkey"
+	"github.com/koo-arch/adjusta-backend/ent/oauthtoken"
 	"github.com/koo-arch/adjusta-backend/ent/proposeddate"
 	"github.com/koo-arch/adjusta-backend/ent/schema"
 	"github.com/koo-arch/adjusta-backend/ent/user"
@@ -17,25 +17,6 @@ import (
 // (default values, validators, hooks and policies) and stitches it
 // to their package variables.
 func init() {
-	accountHooks := schema.Account{}.Hooks()
-	account.Hooks[0] = accountHooks[0]
-	account.Hooks[1] = accountHooks[1]
-	accountFields := schema.Account{}.Fields()
-	_ = accountFields
-	// accountDescEmail is the schema descriptor for email field.
-	accountDescEmail := accountFields[1].Descriptor()
-	// account.EmailValidator is a validator for the "email" field. It is called by the builders before save.
-	account.EmailValidator = accountDescEmail.Validators[0].(func(string) error)
-	// accountDescGoogleID is the schema descriptor for google_id field.
-	accountDescGoogleID := accountFields[2].Descriptor()
-	// account.GoogleIDValidator is a validator for the "google_id" field. It is called by the builders before save.
-	account.GoogleIDValidator = accountDescGoogleID.Validators[0].(func(string) error)
-	// accountDescID is the schema descriptor for id field.
-	accountDescID := accountFields[0].Descriptor()
-	// account.DefaultID holds the default value on creation for the id field.
-	account.DefaultID = accountDescID.Default.(func() uuid.UUID)
-	calendarHooks := schema.Calendar{}.Hooks()
-	calendar.Hooks[0] = calendarHooks[0]
 	calendarFields := schema.Calendar{}.Fields()
 	_ = calendarFields
 	// calendarDescIsPrimary is the schema descriptor for is_primary field.
@@ -64,6 +45,12 @@ func init() {
 	jwtkey.DefaultType = jwtkeyDescType.Default.(string)
 	// jwtkey.TypeValidator is a validator for the "type" field. It is called by the builders before save.
 	jwtkey.TypeValidator = jwtkeyDescType.Validators[0].(func(string) error)
+	oauthtokenFields := schema.OAuthToken{}.Fields()
+	_ = oauthtokenFields
+	// oauthtokenDescID is the schema descriptor for id field.
+	oauthtokenDescID := oauthtokenFields[0].Descriptor()
+	// oauthtoken.DefaultID holds the default value on creation for the id field.
+	oauthtoken.DefaultID = oauthtokenDescID.Default.(func() uuid.UUID)
 	proposeddateHooks := schema.ProposedDate{}.Hooks()
 	proposeddate.Hooks[0] = proposeddateHooks[0]
 	proposeddateFields := schema.ProposedDate{}.Fields()

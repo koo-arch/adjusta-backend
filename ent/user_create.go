@@ -11,7 +11,8 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
-	"github.com/koo-arch/adjusta-backend/ent/account"
+	"github.com/koo-arch/adjusta-backend/ent/calendar"
+	"github.com/koo-arch/adjusta-backend/ent/oauthtoken"
 	"github.com/koo-arch/adjusta-backend/ent/user"
 )
 
@@ -70,19 +71,38 @@ func (uc *UserCreate) SetNillableID(u *uuid.UUID) *UserCreate {
 	return uc
 }
 
-// AddAccountIDs adds the "accounts" edge to the Account entity by IDs.
-func (uc *UserCreate) AddAccountIDs(ids ...uuid.UUID) *UserCreate {
-	uc.mutation.AddAccountIDs(ids...)
+// SetOauthTokenID sets the "oauth_token" edge to the OAuthToken entity by ID.
+func (uc *UserCreate) SetOauthTokenID(id uuid.UUID) *UserCreate {
+	uc.mutation.SetOauthTokenID(id)
 	return uc
 }
 
-// AddAccounts adds the "accounts" edges to the Account entity.
-func (uc *UserCreate) AddAccounts(a ...*Account) *UserCreate {
-	ids := make([]uuid.UUID, len(a))
-	for i := range a {
-		ids[i] = a[i].ID
+// SetNillableOauthTokenID sets the "oauth_token" edge to the OAuthToken entity by ID if the given value is not nil.
+func (uc *UserCreate) SetNillableOauthTokenID(id *uuid.UUID) *UserCreate {
+	if id != nil {
+		uc = uc.SetOauthTokenID(*id)
 	}
-	return uc.AddAccountIDs(ids...)
+	return uc
+}
+
+// SetOauthToken sets the "oauth_token" edge to the OAuthToken entity.
+func (uc *UserCreate) SetOauthToken(o *OAuthToken) *UserCreate {
+	return uc.SetOauthTokenID(o.ID)
+}
+
+// AddCalendarIDs adds the "calendars" edge to the Calendar entity by IDs.
+func (uc *UserCreate) AddCalendarIDs(ids ...uuid.UUID) *UserCreate {
+	uc.mutation.AddCalendarIDs(ids...)
+	return uc
+}
+
+// AddCalendars adds the "calendars" edges to the Calendar entity.
+func (uc *UserCreate) AddCalendars(c ...*Calendar) *UserCreate {
+	ids := make([]uuid.UUID, len(c))
+	for i := range c {
+		ids[i] = c[i].ID
+	}
+	return uc.AddCalendarIDs(ids...)
 }
 
 // Mutation returns the UserMutation object of the builder.
@@ -189,15 +209,31 @@ func (uc *UserCreate) createSpec() (*User, *sqlgraph.CreateSpec) {
 		_spec.SetField(user.FieldRefreshTokenExpiry, field.TypeTime, value)
 		_node.RefreshTokenExpiry = value
 	}
-	if nodes := uc.mutation.AccountsIDs(); len(nodes) > 0 {
+	if nodes := uc.mutation.OauthTokenIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2O,
+			Inverse: false,
+			Table:   user.OauthTokenTable,
+			Columns: []string{user.OauthTokenColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(oauthtoken.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := uc.mutation.CalendarsIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   user.AccountsTable,
-			Columns: []string{user.AccountsColumn},
+			Table:   user.CalendarsTable,
+			Columns: []string{user.CalendarsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(account.FieldID, field.TypeUUID),
+				IDSpec: sqlgraph.NewFieldSpec(calendar.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

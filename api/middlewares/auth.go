@@ -11,6 +11,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/koo-arch/adjusta-backend/cookie"
 	"github.com/koo-arch/adjusta-backend/internal/models"
+	"github.com/koo-arch/adjusta-backend/internal/repo/user"
 )
 
 type AuthMiddleware struct {
@@ -92,7 +93,7 @@ func (am *AuthMiddleware) tokenRefresh(c *gin.Context) (*models.JWTToken, error)
 	userRepo := am.middleware.Server.UserRepo
 
 	// リフレッシュトークンの取得
-	u, err := userRepo.Read(ctx, nil, userid)
+	u, err := userRepo.Read(ctx, nil, userid, user.UserQueryOptions{})
 	if err != nil {
 		return nil, err
 	}

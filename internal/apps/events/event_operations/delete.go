@@ -24,13 +24,13 @@ func NewEventDeleteManager(event *events.EventManager) *EventDeleteManager {
 	}
 }
 
-func (edm *EventDeleteManager) DeleteDraftedEvents(ctx context.Context, userId, accountID uuid.UUID, email string, eventReq *models.EventDraftDetail) error {
+func (edm *EventDeleteManager) DeleteDraftedEvents(ctx context.Context, userID uuid.UUID, email string, eventReq *models.EventDraftDetail) error {
 	tx, err := edm.event.Client.Tx(ctx)
 	if err != nil {
 		return fmt.Errorf("failed starting transaction: %w", err)
 	}
 
-	token, err := edm.event.AuthManager.VerifyOAuthToken(ctx, userId, email)
+	token, err := edm.event.AuthManager.VerifyOAuthToken(ctx, userID)
 	if err != nil {
 		return fmt.Errorf("failed to verify token for account: %s, error: %w", email, err)
 	}
@@ -47,7 +47,7 @@ func (edm *EventDeleteManager) DeleteDraftedEvents(ctx context.Context, userId, 
 		IsPrimary: &isPrimary,
 	}
 
-	_, err = edm.event.CalendarRepo.FindByFields(ctx, tx, accountID, findOptions)
+	_, err = edm.event.CalendarRepo.FindByFields(ctx, tx, userID, findOptions)
 	if err != nil {
 		return fmt.Errorf("failed to get primary calendar for account: %s, error: %w", email, err)
 	}

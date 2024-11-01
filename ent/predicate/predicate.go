@@ -6,9 +6,6 @@ import (
 	"entgo.io/ent/dialect/sql"
 )
 
-// Account is the predicate function for account builders.
-type Account func(*sql.Selector)
-
 // Calendar is the predicate function for calendar builders.
 type Calendar func(*sql.Selector)
 
@@ -17,6 +14,9 @@ type Event func(*sql.Selector)
 
 // JWTKey is the predicate function for jwtkey builders.
 type JWTKey func(*sql.Selector)
+
+// OAuthToken is the predicate function for oauthtoken builders.
+type OAuthToken func(*sql.Selector)
 
 // ProposedDate is the predicate function for proposeddate builders.
 type ProposedDate func(*sql.Selector)

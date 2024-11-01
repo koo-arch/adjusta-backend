@@ -12,7 +12,8 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
-	"github.com/koo-arch/adjusta-backend/ent/account"
+	"github.com/koo-arch/adjusta-backend/ent/calendar"
+	"github.com/koo-arch/adjusta-backend/ent/oauthtoken"
 	"github.com/koo-arch/adjusta-backend/ent/predicate"
 	"github.com/koo-arch/adjusta-backend/ent/user"
 )
@@ -84,19 +85,38 @@ func (uu *UserUpdate) ClearRefreshTokenExpiry() *UserUpdate {
 	return uu
 }
 
-// AddAccountIDs adds the "accounts" edge to the Account entity by IDs.
-func (uu *UserUpdate) AddAccountIDs(ids ...uuid.UUID) *UserUpdate {
-	uu.mutation.AddAccountIDs(ids...)
+// SetOauthTokenID sets the "oauth_token" edge to the OAuthToken entity by ID.
+func (uu *UserUpdate) SetOauthTokenID(id uuid.UUID) *UserUpdate {
+	uu.mutation.SetOauthTokenID(id)
 	return uu
 }
 
-// AddAccounts adds the "accounts" edges to the Account entity.
-func (uu *UserUpdate) AddAccounts(a ...*Account) *UserUpdate {
-	ids := make([]uuid.UUID, len(a))
-	for i := range a {
-		ids[i] = a[i].ID
+// SetNillableOauthTokenID sets the "oauth_token" edge to the OAuthToken entity by ID if the given value is not nil.
+func (uu *UserUpdate) SetNillableOauthTokenID(id *uuid.UUID) *UserUpdate {
+	if id != nil {
+		uu = uu.SetOauthTokenID(*id)
 	}
-	return uu.AddAccountIDs(ids...)
+	return uu
+}
+
+// SetOauthToken sets the "oauth_token" edge to the OAuthToken entity.
+func (uu *UserUpdate) SetOauthToken(o *OAuthToken) *UserUpdate {
+	return uu.SetOauthTokenID(o.ID)
+}
+
+// AddCalendarIDs adds the "calendars" edge to the Calendar entity by IDs.
+func (uu *UserUpdate) AddCalendarIDs(ids ...uuid.UUID) *UserUpdate {
+	uu.mutation.AddCalendarIDs(ids...)
+	return uu
+}
+
+// AddCalendars adds the "calendars" edges to the Calendar entity.
+func (uu *UserUpdate) AddCalendars(c ...*Calendar) *UserUpdate {
+	ids := make([]uuid.UUID, len(c))
+	for i := range c {
+		ids[i] = c[i].ID
+	}
+	return uu.AddCalendarIDs(ids...)
 }
 
 // Mutation returns the UserMutation object of the builder.
@@ -104,25 +124,31 @@ func (uu *UserUpdate) Mutation() *UserMutation {
 	return uu.mutation
 }
 
-// ClearAccounts clears all "accounts" edges to the Account entity.
-func (uu *UserUpdate) ClearAccounts() *UserUpdate {
-	uu.mutation.ClearAccounts()
+// ClearOauthToken clears the "oauth_token" edge to the OAuthToken entity.
+func (uu *UserUpdate) ClearOauthToken() *UserUpdate {
+	uu.mutation.ClearOauthToken()
 	return uu
 }
 
-// RemoveAccountIDs removes the "accounts" edge to Account entities by IDs.
-func (uu *UserUpdate) RemoveAccountIDs(ids ...uuid.UUID) *UserUpdate {
-	uu.mutation.RemoveAccountIDs(ids...)
+// ClearCalendars clears all "calendars" edges to the Calendar entity.
+func (uu *UserUpdate) ClearCalendars() *UserUpdate {
+	uu.mutation.ClearCalendars()
 	return uu
 }
 
-// RemoveAccounts removes "accounts" edges to Account entities.
-func (uu *UserUpdate) RemoveAccounts(a ...*Account) *UserUpdate {
-	ids := make([]uuid.UUID, len(a))
-	for i := range a {
-		ids[i] = a[i].ID
+// RemoveCalendarIDs removes the "calendars" edge to Calendar entities by IDs.
+func (uu *UserUpdate) RemoveCalendarIDs(ids ...uuid.UUID) *UserUpdate {
+	uu.mutation.RemoveCalendarIDs(ids...)
+	return uu
+}
+
+// RemoveCalendars removes "calendars" edges to Calendar entities.
+func (uu *UserUpdate) RemoveCalendars(c ...*Calendar) *UserUpdate {
+	ids := make([]uuid.UUID, len(c))
+	for i := range c {
+		ids[i] = c[i].ID
 	}
-	return uu.RemoveAccountIDs(ids...)
+	return uu.RemoveCalendarIDs(ids...)
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -189,28 +215,57 @@ func (uu *UserUpdate) sqlSave(ctx context.Context) (n int, err error) {
 	if uu.mutation.RefreshTokenExpiryCleared() {
 		_spec.ClearField(user.FieldRefreshTokenExpiry, field.TypeTime)
 	}
-	if uu.mutation.AccountsCleared() {
+	if uu.mutation.OauthTokenCleared() {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
+			Rel:     sqlgraph.O2O,
 			Inverse: false,
-			Table:   user.AccountsTable,
-			Columns: []string{user.AccountsColumn},
+			Table:   user.OauthTokenTable,
+			Columns: []string{user.OauthTokenColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(account.FieldID, field.TypeUUID),
+				IDSpec: sqlgraph.NewFieldSpec(oauthtoken.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := uu.mutation.RemovedAccountsIDs(); len(nodes) > 0 && !uu.mutation.AccountsCleared() {
+	if nodes := uu.mutation.OauthTokenIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2O,
+			Inverse: false,
+			Table:   user.OauthTokenTable,
+			Columns: []string{user.OauthTokenColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(oauthtoken.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if uu.mutation.CalendarsCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   user.AccountsTable,
-			Columns: []string{user.AccountsColumn},
+			Table:   user.CalendarsTable,
+			Columns: []string{user.CalendarsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(account.FieldID, field.TypeUUID),
+				IDSpec: sqlgraph.NewFieldSpec(calendar.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := uu.mutation.RemovedCalendarsIDs(); len(nodes) > 0 && !uu.mutation.CalendarsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.CalendarsTable,
+			Columns: []string{user.CalendarsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(calendar.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -218,15 +273,15 @@ func (uu *UserUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := uu.mutation.AccountsIDs(); len(nodes) > 0 {
+	if nodes := uu.mutation.CalendarsIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   user.AccountsTable,
-			Columns: []string{user.AccountsColumn},
+			Table:   user.CalendarsTable,
+			Columns: []string{user.CalendarsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(account.FieldID, field.TypeUUID),
+				IDSpec: sqlgraph.NewFieldSpec(calendar.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -308,19 +363,38 @@ func (uuo *UserUpdateOne) ClearRefreshTokenExpiry() *UserUpdateOne {
 	return uuo
 }
 
-// AddAccountIDs adds the "accounts" edge to the Account entity by IDs.
-func (uuo *UserUpdateOne) AddAccountIDs(ids ...uuid.UUID) *UserUpdateOne {
-	uuo.mutation.AddAccountIDs(ids...)
+// SetOauthTokenID sets the "oauth_token" edge to the OAuthToken entity by ID.
+func (uuo *UserUpdateOne) SetOauthTokenID(id uuid.UUID) *UserUpdateOne {
+	uuo.mutation.SetOauthTokenID(id)
 	return uuo
 }
 
-// AddAccounts adds the "accounts" edges to the Account entity.
-func (uuo *UserUpdateOne) AddAccounts(a ...*Account) *UserUpdateOne {
-	ids := make([]uuid.UUID, len(a))
-	for i := range a {
-		ids[i] = a[i].ID
+// SetNillableOauthTokenID sets the "oauth_token" edge to the OAuthToken entity by ID if the given value is not nil.
+func (uuo *UserUpdateOne) SetNillableOauthTokenID(id *uuid.UUID) *UserUpdateOne {
+	if id != nil {
+		uuo = uuo.SetOauthTokenID(*id)
 	}
-	return uuo.AddAccountIDs(ids...)
+	return uuo
+}
+
+// SetOauthToken sets the "oauth_token" edge to the OAuthToken entity.
+func (uuo *UserUpdateOne) SetOauthToken(o *OAuthToken) *UserUpdateOne {
+	return uuo.SetOauthTokenID(o.ID)
+}
+
+// AddCalendarIDs adds the "calendars" edge to the Calendar entity by IDs.
+func (uuo *UserUpdateOne) AddCalendarIDs(ids ...uuid.UUID) *UserUpdateOne {
+	uuo.mutation.AddCalendarIDs(ids...)
+	return uuo
+}
+
+// AddCalendars adds the "calendars" edges to the Calendar entity.
+func (uuo *UserUpdateOne) AddCalendars(c ...*Calendar) *UserUpdateOne {
+	ids := make([]uuid.UUID, len(c))
+	for i := range c {
+		ids[i] = c[i].ID
+	}
+	return uuo.AddCalendarIDs(ids...)
 }
 
 // Mutation returns the UserMutation object of the builder.
@@ -328,25 +402,31 @@ func (uuo *UserUpdateOne) Mutation() *UserMutation {
 	return uuo.mutation
 }
 
-// ClearAccounts clears all "accounts" edges to the Account entity.
-func (uuo *UserUpdateOne) ClearAccounts() *UserUpdateOne {
-	uuo.mutation.ClearAccounts()
+// ClearOauthToken clears the "oauth_token" edge to the OAuthToken entity.
+func (uuo *UserUpdateOne) ClearOauthToken() *UserUpdateOne {
+	uuo.mutation.ClearOauthToken()
 	return uuo
 }
 
-// RemoveAccountIDs removes the "accounts" edge to Account entities by IDs.
-func (uuo *UserUpdateOne) RemoveAccountIDs(ids ...uuid.UUID) *UserUpdateOne {
-	uuo.mutation.RemoveAccountIDs(ids...)
+// ClearCalendars clears all "calendars" edges to the Calendar entity.
+func (uuo *UserUpdateOne) ClearCalendars() *UserUpdateOne {
+	uuo.mutation.ClearCalendars()
 	return uuo
 }
 
-// RemoveAccounts removes "accounts" edges to Account entities.
-func (uuo *UserUpdateOne) RemoveAccounts(a ...*Account) *UserUpdateOne {
-	ids := make([]uuid.UUID, len(a))
-	for i := range a {
-		ids[i] = a[i].ID
+// RemoveCalendarIDs removes the "calendars" edge to Calendar entities by IDs.
+func (uuo *UserUpdateOne) RemoveCalendarIDs(ids ...uuid.UUID) *UserUpdateOne {
+	uuo.mutation.RemoveCalendarIDs(ids...)
+	return uuo
+}
+
+// RemoveCalendars removes "calendars" edges to Calendar entities.
+func (uuo *UserUpdateOne) RemoveCalendars(c ...*Calendar) *UserUpdateOne {
+	ids := make([]uuid.UUID, len(c))
+	for i := range c {
+		ids[i] = c[i].ID
 	}
-	return uuo.RemoveAccountIDs(ids...)
+	return uuo.RemoveCalendarIDs(ids...)
 }
 
 // Where appends a list predicates to the UserUpdate builder.
@@ -443,28 +523,57 @@ func (uuo *UserUpdateOne) sqlSave(ctx context.Context) (_node *User, err error) 
 	if uuo.mutation.RefreshTokenExpiryCleared() {
 		_spec.ClearField(user.FieldRefreshTokenExpiry, field.TypeTime)
 	}
-	if uuo.mutation.AccountsCleared() {
+	if uuo.mutation.OauthTokenCleared() {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
+			Rel:     sqlgraph.O2O,
 			Inverse: false,
-			Table:   user.AccountsTable,
-			Columns: []string{user.AccountsColumn},
+			Table:   user.OauthTokenTable,
+			Columns: []string{user.OauthTokenColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(account.FieldID, field.TypeUUID),
+				IDSpec: sqlgraph.NewFieldSpec(oauthtoken.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := uuo.mutation.RemovedAccountsIDs(); len(nodes) > 0 && !uuo.mutation.AccountsCleared() {
+	if nodes := uuo.mutation.OauthTokenIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2O,
+			Inverse: false,
+			Table:   user.OauthTokenTable,
+			Columns: []string{user.OauthTokenColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(oauthtoken.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if uuo.mutation.CalendarsCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   user.AccountsTable,
-			Columns: []string{user.AccountsColumn},
+			Table:   user.CalendarsTable,
+			Columns: []string{user.CalendarsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(account.FieldID, field.TypeUUID),
+				IDSpec: sqlgraph.NewFieldSpec(calendar.FieldID, field.TypeUUID),
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := uuo.mutation.RemovedCalendarsIDs(); len(nodes) > 0 && !uuo.mutation.CalendarsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   user.CalendarsTable,
+			Columns: []string{user.CalendarsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(calendar.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -472,15 +581,15 @@ func (uuo *UserUpdateOne) sqlSave(ctx context.Context) (_node *User, err error) 
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := uuo.mutation.AccountsIDs(); len(nodes) > 0 {
+	if nodes := uuo.mutation.CalendarsIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.O2M,
 			Inverse: false,
-			Table:   user.AccountsTable,
-			Columns: []string{user.AccountsColumn},
+			Table:   user.CalendarsTable,
+			Columns: []string{user.CalendarsColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(account.FieldID, field.TypeUUID),
+				IDSpec: sqlgraph.NewFieldSpec(calendar.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

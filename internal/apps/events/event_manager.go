@@ -44,14 +44,14 @@ func NewEventManager(
 	}
 }
 
-func (em *EventManager) FinalizeProposedDate(ctx context.Context, userID, accountID, eventID uuid.UUID, email string, eventReq *models.ConfirmEvent) error {
+func (em *EventManager) FinalizeProposedDate(ctx context.Context, userID, eventID uuid.UUID, email string, eventReq *models.ConfirmEvent) error {
 	tx, err := em.Client.Tx(ctx)
 	if err != nil {
 		return fmt.Errorf("failed starting transaction: %w", err)
 	}
 
 	// OAuthトークンを検証
-	token, err := em.AuthManager.VerifyOAuthToken(ctx, userID, email)
+	token, err := em.AuthManager.VerifyOAuthToken(ctx, userID)
 	if err != nil {
 		return fmt.Errorf("failed to verify token for account: %s, error: %w", email, err)
 	}

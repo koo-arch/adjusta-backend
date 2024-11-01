@@ -19,11 +19,19 @@ func NewUserRepository(client *ent.Client) *UserRepositoryImpl {
 	}
 }
 
-func (r *UserRepositoryImpl) Read(ctx context.Context, tx *ent.Tx, id uuid.UUID) (*ent.User, error) {
+func (r *UserRepositoryImpl) Read(ctx context.Context, tx *ent.Tx, id uuid.UUID, opt UserQueryOptions) (*ent.User, error) {
+	findQuery := r.client.User.Query()
 	if tx != nil {
-		return tx.User.Get(ctx, id)
+		findQuery = tx.User.Query()
 	}
-	return r.client.User.Get(ctx, id)
+
+	if opt.WithOAuthToken {
+		findQuery = findQuery.WithOauthToken()
+	}
+
+	return findQuery.
+		Where(user.IDEQ(id)).
+		Only(ctx)
 }
 
 func (r *UserRepositoryImpl) FindByEmail(ctx context.Context, tx *ent.Tx, email string) (*ent.User, error) {

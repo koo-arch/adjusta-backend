@@ -29,14 +29,14 @@ func NewEventUpdateManager(event *events.EventManager) *EventUpdateManager {
 	}
 }
 
-func (eum *EventUpdateManager) UpdateDraftedEvents(ctx context.Context, userID, accountID, eventID uuid.UUID, email string, eventReq *models.EventDraftDetail) error {
+func (eum *EventUpdateManager) UpdateDraftedEvents(ctx context.Context, userID, eventID uuid.UUID, email string, eventReq *models.EventDraftDetail) error {
 	tx, err := eum.event.Client.Tx(ctx)
 	if err != nil {
 		return fmt.Errorf("failed starting transaction: %w", err)
 	}
 
 	// OAuthトークンを検証
-	token, err := eum.event.AuthManager.VerifyOAuthToken(ctx, userID, email)
+	token, err := eum.event.AuthManager.VerifyOAuthToken(ctx, userID)
 	if err != nil {
 		return fmt.Errorf("failed to verify token for account: %s, error: %w", email, err)
 	}
@@ -55,7 +55,7 @@ func (eum *EventUpdateManager) UpdateDraftedEvents(ctx context.Context, userID, 
 	findOptions := repoCalendar.CalendarQueryOptions{
 		IsPrimary: &isPrimary,
 	}
-	_, err = eum.event.CalendarRepo.FindByFields(ctx, tx, accountID, findOptions)
+	_, err = eum.event.CalendarRepo.FindByFields(ctx, tx, userID, findOptions)
 	if err != nil {
 		return fmt.Errorf("failed to get primary calendar for account: %s, error: %w", email, err)
 	}

@@ -9,11 +9,6 @@ import (
 	"github.com/koo-arch/adjusta-backend/internal/google/userinfo"
 )
 
-type AccountsInfo struct {
-	AccountID string             `json:"account_id"`
-	UserInfo  *userinfo.UserInfo `json:"user_info"`
-}
-
 type AccountHandler struct {
 	handler *Handler
 }
@@ -41,40 +36,22 @@ func (ah *AccountHandler) FetchAccountsHandler() gin.HandlerFunc {
 			return
 		}
 
-		accountRepo := ah.handler.Server.AccountRepo
+		authManager := ah.handler.Server.AuthManager
 
-		userAccounts, err := accountRepo.FilterByUserID(ctx, nil, userid)
+		token, err := authManager.VerifyOAuthToken(ctx, userid)
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to get user accounts"})
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to verify token"})
 			c.Abort()
 			return
 		}
 
-		var accountsInfo []AccountsInfo
-		authManager := ah.handler.Server.AuthManager
-
-		for _, userAccount := range userAccounts {
-			token, err := authManager.VerifyOAuthToken(ctx, userid, userAccount.Email)
-			if err != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to verify token"})
-				c.Abort()
-				return
-			}
-
-			userInfo, err := userinfo.FetchGoogleUserInfo(ctx, token)
-			if err != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch user info"})
-				c.Abort()
-				return
-			}
-
-			accountsInfo = append(accountsInfo, AccountsInfo{
-				AccountID: userAccount.ID.String(),
-				UserInfo:  userInfo,
-			})
-
+		userInfo, err := userinfo.FetchGoogleUserInfo(ctx, token)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch user info"})
+			c.Abort()
+			return
 		}
 
-		c.JSON(http.StatusOK, accountsInfo)
+		c.JSON(http.StatusOK, userInfo)
 	}
 }

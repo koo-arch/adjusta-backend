@@ -6,7 +6,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/koo-arch/adjusta-backend/ent"
-	"github.com/koo-arch/adjusta-backend/ent/account"
+	"github.com/koo-arch/adjusta-backend/ent/user"
 	"github.com/koo-arch/adjusta-backend/ent/calendar"
 )
 
@@ -27,17 +27,17 @@ func (r *CalendarRepositoryImpl) Read(ctx context.Context, tx *ent.Tx, id uuid.U
 	return r.client.Calendar.Get(ctx, id)
 }
 
-func (r *CalendarRepositoryImpl) FilterByAccountID(ctx context.Context, tx *ent.Tx, accountID uuid.UUID) ([]*ent.Calendar, error) {
+func (r *CalendarRepositoryImpl) FilterByUserID(ctx context.Context, tx *ent.Tx, userID uuid.UUID) ([]*ent.Calendar, error) {
 	fileterCalendar := r.client.Calendar.Query()
 	if tx != nil {
 		fileterCalendar = tx.Calendar.Query()
 	}
 	return fileterCalendar.
-		Where(calendar.HasAccountWith(account.ID(accountID))).
+		Where(calendar.HasUserWith(user.ID(userID))).
 		All(ctx)
 }
 
-func (r *CalendarRepositoryImpl) FindByFields(ctx context.Context, tx *ent.Tx, accountID uuid.UUID, opt CalendarQueryOptions) (*ent.Calendar, error) {
+func (r *CalendarRepositoryImpl) FindByFields(ctx context.Context, tx *ent.Tx, userID uuid.UUID, opt CalendarQueryOptions) (*ent.Calendar, error) {
 	if !opt.WithEvents && opt.WithProposedDates {
 		return nil, fmt.Errorf("WithDates is only available when withEvents is true")
 	}
@@ -46,12 +46,12 @@ func (r *CalendarRepositoryImpl) FindByFields(ctx context.Context, tx *ent.Tx, a
 	if tx != nil {
 		findCalendar = tx.Calendar.Query()
 	}
-	query := r.applyCalendarQueryOptions(findCalendar, accountID, opt)
+	query := r.applyCalendarQueryOptions(findCalendar, userID, opt)
 
 	return query.Only(ctx)
 }
 
-func (r *CalendarRepositoryImpl) FilterByFields(ctx context.Context, tx *ent.Tx, accountID uuid.UUID, opt CalendarQueryOptions) ([]*ent.Calendar, error) {
+func (r *CalendarRepositoryImpl) FilterByFields(ctx context.Context, tx *ent.Tx, userID uuid.UUID, opt CalendarQueryOptions) ([]*ent.Calendar, error) {
 	filterCalendar := r.client.Calendar.Query()
 	
 	if !opt.WithEvents && opt.WithProposedDates {
@@ -61,12 +61,12 @@ func (r *CalendarRepositoryImpl) FilterByFields(ctx context.Context, tx *ent.Tx,
 		filterCalendar = tx.Calendar.Query()
 	}
 	
-	query := r.applyCalendarQueryOptions(filterCalendar, accountID, opt)
+	query := r.applyCalendarQueryOptions(filterCalendar, userID, opt)
 
 	return query.All(ctx)
 }
 
-func (r *CalendarRepositoryImpl) Create(ctx context.Context, tx *ent.Tx, calendarID string, summary string, is_primary bool, account *ent.Account) (*ent.Calendar, error) {
+func (r *CalendarRepositoryImpl) Create(ctx context.Context, tx *ent.Tx, calendarID string, summary string, is_primary bool, entUser *ent.User) (*ent.Calendar, error) {
 	createCalendar := r.client.Calendar.Create()
 	if tx != nil {
 		createCalendar = tx.Calendar.Create()
@@ -74,7 +74,7 @@ func (r *CalendarRepositoryImpl) Create(ctx context.Context, tx *ent.Tx, calenda
 	return createCalendar.
 		SetCalendarID(calendarID).
 		SetSummary(summary).
-		SetAccount(account).
+		SetUser(entUser).
 		SetIsPrimary(is_primary).
 		Save(ctx)
 }
@@ -96,8 +96,8 @@ func (r *CalendarRepositoryImpl) Delete(ctx context.Context, tx *ent.Tx, id uuid
 	return r.client.Calendar.DeleteOneID(id).Exec(ctx)
 }
 
-func (r *CalendarRepositoryImpl) applyCalendarQueryOptions(query *ent.CalendarQuery, accountID uuid.UUID, opt CalendarQueryOptions) *ent.CalendarQuery {
-	query = query.Where(calendar.HasAccountWith(account.IDEQ(accountID)))
+func (r *CalendarRepositoryImpl) applyCalendarQueryOptions(query *ent.CalendarQuery, userID uuid.UUID, opt CalendarQueryOptions) *ent.CalendarQuery {
+	query = query.Where(calendar.HasUserWith(user.IDEQ(userID)))
 
 	if opt.CalendarID != nil {
 		query = query.Where(calendar.CalendarIDEQ(*opt.CalendarID))

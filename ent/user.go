@@ -10,6 +10,7 @@ import (
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
 	"github.com/google/uuid"
+	"github.com/koo-arch/adjusta-backend/ent/oauthtoken"
 	"github.com/koo-arch/adjusta-backend/ent/user"
 )
 
@@ -32,20 +33,33 @@ type User struct {
 
 // UserEdges holds the relations/edges for other nodes in the graph.
 type UserEdges struct {
-	// Accounts holds the value of the accounts edge.
-	Accounts []*Account `json:"accounts,omitempty"`
+	// OauthToken holds the value of the oauth_token edge.
+	OauthToken *OAuthToken `json:"oauth_token,omitempty"`
+	// Calendars holds the value of the calendars edge.
+	Calendars []*Calendar `json:"calendars,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [1]bool
+	loadedTypes [2]bool
 }
 
-// AccountsOrErr returns the Accounts value or an error if the edge
-// was not loaded in eager-loading.
-func (e UserEdges) AccountsOrErr() ([]*Account, error) {
-	if e.loadedTypes[0] {
-		return e.Accounts, nil
+// OauthTokenOrErr returns the OauthToken value or an error if the edge
+// was not loaded in eager-loading, or loaded but was not found.
+func (e UserEdges) OauthTokenOrErr() (*OAuthToken, error) {
+	if e.OauthToken != nil {
+		return e.OauthToken, nil
+	} else if e.loadedTypes[0] {
+		return nil, &NotFoundError{label: oauthtoken.Label}
 	}
-	return nil, &NotLoadedError{edge: "accounts"}
+	return nil, &NotLoadedError{edge: "oauth_token"}
+}
+
+// CalendarsOrErr returns the Calendars value or an error if the edge
+// was not loaded in eager-loading.
+func (e UserEdges) CalendarsOrErr() ([]*Calendar, error) {
+	if e.loadedTypes[1] {
+		return e.Calendars, nil
+	}
+	return nil, &NotLoadedError{edge: "calendars"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -111,9 +125,14 @@ func (u *User) Value(name string) (ent.Value, error) {
 	return u.selectValues.Get(name)
 }
 
-// QueryAccounts queries the "accounts" edge of the User entity.
-func (u *User) QueryAccounts() *AccountQuery {
-	return NewUserClient(u.config).QueryAccounts(u)
+// QueryOauthToken queries the "oauth_token" edge of the User entity.
+func (u *User) QueryOauthToken() *OAuthTokenQuery {
+	return NewUserClient(u.config).QueryOauthToken(u)
+}
+
+// QueryCalendars queries the "calendars" edge of the User entity.
+func (u *User) QueryCalendars() *CalendarQuery {
+	return NewUserClient(u.config).QueryCalendars(u)
 }
 
 // Update returns a builder for updating this User.

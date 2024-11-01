@@ -22,14 +22,14 @@ func NewEventCreationManager(event *events.EventManager) *EventCreationManager {
 	}
 }
 
-func (ecm *EventCreationManager) CreateDraftedEvents(ctx context.Context, userID, accountID uuid.UUID, email string, eventReq *models.EventDraftCreation) error {
+func (ecm *EventCreationManager) CreateDraftedEvents(ctx context.Context, userID uuid.UUID, email string, eventReq *models.EventDraftCreation) error {
 
 	tx, err := ecm.event.Client.Tx(ctx)
 	if err != nil {
 		return fmt.Errorf("failed starting transaction: %w", err)
 	}
 
-	token, err := ecm.event.AuthManager.VerifyOAuthToken(ctx, userID, email)
+	token, err := ecm.event.AuthManager.VerifyOAuthToken(ctx, userID)
 	if err != nil {
 		return fmt.Errorf("failed to verify token for account: %s, error: %w", email, err)
 	}
@@ -45,7 +45,7 @@ func (ecm *EventCreationManager) CreateDraftedEvents(ctx context.Context, userID
 	findOptions := repoCalendar.CalendarQueryOptions{
 		IsPrimary: &isPrimary,
 	}
-	entCalendar, err := ecm.event.CalendarRepo.FindByFields(ctx, tx, accountID, findOptions)
+	entCalendar, err := ecm.event.CalendarRepo.FindByFields(ctx, tx, userID, findOptions)
 	if err != nil {
 		return fmt.Errorf("failed to get primary calendar for account: %s, error: %w", email, err)
 	}

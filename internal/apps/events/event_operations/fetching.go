@@ -28,52 +28,43 @@ func NewEventFetchingManager(event *events.EventManager) *EventFetchingManager {
 	}
 }
 
-func (efm *EventFetchingManager) FetchAllEvents(ctx context.Context, userID uuid.UUID, userAccounts []*ent.Account) ([]*models.AccountsEvents, error) {
-	var accountsEvents []*models.AccountsEvents
+func (efm *EventFetchingManager) FetchAllGoogleEvents(ctx context.Context, userID uuid.UUID, email string) ([]*models.Event, error) {
 
-	for _, userAccount := range userAccounts {
-		token, err := efm.event.AuthManager.VerifyOAuthToken(ctx, userID, userAccount.Email)
-		if err != nil {
-			return nil, fmt.Errorf("failed to verify token for account: %s, error: %w", userAccount.Email, err)
-		}
-
-		calendarService, err := customCalendar.NewCalendar(ctx, token)
-		if err != nil {
-			return nil, fmt.Errorf("failed to create calendar service for account: %s, error: %w", userAccount.Email, err)
-		}
-
-		now := time.Now()
-		startTime := now.AddDate(0, -2, 0)
-		endTime := now.AddDate(1, 0, 0)
-
-		calendars, err := efm.event.CalendarRepo.FilterByAccountID(ctx, nil, userAccount.ID)
-		if err != nil {
-			return nil, fmt.Errorf("failed to get calendars from db for account: %s, error: %w", userAccount.Email, err)
-		}
-
-		events, err := efm.event.CalendarApp.FetchEventsFromCalendars(calendarService, calendars, startTime, endTime)
-		if err != nil {
-			return nil, fmt.Errorf("failed to fetch events for account: %s, error: %w", userAccount.Email, err)
-		}
-
-		accountsEvents = append(accountsEvents, &models.AccountsEvents{
-			AccountID: userAccount.ID,
-			Email:     userAccount.Email,
-			Events:    events,
-		})
+	token, err := efm.event.AuthManager.VerifyOAuthToken(ctx, userID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to verify token for account: %s, error: %w", email, err)
 	}
 
-	return accountsEvents, nil
+	calendarService, err := customCalendar.NewCalendar(ctx, token)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create calendar service for account: %s, error: %w", email, err)
+	}
+
+	now := time.Now()
+	startTime := now.AddDate(0, -2, 0)
+	endTime := now.AddDate(1, 0, 0)
+
+	calendars, err := efm.event.CalendarRepo.FilterByUserID(ctx, nil, userID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get calendars from db for account: %s, error: %w", email, err)
+	}
+
+	events, err := efm.event.CalendarApp.FetchEventsFromCalendars(calendarService, calendars, startTime, endTime)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch events for account: %s, error: %w", email, err)
+	}
+
+	return events, nil
 }
 
-func (efm *EventFetchingManager) FetchDraftedEvents(ctx context.Context, userID, accountID uuid.UUID, email string) ([]*models.EventDraftDetail, error) {
+func (efm *EventFetchingManager) FetchDraftedEvents(ctx context.Context, userID uuid.UUID, email string) ([]*models.EventDraftDetail, error) {
 	isPrimary := true
 	findOptions := repoCalendar.CalendarQueryOptions{
 		IsPrimary:         &isPrimary,
 		WithEvents:        true,
 		WithProposedDates: true,
 	}
-	entCalendar, err := efm.event.CalendarRepo.FindByFields(ctx, nil, accountID, findOptions)
+	entCalendar, err := efm.event.CalendarRepo.FindByFields(ctx, nil, userID, findOptions)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get primary calendar for account: %s, error: %w", email, err)
 	}
@@ -137,7 +128,7 @@ func (efm *EventFetchingManager) FetchDraftedEvents(ctx context.Context, userID,
 	return draftedEvents, nil
 }
 
-func (efm *EventFetchingManager) FetchDraftedEventDetail(ctx context.Context, userID, accountID uuid.UUID, email string, eventID uuid.UUID) (*models.EventDraftDetail, error) {
+func (efm *EventFetchingManager) FetchDraftedEventDetail(ctx context.Context, userID uuid.UUID, email string, eventID uuid.UUID) (*models.EventDraftDetail, error) {
 	tx, err := efm.event.Client.Tx(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed starting transaction: %w", err)

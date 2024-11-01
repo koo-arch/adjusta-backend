@@ -11,10 +11,10 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
-	"github.com/koo-arch/adjusta-backend/ent/account"
 	"github.com/koo-arch/adjusta-backend/ent/calendar"
 	"github.com/koo-arch/adjusta-backend/ent/event"
 	"github.com/koo-arch/adjusta-backend/ent/predicate"
+	"github.com/koo-arch/adjusta-backend/ent/user"
 )
 
 // CalendarUpdate is the builder for updating Calendar entities.
@@ -72,23 +72,23 @@ func (cu *CalendarUpdate) SetNillableIsPrimary(b *bool) *CalendarUpdate {
 	return cu
 }
 
-// SetAccountID sets the "account" edge to the Account entity by ID.
-func (cu *CalendarUpdate) SetAccountID(id uuid.UUID) *CalendarUpdate {
-	cu.mutation.SetAccountID(id)
+// SetUserID sets the "user" edge to the User entity by ID.
+func (cu *CalendarUpdate) SetUserID(id uuid.UUID) *CalendarUpdate {
+	cu.mutation.SetUserID(id)
 	return cu
 }
 
-// SetNillableAccountID sets the "account" edge to the Account entity by ID if the given value is not nil.
-func (cu *CalendarUpdate) SetNillableAccountID(id *uuid.UUID) *CalendarUpdate {
+// SetNillableUserID sets the "user" edge to the User entity by ID if the given value is not nil.
+func (cu *CalendarUpdate) SetNillableUserID(id *uuid.UUID) *CalendarUpdate {
 	if id != nil {
-		cu = cu.SetAccountID(*id)
+		cu = cu.SetUserID(*id)
 	}
 	return cu
 }
 
-// SetAccount sets the "account" edge to the Account entity.
-func (cu *CalendarUpdate) SetAccount(a *Account) *CalendarUpdate {
-	return cu.SetAccountID(a.ID)
+// SetUser sets the "user" edge to the User entity.
+func (cu *CalendarUpdate) SetUser(u *User) *CalendarUpdate {
+	return cu.SetUserID(u.ID)
 }
 
 // AddEventIDs adds the "events" edge to the Event entity by IDs.
@@ -111,9 +111,9 @@ func (cu *CalendarUpdate) Mutation() *CalendarMutation {
 	return cu.mutation
 }
 
-// ClearAccount clears the "account" edge to the Account entity.
-func (cu *CalendarUpdate) ClearAccount() *CalendarUpdate {
-	cu.mutation.ClearAccount()
+// ClearUser clears the "user" edge to the User entity.
+func (cu *CalendarUpdate) ClearUser() *CalendarUpdate {
+	cu.mutation.ClearUser()
 	return cu
 }
 
@@ -183,28 +183,28 @@ func (cu *CalendarUpdate) sqlSave(ctx context.Context) (n int, err error) {
 	if value, ok := cu.mutation.IsPrimary(); ok {
 		_spec.SetField(calendar.FieldIsPrimary, field.TypeBool, value)
 	}
-	if cu.mutation.AccountCleared() {
+	if cu.mutation.UserCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: true,
-			Table:   calendar.AccountTable,
-			Columns: []string{calendar.AccountColumn},
+			Table:   calendar.UserTable,
+			Columns: []string{calendar.UserColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(account.FieldID, field.TypeUUID),
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := cu.mutation.AccountIDs(); len(nodes) > 0 {
+	if nodes := cu.mutation.UserIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: true,
-			Table:   calendar.AccountTable,
-			Columns: []string{calendar.AccountColumn},
+			Table:   calendar.UserTable,
+			Columns: []string{calendar.UserColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(account.FieldID, field.TypeUUID),
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
@@ -319,23 +319,23 @@ func (cuo *CalendarUpdateOne) SetNillableIsPrimary(b *bool) *CalendarUpdateOne {
 	return cuo
 }
 
-// SetAccountID sets the "account" edge to the Account entity by ID.
-func (cuo *CalendarUpdateOne) SetAccountID(id uuid.UUID) *CalendarUpdateOne {
-	cuo.mutation.SetAccountID(id)
+// SetUserID sets the "user" edge to the User entity by ID.
+func (cuo *CalendarUpdateOne) SetUserID(id uuid.UUID) *CalendarUpdateOne {
+	cuo.mutation.SetUserID(id)
 	return cuo
 }
 
-// SetNillableAccountID sets the "account" edge to the Account entity by ID if the given value is not nil.
-func (cuo *CalendarUpdateOne) SetNillableAccountID(id *uuid.UUID) *CalendarUpdateOne {
+// SetNillableUserID sets the "user" edge to the User entity by ID if the given value is not nil.
+func (cuo *CalendarUpdateOne) SetNillableUserID(id *uuid.UUID) *CalendarUpdateOne {
 	if id != nil {
-		cuo = cuo.SetAccountID(*id)
+		cuo = cuo.SetUserID(*id)
 	}
 	return cuo
 }
 
-// SetAccount sets the "account" edge to the Account entity.
-func (cuo *CalendarUpdateOne) SetAccount(a *Account) *CalendarUpdateOne {
-	return cuo.SetAccountID(a.ID)
+// SetUser sets the "user" edge to the User entity.
+func (cuo *CalendarUpdateOne) SetUser(u *User) *CalendarUpdateOne {
+	return cuo.SetUserID(u.ID)
 }
 
 // AddEventIDs adds the "events" edge to the Event entity by IDs.
@@ -358,9 +358,9 @@ func (cuo *CalendarUpdateOne) Mutation() *CalendarMutation {
 	return cuo.mutation
 }
 
-// ClearAccount clears the "account" edge to the Account entity.
-func (cuo *CalendarUpdateOne) ClearAccount() *CalendarUpdateOne {
-	cuo.mutation.ClearAccount()
+// ClearUser clears the "user" edge to the User entity.
+func (cuo *CalendarUpdateOne) ClearUser() *CalendarUpdateOne {
+	cuo.mutation.ClearUser()
 	return cuo
 }
 
@@ -460,28 +460,28 @@ func (cuo *CalendarUpdateOne) sqlSave(ctx context.Context) (_node *Calendar, err
 	if value, ok := cuo.mutation.IsPrimary(); ok {
 		_spec.SetField(calendar.FieldIsPrimary, field.TypeBool, value)
 	}
-	if cuo.mutation.AccountCleared() {
+	if cuo.mutation.UserCleared() {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: true,
-			Table:   calendar.AccountTable,
-			Columns: []string{calendar.AccountColumn},
+			Table:   calendar.UserTable,
+			Columns: []string{calendar.UserColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(account.FieldID, field.TypeUUID),
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := cuo.mutation.AccountIDs(); len(nodes) > 0 {
+	if nodes := cuo.mutation.UserIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: true,
-			Table:   calendar.AccountTable,
-			Columns: []string{calendar.AccountColumn},
+			Table:   calendar.UserTable,
+			Columns: []string{calendar.UserColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(account.FieldID, field.TypeUUID),
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {

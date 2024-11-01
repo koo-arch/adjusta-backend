@@ -12,22 +12,22 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
-	"github.com/koo-arch/adjusta-backend/ent/account"
 	"github.com/koo-arch/adjusta-backend/ent/calendar"
 	"github.com/koo-arch/adjusta-backend/ent/event"
 	"github.com/koo-arch/adjusta-backend/ent/predicate"
+	"github.com/koo-arch/adjusta-backend/ent/user"
 )
 
 // CalendarQuery is the builder for querying Calendar entities.
 type CalendarQuery struct {
 	config
-	ctx         *QueryContext
-	order       []calendar.OrderOption
-	inters      []Interceptor
-	predicates  []predicate.Calendar
-	withAccount *AccountQuery
-	withEvents  *EventQuery
-	withFKs     bool
+	ctx        *QueryContext
+	order      []calendar.OrderOption
+	inters     []Interceptor
+	predicates []predicate.Calendar
+	withUser   *UserQuery
+	withEvents *EventQuery
+	withFKs    bool
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -64,9 +64,9 @@ func (cq *CalendarQuery) Order(o ...calendar.OrderOption) *CalendarQuery {
 	return cq
 }
 
-// QueryAccount chains the current query on the "account" edge.
-func (cq *CalendarQuery) QueryAccount() *AccountQuery {
-	query := (&AccountClient{config: cq.config}).Query()
+// QueryUser chains the current query on the "user" edge.
+func (cq *CalendarQuery) QueryUser() *UserQuery {
+	query := (&UserClient{config: cq.config}).Query()
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := cq.prepareQuery(ctx); err != nil {
 			return nil, err
@@ -77,8 +77,8 @@ func (cq *CalendarQuery) QueryAccount() *AccountQuery {
 		}
 		step := sqlgraph.NewStep(
 			sqlgraph.From(calendar.Table, calendar.FieldID, selector),
-			sqlgraph.To(account.Table, account.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, calendar.AccountTable, calendar.AccountColumn),
+			sqlgraph.To(user.Table, user.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, calendar.UserTable, calendar.UserColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(cq.driver.Dialect(), step)
 		return fromU, nil
@@ -295,27 +295,27 @@ func (cq *CalendarQuery) Clone() *CalendarQuery {
 		return nil
 	}
 	return &CalendarQuery{
-		config:      cq.config,
-		ctx:         cq.ctx.Clone(),
-		order:       append([]calendar.OrderOption{}, cq.order...),
-		inters:      append([]Interceptor{}, cq.inters...),
-		predicates:  append([]predicate.Calendar{}, cq.predicates...),
-		withAccount: cq.withAccount.Clone(),
-		withEvents:  cq.withEvents.Clone(),
+		config:     cq.config,
+		ctx:        cq.ctx.Clone(),
+		order:      append([]calendar.OrderOption{}, cq.order...),
+		inters:     append([]Interceptor{}, cq.inters...),
+		predicates: append([]predicate.Calendar{}, cq.predicates...),
+		withUser:   cq.withUser.Clone(),
+		withEvents: cq.withEvents.Clone(),
 		// clone intermediate query.
 		sql:  cq.sql.Clone(),
 		path: cq.path,
 	}
 }
 
-// WithAccount tells the query-builder to eager-load the nodes that are connected to
-// the "account" edge. The optional arguments are used to configure the query builder of the edge.
-func (cq *CalendarQuery) WithAccount(opts ...func(*AccountQuery)) *CalendarQuery {
-	query := (&AccountClient{config: cq.config}).Query()
+// WithUser tells the query-builder to eager-load the nodes that are connected to
+// the "user" edge. The optional arguments are used to configure the query builder of the edge.
+func (cq *CalendarQuery) WithUser(opts ...func(*UserQuery)) *CalendarQuery {
+	query := (&UserClient{config: cq.config}).Query()
 	for _, opt := range opts {
 		opt(query)
 	}
-	cq.withAccount = query
+	cq.withUser = query
 	return cq
 }
 
@@ -410,11 +410,11 @@ func (cq *CalendarQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Cal
 		withFKs     = cq.withFKs
 		_spec       = cq.querySpec()
 		loadedTypes = [2]bool{
-			cq.withAccount != nil,
+			cq.withUser != nil,
 			cq.withEvents != nil,
 		}
 	)
-	if cq.withAccount != nil {
+	if cq.withUser != nil {
 		withFKs = true
 	}
 	if withFKs {
@@ -438,9 +438,9 @@ func (cq *CalendarQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Cal
 	if len(nodes) == 0 {
 		return nodes, nil
 	}
-	if query := cq.withAccount; query != nil {
-		if err := cq.loadAccount(ctx, query, nodes, nil,
-			func(n *Calendar, e *Account) { n.Edges.Account = e }); err != nil {
+	if query := cq.withUser; query != nil {
+		if err := cq.loadUser(ctx, query, nodes, nil,
+			func(n *Calendar, e *User) { n.Edges.User = e }); err != nil {
 			return nil, err
 		}
 	}
@@ -454,14 +454,14 @@ func (cq *CalendarQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Cal
 	return nodes, nil
 }
 
-func (cq *CalendarQuery) loadAccount(ctx context.Context, query *AccountQuery, nodes []*Calendar, init func(*Calendar), assign func(*Calendar, *Account)) error {
+func (cq *CalendarQuery) loadUser(ctx context.Context, query *UserQuery, nodes []*Calendar, init func(*Calendar), assign func(*Calendar, *User)) error {
 	ids := make([]uuid.UUID, 0, len(nodes))
 	nodeids := make(map[uuid.UUID][]*Calendar)
 	for i := range nodes {
-		if nodes[i].account_calendars == nil {
+		if nodes[i].user_calendars == nil {
 			continue
 		}
-		fk := *nodes[i].account_calendars
+		fk := *nodes[i].user_calendars
 		if _, ok := nodeids[fk]; !ok {
 			ids = append(ids, fk)
 		}
@@ -470,7 +470,7 @@ func (cq *CalendarQuery) loadAccount(ctx context.Context, query *AccountQuery, n
 	if len(ids) == 0 {
 		return nil
 	}
-	query.Where(account.IDIn(ids...))
+	query.Where(user.IDIn(ids...))
 	neighbors, err := query.All(ctx)
 	if err != nil {
 		return err
@@ -478,7 +478,7 @@ func (cq *CalendarQuery) loadAccount(ctx context.Context, query *AccountQuery, n
 	for _, n := range neighbors {
 		nodes, ok := nodeids[n.ID]
 		if !ok {
-			return fmt.Errorf(`unexpected foreign-key "account_calendars" returned %v`, n.ID)
+			return fmt.Errorf(`unexpected foreign-key "user_calendars" returned %v`, n.ID)
 		}
 		for i := range nodes {
 			assign(nodes[i], n)

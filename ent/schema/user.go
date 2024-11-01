@@ -35,7 +35,8 @@ func (User) Fields() []ent.Field {
 // Edges of the User.
 func (User) Edges() []ent.Edge {
 	return []ent.Edge{
-		edge.To("accounts", Account.Type).Annotations(entsql.OnDelete(entsql.Cascade)),
+		edge.To("oauth_token", OAuthToken.Type).Unique().Annotations(entsql.OnDelete(entsql.Cascade)),
+		edge.To("calendars", Calendar.Type).Annotations(entsql.OnDelete(entsql.Cascade)),
 	}
 }
 

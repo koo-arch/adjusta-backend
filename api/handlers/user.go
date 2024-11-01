@@ -19,13 +19,6 @@ func NewUserHandler(handler *Handler) *UserHandler {
 
 func (uh *UserHandler) GetCurrentUserHandler() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		email, ok := c.Get("email")
-		if !ok {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "failed to get email from context"})
-			c.Abort()
-			return
-		}
-
 		session := sessions.Default(c)
 		useridStr, ok := session.Get("userid").(string)
 		if !ok {
@@ -45,7 +38,7 @@ func (uh *UserHandler) GetCurrentUserHandler() gin.HandlerFunc {
 
 		authManager := uh.handler.Server.AuthManager
 
-		token, err := authManager.VerifyOAuthToken(ctx, userid, email.(string))
+		token, err := authManager.VerifyOAuthToken(ctx, userid)
 		if err != nil {
 			println("oauth期限切れ")
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "failed to verify token"})

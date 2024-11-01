@@ -9,18 +9,6 @@ import (
 	"github.com/koo-arch/adjusta-backend/ent"
 )
 
-// The AccountFunc type is an adapter to allow the use of ordinary
-// function as Account mutator.
-type AccountFunc func(context.Context, *ent.AccountMutation) (ent.Value, error)
-
-// Mutate calls f(ctx, m).
-func (f AccountFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
-	if mv, ok := m.(*ent.AccountMutation); ok {
-		return f(ctx, mv)
-	}
-	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.AccountMutation", m)
-}
-
 // The CalendarFunc type is an adapter to allow the use of ordinary
 // function as Calendar mutator.
 type CalendarFunc func(context.Context, *ent.CalendarMutation) (ent.Value, error)
@@ -55,6 +43,18 @@ func (f JWTKeyFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, erro
 		return f(ctx, mv)
 	}
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.JWTKeyMutation", m)
+}
+
+// The OAuthTokenFunc type is an adapter to allow the use of ordinary
+// function as OAuthToken mutator.
+type OAuthTokenFunc func(context.Context, *ent.OAuthTokenMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f OAuthTokenFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.OAuthTokenMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.OAuthTokenMutation", m)
 }
 
 // The ProposedDateFunc type is an adapter to allow the use of ordinary

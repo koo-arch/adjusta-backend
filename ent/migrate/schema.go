@@ -8,37 +8,13 @@ import (
 )
 
 var (
-	// AccountsColumns holds the columns for the "accounts" table.
-	AccountsColumns = []*schema.Column{
-		{Name: "id", Type: field.TypeUUID, Unique: true},
-		{Name: "email", Type: field.TypeString},
-		{Name: "google_id", Type: field.TypeString},
-		{Name: "access_token", Type: field.TypeString, Nullable: true},
-		{Name: "refresh_token", Type: field.TypeString, Nullable: true},
-		{Name: "access_token_expiry", Type: field.TypeTime, Nullable: true},
-		{Name: "user_accounts", Type: field.TypeUUID, Nullable: true},
-	}
-	// AccountsTable holds the schema information for the "accounts" table.
-	AccountsTable = &schema.Table{
-		Name:       "accounts",
-		Columns:    AccountsColumns,
-		PrimaryKey: []*schema.Column{AccountsColumns[0]},
-		ForeignKeys: []*schema.ForeignKey{
-			{
-				Symbol:     "accounts_users_accounts",
-				Columns:    []*schema.Column{AccountsColumns[6]},
-				RefColumns: []*schema.Column{UsersColumns[0]},
-				OnDelete:   schema.Cascade,
-			},
-		},
-	}
 	// CalendarsColumns holds the columns for the "calendars" table.
 	CalendarsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID, Unique: true},
 		{Name: "calendar_id", Type: field.TypeString},
 		{Name: "summary", Type: field.TypeString},
 		{Name: "is_primary", Type: field.TypeBool, Default: false},
-		{Name: "account_calendars", Type: field.TypeUUID, Nullable: true},
+		{Name: "user_calendars", Type: field.TypeUUID, Nullable: true},
 	}
 	// CalendarsTable holds the schema information for the "calendars" table.
 	CalendarsTable = &schema.Table{
@@ -47,9 +23,9 @@ var (
 		PrimaryKey: []*schema.Column{CalendarsColumns[0]},
 		ForeignKeys: []*schema.ForeignKey{
 			{
-				Symbol:     "calendars_accounts_calendars",
+				Symbol:     "calendars_users_calendars",
 				Columns:    []*schema.Column{CalendarsColumns[4]},
-				RefColumns: []*schema.Column{AccountsColumns[0]},
+				RefColumns: []*schema.Column{UsersColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
 		},
@@ -99,6 +75,28 @@ var (
 			},
 		},
 	}
+	// OauthTokensColumns holds the columns for the "oauth_tokens" table.
+	OauthTokensColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID, Unique: true},
+		{Name: "access_token", Type: field.TypeString, Nullable: true},
+		{Name: "refresh_token", Type: field.TypeString, Nullable: true},
+		{Name: "expiry", Type: field.TypeTime, Nullable: true},
+		{Name: "user_oauth_token", Type: field.TypeUUID, Unique: true, Nullable: true},
+	}
+	// OauthTokensTable holds the schema information for the "oauth_tokens" table.
+	OauthTokensTable = &schema.Table{
+		Name:       "oauth_tokens",
+		Columns:    OauthTokensColumns,
+		PrimaryKey: []*schema.Column{OauthTokensColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "oauth_tokens_users_oauth_token",
+				Columns:    []*schema.Column{OauthTokensColumns[4]},
+				RefColumns: []*schema.Column{UsersColumns[0]},
+				OnDelete:   schema.Cascade,
+			},
+		},
+	}
 	// ProposedDatesColumns holds the columns for the "proposed_dates" table.
 	ProposedDatesColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID, Unique: true},
@@ -137,18 +135,18 @@ var (
 	}
 	// Tables holds all the tables in the schema.
 	Tables = []*schema.Table{
-		AccountsTable,
 		CalendarsTable,
 		EventsTable,
 		JwtKeysTable,
+		OauthTokensTable,
 		ProposedDatesTable,
 		UsersTable,
 	}
 )
 
 func init() {
-	AccountsTable.ForeignKeys[0].RefTable = UsersTable
-	CalendarsTable.ForeignKeys[0].RefTable = AccountsTable
+	CalendarsTable.ForeignKeys[0].RefTable = UsersTable
 	EventsTable.ForeignKeys[0].RefTable = CalendarsTable
+	OauthTokensTable.ForeignKeys[0].RefTable = UsersTable
 	ProposedDatesTable.ForeignKeys[0].RefTable = EventsTable
 }

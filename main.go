@@ -113,8 +113,6 @@ func main() {
 	auth := router.Group("/api")
 	auth.Use(sessionMiddleware.SessionRenewal(), authMiddleware.AuthUser())
 	{
-		auth.GET("/google/add-account", oauthHandler.AddAccountHandler)
-		auth.GET("/google/add-account/callback", oauthHandler.AddAccountCallbackHandler())
 		auth.GET("/users/me", userHandler.GetCurrentUserHandler())
 		auth.GET("/account/list", accountHandler.FetchAccountsHandler())
 		calendar := auth.Group("/calendar").Use(calendarMiddleware.SyncGoogleCalendars())

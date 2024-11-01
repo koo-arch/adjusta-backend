@@ -6,15 +6,13 @@ import (
 	"fmt"
 	"time"
 	"strings"
-	"sync"
 
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/koo-arch/adjusta-backend/ent"
-	"github.com/koo-arch/adjusta-backend/internal/auth"
+	"github.com/koo-arch/adjusta-backend/internal/repo/user"
 	customCalendar "github.com/koo-arch/adjusta-backend/internal/google/calendar"
-	repoCalendar "github.com/koo-arch/adjusta-backend/internal/repo/calendar"
 )
 
 type CalendarMiddleware struct {
@@ -45,9 +43,14 @@ func (cm *CalendarMiddleware) SyncGoogleCalendars() gin.HandlerFunc {
 			c.Abort()
 			return
 		}
-		accountRepo := cm.middleware.Server.AccountRepo
-		calendarRepo := cm.middleware.Server.CalendarRepo
-		authManager := cm.middleware.Server.AuthManager
+
+		userRepo := cm.middleware.Server.UserRepo
+		entUser, err := userRepo.Read(ctx, nil, userid, user.UserQueryOptions{})
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to get user from db"})
+			c.Abort()
+			return
+		}
 
 		// キャッシュにある場合はそれを使う
 		cache := cm.middleware.Server.Cache
@@ -60,14 +63,7 @@ func (cm *CalendarMiddleware) SyncGoogleCalendars() gin.HandlerFunc {
 			return
 		}
 
-		userAccounts, err := accountRepo.FilterByUserID(ctx, nil, userid)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to get user accounts"})
-			c.Abort()
-			return
-		}
-
-		calendarList, err := cm.fetchAndCacheCalendars(ctx, authManager, userid, userAccounts, calendarRepo)
+		calendarList, err := cm.fetchAndCacheCalendars(ctx, entUser)
 		if err != nil {
 			fmt.Printf("failed to register calendar list: %v\n", err)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to register calendar list"})
@@ -80,81 +76,41 @@ func (cm *CalendarMiddleware) SyncGoogleCalendars() gin.HandlerFunc {
 	}
 }
 
-type AccountsCalendars struct {
-	AccountID uuid.UUID       `json:"account_id"`
-	Email     string          `json:"email"`
-	Calendars []*customCalendar.CalendarList `json:"calendars"`
-}
+func(cm *CalendarMiddleware) fetchAndCacheCalendars(ctx context.Context, entUser *ent.User) ([]*customCalendar.CalendarList, error) {
 
-func(cm *CalendarMiddleware) fetchAndCacheCalendars(ctx context.Context, authManager *auth.AuthManager, userID uuid.UUID, userAccounts []*ent.Account, calendarRepo repoCalendar.CalendarRepository) ([]*AccountsCalendars, error) {
-	var accountsCalendars []*AccountsCalendars
-	var wg sync.WaitGroup
-	var mu sync.Mutex
-	errCh := make(chan error, len(userAccounts))
-
-	for _, userAccount := range userAccounts {
-		wg.Add(1)
-		go func(userAccount *ent.Account) {
-			defer wg.Done()
-
-			token, err := authManager.VerifyOAuthToken(ctx, userID, userAccount.Email)
-			if err != nil {
-				errCh <- fmt.Errorf("failed to verify token for account: %s, error: %w", userAccount.Email, err)
-				return
-			}
-
-			calendarService, err := customCalendar.NewCalendar(ctx, token)
-			if err != nil {
-				errCh <- fmt.Errorf("failed to create calendar service for account: %s, error: %w", userAccount.Email, err)
-				return
-			}
-
-			calendars, err := calendarService.FetchCalendarList()
-			if err != nil {
-				errCh <- fmt.Errorf("failed to fetch calendars for account: %s, error: %w", userAccount.Email, err)
-				return
-			}
-
-			if err := cm.syncCalendar(ctx, calendars, userAccount, calendarRepo); err != nil {
-				errCh <- fmt.Errorf("failed to sync calendars for account: %s, error: %w", userAccount.Email, err)
-				return
-			}
-
-			mu.Lock() // accountsCalendarsにアクセスするためにロック
-			accountsCalendars = append(accountsCalendars, &AccountsCalendars{
-				AccountID: userAccount.ID,
-				Email:     userAccount.Email,
-				Calendars: calendars,
-			})
-			mu.Unlock()
-		}(userAccount)
+	authManager := cm.middleware.Server.AuthManager
+	token, err := authManager.VerifyOAuthToken(ctx, entUser.ID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to verify token for account: %s, error: %w", entUser.Email, err)
 	}
 
-	// 全てのgoroutineが終了するまで待機
-	wg.Wait()
-	close(errCh)
-	
-	// エラーが発生した場合はエラーを返す
-	if len(errCh) > 0 {
-		var errList []error
-		for err := range errCh {
-			errList = append(errList, err)
-		}
-		return nil, fmt.Errorf("multiple errors occurred: %v", errList)
+	calendarService, err := customCalendar.NewCalendar(ctx, token)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create calendar service for account: %s, error: %w", entUser.Email, err)
+	}
+
+	calendars, err := calendarService.FetchCalendarList()
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch calendars for account: %s, error: %w", entUser.Email, err)
+	}
+
+	if err := cm.syncCalendar(ctx, calendars, entUser); err != nil {
+		return nil, fmt.Errorf("failed to sync calendars for account: %s, error: %w", entUser.Email, err)
 	}
 
 	// キャッシュに保存
 	calendarCache := cm.middleware.Server.Cache.CalendarCache
-	cacheKey := fmt.Sprintf("calendars:%s", userID.String())
-	calendarCache.Set(cacheKey, accountsCalendars, 5*time.Hour)
+	cacheKey := fmt.Sprintf("calendars:%s", entUser.ID.String())
+	calendarCache.Set(cacheKey, calendars, 5*time.Hour)
 
-	return accountsCalendars, nil
+	return calendars, nil
 }
 
-func(cm *CalendarMiddleware) syncCalendar(ctx context.Context, calendars []*customCalendar.CalendarList, userAccount *ent.Account, calendarRepo repoCalendar.CalendarRepository) error {
-	dbCalendars, err := calendarRepo.FilterByAccountID(ctx, nil, userAccount.ID)
+func(cm *CalendarMiddleware) syncCalendar(ctx context.Context, calendars []*customCalendar.CalendarList, entUser *ent.User) error {
+	calendarRepo := cm.middleware.Server.CalendarRepo
+	dbCalendars, err := calendarRepo.FilterByUserID(ctx, nil, entUser.ID)
 	if err != nil {
-		return fmt.Errorf("failed to get calendars from db for account: %s, error: %w", userAccount.Email, err)
+		return fmt.Errorf("failed to get calendars from db for user: %s, error: %w", entUser.Email, err)
 	}
 
 	// Googleから取得したカレンダーとデータベースのカレンダーを比較
@@ -172,7 +128,7 @@ func(cm *CalendarMiddleware) syncCalendar(ctx context.Context, calendars []*cust
 
 	// データベースに存在しないカレンダーを追加
 	for _, cal := range calendarMap {
-		if _, err := calendarRepo.Create(ctx, nil, cal.CalendarID, cal.Summary, cal.Primary, userAccount); err != nil {
+		if _, err := calendarRepo.Create(ctx, nil, cal.CalendarID, cal.Summary, cal.Primary, entUser); err != nil {
 			if strings.Contains(err.Error(), "is already in use by another account of the same user") {
 				fmt.Printf("calendar already exists: %s\n", cal.Summary)
 				continue

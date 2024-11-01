@@ -10,9 +10,9 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/google/uuid"
-	"github.com/koo-arch/adjusta-backend/ent/account"
 	"github.com/koo-arch/adjusta-backend/ent/calendar"
 	"github.com/koo-arch/adjusta-backend/ent/event"
+	"github.com/koo-arch/adjusta-backend/ent/user"
 )
 
 // CalendarCreate is the builder for creating a Calendar entity.
@@ -62,23 +62,23 @@ func (cc *CalendarCreate) SetNillableID(u *uuid.UUID) *CalendarCreate {
 	return cc
 }
 
-// SetAccountID sets the "account" edge to the Account entity by ID.
-func (cc *CalendarCreate) SetAccountID(id uuid.UUID) *CalendarCreate {
-	cc.mutation.SetAccountID(id)
+// SetUserID sets the "user" edge to the User entity by ID.
+func (cc *CalendarCreate) SetUserID(id uuid.UUID) *CalendarCreate {
+	cc.mutation.SetUserID(id)
 	return cc
 }
 
-// SetNillableAccountID sets the "account" edge to the Account entity by ID if the given value is not nil.
-func (cc *CalendarCreate) SetNillableAccountID(id *uuid.UUID) *CalendarCreate {
+// SetNillableUserID sets the "user" edge to the User entity by ID if the given value is not nil.
+func (cc *CalendarCreate) SetNillableUserID(id *uuid.UUID) *CalendarCreate {
 	if id != nil {
-		cc = cc.SetAccountID(*id)
+		cc = cc.SetUserID(*id)
 	}
 	return cc
 }
 
-// SetAccount sets the "account" edge to the Account entity.
-func (cc *CalendarCreate) SetAccount(a *Account) *CalendarCreate {
-	return cc.SetAccountID(a.ID)
+// SetUser sets the "user" edge to the User entity.
+func (cc *CalendarCreate) SetUser(u *User) *CalendarCreate {
+	return cc.SetUserID(u.ID)
 }
 
 // AddEventIDs adds the "events" edge to the Event entity by IDs.
@@ -103,9 +103,7 @@ func (cc *CalendarCreate) Mutation() *CalendarMutation {
 
 // Save creates the Calendar in the database.
 func (cc *CalendarCreate) Save(ctx context.Context) (*Calendar, error) {
-	if err := cc.defaults(); err != nil {
-		return nil, err
-	}
+	cc.defaults()
 	return withHooks(ctx, cc.sqlSave, cc.mutation, cc.hooks)
 }
 
@@ -132,19 +130,15 @@ func (cc *CalendarCreate) ExecX(ctx context.Context) {
 }
 
 // defaults sets the default values of the builder before save.
-func (cc *CalendarCreate) defaults() error {
+func (cc *CalendarCreate) defaults() {
 	if _, ok := cc.mutation.IsPrimary(); !ok {
 		v := calendar.DefaultIsPrimary
 		cc.mutation.SetIsPrimary(v)
 	}
 	if _, ok := cc.mutation.ID(); !ok {
-		if calendar.DefaultID == nil {
-			return fmt.Errorf("ent: uninitialized calendar.DefaultID (forgotten import ent/runtime?)")
-		}
 		v := calendar.DefaultID()
 		cc.mutation.SetID(v)
 	}
-	return nil
 }
 
 // check runs all checks and user-defined validators on the builder.
@@ -205,21 +199,21 @@ func (cc *CalendarCreate) createSpec() (*Calendar, *sqlgraph.CreateSpec) {
 		_spec.SetField(calendar.FieldIsPrimary, field.TypeBool, value)
 		_node.IsPrimary = value
 	}
-	if nodes := cc.mutation.AccountIDs(); len(nodes) > 0 {
+	if nodes := cc.mutation.UserIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
 			Inverse: true,
-			Table:   calendar.AccountTable,
-			Columns: []string{calendar.AccountColumn},
+			Table:   calendar.UserTable,
+			Columns: []string{calendar.UserColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
-				IDSpec: sqlgraph.NewFieldSpec(account.FieldID, field.TypeUUID),
+				IDSpec: sqlgraph.NewFieldSpec(user.FieldID, field.TypeUUID),
 			},
 		}
 		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
-		_node.account_calendars = &nodes[0]
+		_node.user_calendars = &nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
 	if nodes := cc.mutation.EventsIDs(); len(nodes) > 0 {

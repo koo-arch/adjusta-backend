@@ -8,8 +8,12 @@ import (
 	"github.com/google/uuid"
 )
 
+type UserQueryOptions struct {
+	WithOAuthToken bool
+}
+
 type UserRepository interface {
-	Read(ctx context.Context, tx *ent.Tx, id uuid.UUID) (*ent.User, error)
+	Read(ctx context.Context, tx *ent.Tx, id uuid.UUID, opt UserQueryOptions) (*ent.User, error)
 	FindByEmail(ctx context.Context, tx *ent.Tx, email string) (*ent.User, error)
 	Create(ctx context.Context, tx *ent.Tx, email string, jwtToken *models.JWTToken) (*ent.User, error)
 	Update(ctx context.Context, tx *ent.Tx, id uuid.UUID, jwtToken *models.JWTToken) (*ent.User, error)

@@ -14,12 +14,6 @@ const (
 	StatusCancelled EventStatus = "cancelled"
 )
 
-type AccountsEvents struct {
-	AccountID uuid.UUID `json:"account_id"`
-	Email     string    `json:"email"`
-	Events    []*Event  `json:"events"`
-}
-
 type Event struct {
 	ID      string `json:"id"`
 	Summary string `json:"summary"`
