@@ -90,6 +90,40 @@ func (eu *EventUpdate) ClearLocation() *EventUpdate {
 	return eu
 }
 
+// SetStatus sets the "status" field.
+func (eu *EventUpdate) SetStatus(e event.Status) *EventUpdate {
+	eu.mutation.SetStatus(e)
+	return eu
+}
+
+// SetNillableStatus sets the "status" field if the given value is not nil.
+func (eu *EventUpdate) SetNillableStatus(e *event.Status) *EventUpdate {
+	if e != nil {
+		eu.SetStatus(*e)
+	}
+	return eu
+}
+
+// SetConfirmedDateID sets the "confirmed_date_id" field.
+func (eu *EventUpdate) SetConfirmedDateID(u uuid.UUID) *EventUpdate {
+	eu.mutation.SetConfirmedDateID(u)
+	return eu
+}
+
+// SetNillableConfirmedDateID sets the "confirmed_date_id" field if the given value is not nil.
+func (eu *EventUpdate) SetNillableConfirmedDateID(u *uuid.UUID) *EventUpdate {
+	if u != nil {
+		eu.SetConfirmedDateID(*u)
+	}
+	return eu
+}
+
+// ClearConfirmedDateID clears the value of the "confirmed_date_id" field.
+func (eu *EventUpdate) ClearConfirmedDateID() *EventUpdate {
+	eu.mutation.ClearConfirmedDateID()
+	return eu
+}
+
 // SetCalendarID sets the "calendar" edge to the Calendar entity by ID.
 func (eu *EventUpdate) SetCalendarID(id uuid.UUID) *EventUpdate {
 	eu.mutation.SetCalendarID(id)
@@ -183,7 +217,20 @@ func (eu *EventUpdate) ExecX(ctx context.Context) {
 	}
 }
 
+// check runs all checks and user-defined validators on the builder.
+func (eu *EventUpdate) check() error {
+	if v, ok := eu.mutation.Status(); ok {
+		if err := event.StatusValidator(v); err != nil {
+			return &ValidationError{Name: "status", err: fmt.Errorf(`ent: validator failed for field "Event.status": %w`, err)}
+		}
+	}
+	return nil
+}
+
 func (eu *EventUpdate) sqlSave(ctx context.Context) (n int, err error) {
+	if err := eu.check(); err != nil {
+		return n, err
+	}
 	_spec := sqlgraph.NewUpdateSpec(event.Table, event.Columns, sqlgraph.NewFieldSpec(event.FieldID, field.TypeUUID))
 	if ps := eu.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
@@ -209,6 +256,15 @@ func (eu *EventUpdate) sqlSave(ctx context.Context) (n int, err error) {
 	}
 	if eu.mutation.LocationCleared() {
 		_spec.ClearField(event.FieldLocation, field.TypeString)
+	}
+	if value, ok := eu.mutation.Status(); ok {
+		_spec.SetField(event.FieldStatus, field.TypeEnum, value)
+	}
+	if value, ok := eu.mutation.ConfirmedDateID(); ok {
+		_spec.SetField(event.FieldConfirmedDateID, field.TypeUUID, value)
+	}
+	if eu.mutation.ConfirmedDateIDCleared() {
+		_spec.ClearField(event.FieldConfirmedDateID, field.TypeUUID)
 	}
 	if eu.mutation.CalendarCleared() {
 		edge := &sqlgraph.EdgeSpec{
@@ -364,6 +420,40 @@ func (euo *EventUpdateOne) ClearLocation() *EventUpdateOne {
 	return euo
 }
 
+// SetStatus sets the "status" field.
+func (euo *EventUpdateOne) SetStatus(e event.Status) *EventUpdateOne {
+	euo.mutation.SetStatus(e)
+	return euo
+}
+
+// SetNillableStatus sets the "status" field if the given value is not nil.
+func (euo *EventUpdateOne) SetNillableStatus(e *event.Status) *EventUpdateOne {
+	if e != nil {
+		euo.SetStatus(*e)
+	}
+	return euo
+}
+
+// SetConfirmedDateID sets the "confirmed_date_id" field.
+func (euo *EventUpdateOne) SetConfirmedDateID(u uuid.UUID) *EventUpdateOne {
+	euo.mutation.SetConfirmedDateID(u)
+	return euo
+}
+
+// SetNillableConfirmedDateID sets the "confirmed_date_id" field if the given value is not nil.
+func (euo *EventUpdateOne) SetNillableConfirmedDateID(u *uuid.UUID) *EventUpdateOne {
+	if u != nil {
+		euo.SetConfirmedDateID(*u)
+	}
+	return euo
+}
+
+// ClearConfirmedDateID clears the value of the "confirmed_date_id" field.
+func (euo *EventUpdateOne) ClearConfirmedDateID() *EventUpdateOne {
+	euo.mutation.ClearConfirmedDateID()
+	return euo
+}
+
 // SetCalendarID sets the "calendar" edge to the Calendar entity by ID.
 func (euo *EventUpdateOne) SetCalendarID(id uuid.UUID) *EventUpdateOne {
 	euo.mutation.SetCalendarID(id)
@@ -470,7 +560,20 @@ func (euo *EventUpdateOne) ExecX(ctx context.Context) {
 	}
 }
 
+// check runs all checks and user-defined validators on the builder.
+func (euo *EventUpdateOne) check() error {
+	if v, ok := euo.mutation.Status(); ok {
+		if err := event.StatusValidator(v); err != nil {
+			return &ValidationError{Name: "status", err: fmt.Errorf(`ent: validator failed for field "Event.status": %w`, err)}
+		}
+	}
+	return nil
+}
+
 func (euo *EventUpdateOne) sqlSave(ctx context.Context) (_node *Event, err error) {
+	if err := euo.check(); err != nil {
+		return _node, err
+	}
 	_spec := sqlgraph.NewUpdateSpec(event.Table, event.Columns, sqlgraph.NewFieldSpec(event.FieldID, field.TypeUUID))
 	id, ok := euo.mutation.ID()
 	if !ok {
@@ -513,6 +616,15 @@ func (euo *EventUpdateOne) sqlSave(ctx context.Context) (_node *Event, err error
 	}
 	if euo.mutation.LocationCleared() {
 		_spec.ClearField(event.FieldLocation, field.TypeString)
+	}
+	if value, ok := euo.mutation.Status(); ok {
+		_spec.SetField(event.FieldStatus, field.TypeEnum, value)
+	}
+	if value, ok := euo.mutation.ConfirmedDateID(); ok {
+		_spec.SetField(event.FieldConfirmedDateID, field.TypeUUID, value)
+	}
+	if euo.mutation.ConfirmedDateIDCleared() {
+		_spec.ClearField(event.FieldConfirmedDateID, field.TypeUUID)
 	}
 	if euo.mutation.CalendarCleared() {
 		edge := &sqlgraph.EdgeSpec{

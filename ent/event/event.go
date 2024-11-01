@@ -3,6 +3,8 @@
 package event
 
 import (
+	"fmt"
+
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/google/uuid"
@@ -19,6 +21,10 @@ const (
 	FieldDescription = "description"
 	// FieldLocation holds the string denoting the location field in the database.
 	FieldLocation = "location"
+	// FieldStatus holds the string denoting the status field in the database.
+	FieldStatus = "status"
+	// FieldConfirmedDateID holds the string denoting the confirmed_date_id field in the database.
+	FieldConfirmedDateID = "confirmed_date_id"
 	// EdgeCalendar holds the string denoting the calendar edge name in mutations.
 	EdgeCalendar = "calendar"
 	// EdgeProposedDates holds the string denoting the proposed_dates edge name in mutations.
@@ -47,6 +53,8 @@ var Columns = []string{
 	FieldSummary,
 	FieldDescription,
 	FieldLocation,
+	FieldStatus,
+	FieldConfirmedDateID,
 }
 
 // ForeignKeys holds the SQL foreign-keys that are owned by the "events"
@@ -75,6 +83,33 @@ var (
 	DefaultID func() uuid.UUID
 )
 
+// Status defines the type for the "status" enum field.
+type Status string
+
+// StatusPending is the default value of the Status enum.
+const DefaultStatus = StatusPending
+
+// Status values.
+const (
+	StatusPending   Status = "pending"
+	StatusConfirmed Status = "confirmed"
+	StatusCancelled Status = "cancelled"
+)
+
+func (s Status) String() string {
+	return string(s)
+}
+
+// StatusValidator is a validator for the "status" field enum values. It is called by the builders before save.
+func StatusValidator(s Status) error {
+	switch s {
+	case StatusPending, StatusConfirmed, StatusCancelled:
+		return nil
+	default:
+		return fmt.Errorf("event: invalid enum value for status field: %q", s)
+	}
+}
+
 // OrderOption defines the ordering options for the Event queries.
 type OrderOption func(*sql.Selector)
 
@@ -96,6 +131,16 @@ func ByDescription(opts ...sql.OrderTermOption) OrderOption {
 // ByLocation orders the results by the location field.
 func ByLocation(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldLocation, opts...).ToFunc()
+}
+
+// ByStatus orders the results by the status field.
+func ByStatus(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldStatus, opts...).ToFunc()
+}
+
+// ByConfirmedDateID orders the results by the confirmed_date_id field.
+func ByConfirmedDateID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldConfirmedDateID, opts...).ToFunc()
 }
 
 // ByCalendarField orders the results by calendar field.

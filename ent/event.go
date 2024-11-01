@@ -24,6 +24,10 @@ type Event struct {
 	Description string `json:"description,omitempty"`
 	// Location holds the value of the "location" field.
 	Location string `json:"location,omitempty"`
+	// Status holds the value of the "status" field.
+	Status event.Status `json:"status,omitempty"`
+	// ConfirmedDateID holds the value of the "confirmed_date_id" field.
+	ConfirmedDateID uuid.UUID `json:"confirmed_date_id,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the EventQuery when eager-loading is set.
 	Edges           EventEdges `json:"edges"`
@@ -67,9 +71,9 @@ func (*Event) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case event.FieldSummary, event.FieldDescription, event.FieldLocation:
+		case event.FieldSummary, event.FieldDescription, event.FieldLocation, event.FieldStatus:
 			values[i] = new(sql.NullString)
-		case event.FieldID:
+		case event.FieldID, event.FieldConfirmedDateID:
 			values[i] = new(uuid.UUID)
 		case event.ForeignKeys[0]: // calendar_events
 			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
@@ -111,6 +115,18 @@ func (e *Event) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field location", values[i])
 			} else if value.Valid {
 				e.Location = value.String
+			}
+		case event.FieldStatus:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field status", values[i])
+			} else if value.Valid {
+				e.Status = event.Status(value.String)
+			}
+		case event.FieldConfirmedDateID:
+			if value, ok := values[i].(*uuid.UUID); !ok {
+				return fmt.Errorf("unexpected type %T for field confirmed_date_id", values[i])
+			} else if value != nil {
+				e.ConfirmedDateID = *value
 			}
 		case event.ForeignKeys[0]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
@@ -173,6 +189,12 @@ func (e *Event) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("location=")
 	builder.WriteString(e.Location)
+	builder.WriteString(", ")
+	builder.WriteString("status=")
+	builder.WriteString(fmt.Sprintf("%v", e.Status))
+	builder.WriteString(", ")
+	builder.WriteString("confirmed_date_id=")
+	builder.WriteString(fmt.Sprintf("%v", e.ConfirmedDateID))
 	builder.WriteByte(')')
 	return builder.String()
 }

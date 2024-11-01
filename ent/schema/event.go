@@ -6,6 +6,13 @@ import (
 	"entgo.io/ent/schema/edge"
 	"entgo.io/ent/dialect/entsql"
 	"github.com/google/uuid"
+	"github.com/koo-arch/adjusta-backend/internal/models"
+)
+
+const (
+	StatusPending = models.StatusPending
+	StatusConfirmed = models.StatusConfirmed
+	StatusCancelled = models.StatusCancelled
 )
 
 // Event holds the schema definition for the Event entity.
@@ -20,6 +27,10 @@ func (Event) Fields() []ent.Field {
 		field.String("summary").Optional(),
 		field.String("description").Optional(),
 		field.String("location").Optional(),
+		field.Enum("status").
+			Values(string(StatusPending), string(StatusConfirmed), string(StatusCancelled)).
+			Default(string(StatusPending)),
+		field.UUID("confirmed_date_id", uuid.UUID{}).Optional(),
 	}
 }
 

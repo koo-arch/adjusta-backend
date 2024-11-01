@@ -279,7 +279,7 @@ func (ch *CalendarHandler) EventFinalizeHandler() gin.HandlerFunc {
 		}
 
 		accountRepo := ch.handler.Server.AccountRepo
-		eventFinalizationManager := ch.handler.Server.EventFinalizationManager
+		eventManager := ch.handler.Server.EventManager
 
 		userAccount, err := accountRepo.FindByUserIDAndEmail(ctx, nil, userid, emailStr)
 		if err != nil {
@@ -288,7 +288,7 @@ func (ch *CalendarHandler) EventFinalizeHandler() gin.HandlerFunc {
 			return
 		}
 
-		err = eventFinalizationManager.FinalizeProposedDate(ctx, userid, userAccount.ID, eventID, emailStr, confirmEvent)
+		err = eventManager.FinalizeProposedDate(ctx, userid, userAccount.ID, eventID, emailStr, confirmEvent)
 		if err != nil {
 			fmt.Printf("failed to finalize event: %v", err)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to finalize event"})

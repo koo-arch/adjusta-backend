@@ -1,9 +1,17 @@
 package models
 
 import (
-	"github.com/google/uuid"
-
 	"time"
+	
+	"github.com/google/uuid"
+)
+
+type EventStatus string
+
+const (
+	StatusPending   EventStatus = "pending"
+	StatusConfirmed EventStatus = "confirmed"
+	StatusCancelled EventStatus = "cancelled"
 )
 
 type AccountsEvents struct {
@@ -39,16 +47,17 @@ type EventDraftDetail struct {
 	Title         string         `json:"title"`
 	Location      string         `json:"location"`
 	Description   string         `json:"description"`
+	Status        EventStatus    `json:"status"`
+	ConfirmedDateID *uuid.UUID    `json:"confirmed_date_id"`
 	ProposedDates []ProposedDate `json:"proposed_dates"`
 }
 
 type ProposedDate struct {
-	ID            uuid.UUID  `json:"id"`
+	ID            *uuid.UUID  `json:"id"`
 	GoogleEventID string     `json:"event_id"`
 	Start         *time.Time `json:"start"`
 	End           *time.Time `json:"end"`
 	Priority      int        `json:"priority"`
-	IsFinalized   bool       `json:"is_finalized"`
 }
 
 

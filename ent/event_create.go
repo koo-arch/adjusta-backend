@@ -4,6 +4,7 @@ package ent
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"entgo.io/ent/dialect/sql/sqlgraph"
@@ -59,6 +60,34 @@ func (ec *EventCreate) SetLocation(s string) *EventCreate {
 func (ec *EventCreate) SetNillableLocation(s *string) *EventCreate {
 	if s != nil {
 		ec.SetLocation(*s)
+	}
+	return ec
+}
+
+// SetStatus sets the "status" field.
+func (ec *EventCreate) SetStatus(e event.Status) *EventCreate {
+	ec.mutation.SetStatus(e)
+	return ec
+}
+
+// SetNillableStatus sets the "status" field if the given value is not nil.
+func (ec *EventCreate) SetNillableStatus(e *event.Status) *EventCreate {
+	if e != nil {
+		ec.SetStatus(*e)
+	}
+	return ec
+}
+
+// SetConfirmedDateID sets the "confirmed_date_id" field.
+func (ec *EventCreate) SetConfirmedDateID(u uuid.UUID) *EventCreate {
+	ec.mutation.SetConfirmedDateID(u)
+	return ec
+}
+
+// SetNillableConfirmedDateID sets the "confirmed_date_id" field if the given value is not nil.
+func (ec *EventCreate) SetNillableConfirmedDateID(u *uuid.UUID) *EventCreate {
+	if u != nil {
+		ec.SetConfirmedDateID(*u)
 	}
 	return ec
 }
@@ -146,6 +175,10 @@ func (ec *EventCreate) ExecX(ctx context.Context) {
 
 // defaults sets the default values of the builder before save.
 func (ec *EventCreate) defaults() {
+	if _, ok := ec.mutation.Status(); !ok {
+		v := event.DefaultStatus
+		ec.mutation.SetStatus(v)
+	}
 	if _, ok := ec.mutation.ID(); !ok {
 		v := event.DefaultID()
 		ec.mutation.SetID(v)
@@ -154,6 +187,14 @@ func (ec *EventCreate) defaults() {
 
 // check runs all checks and user-defined validators on the builder.
 func (ec *EventCreate) check() error {
+	if _, ok := ec.mutation.Status(); !ok {
+		return &ValidationError{Name: "status", err: errors.New(`ent: missing required field "Event.status"`)}
+	}
+	if v, ok := ec.mutation.Status(); ok {
+		if err := event.StatusValidator(v); err != nil {
+			return &ValidationError{Name: "status", err: fmt.Errorf(`ent: validator failed for field "Event.status": %w`, err)}
+		}
+	}
 	return nil
 }
 
@@ -200,6 +241,14 @@ func (ec *EventCreate) createSpec() (*Event, *sqlgraph.CreateSpec) {
 	if value, ok := ec.mutation.Location(); ok {
 		_spec.SetField(event.FieldLocation, field.TypeString, value)
 		_node.Location = value
+	}
+	if value, ok := ec.mutation.Status(); ok {
+		_spec.SetField(event.FieldStatus, field.TypeEnum, value)
+		_node.Status = value
+	}
+	if value, ok := ec.mutation.ConfirmedDateID(); ok {
+		_spec.SetField(event.FieldConfirmedDateID, field.TypeUUID, value)
+		_node.ConfirmedDateID = value
 	}
 	if nodes := ec.mutation.CalendarIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{

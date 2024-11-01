@@ -60,6 +60,8 @@ var (
 		{Name: "summary", Type: field.TypeString, Nullable: true},
 		{Name: "description", Type: field.TypeString, Nullable: true},
 		{Name: "location", Type: field.TypeString, Nullable: true},
+		{Name: "status", Type: field.TypeEnum, Enums: []string{"pending", "confirmed", "cancelled"}, Default: "pending"},
+		{Name: "confirmed_date_id", Type: field.TypeUUID, Nullable: true},
 		{Name: "calendar_events", Type: field.TypeUUID, Nullable: true},
 	}
 	// EventsTable holds the schema information for the "events" table.
@@ -70,7 +72,7 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "events_calendars_events",
-				Columns:    []*schema.Column{EventsColumns[4]},
+				Columns:    []*schema.Column{EventsColumns[6]},
 				RefColumns: []*schema.Column{CalendarsColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
@@ -103,7 +105,6 @@ var (
 		{Name: "google_event_id", Type: field.TypeString, Nullable: true},
 		{Name: "start_time", Type: field.TypeTime},
 		{Name: "end_time", Type: field.TypeTime},
-		{Name: "is_finalized", Type: field.TypeBool, Default: false},
 		{Name: "priority", Type: field.TypeInt, Default: 0},
 		{Name: "event_proposed_dates", Type: field.TypeUUID, Nullable: true},
 	}
@@ -115,7 +116,7 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "proposed_dates_events_proposed_dates",
-				Columns:    []*schema.Column{ProposedDatesColumns[6]},
+				Columns:    []*schema.Column{ProposedDatesColumns[5]},
 				RefColumns: []*schema.Column{EventsColumns[0]},
 				OnDelete:   schema.Cascade,
 			},

@@ -71,11 +71,6 @@ func EndTime(v time.Time) predicate.ProposedDate {
 	return predicate.ProposedDate(sql.FieldEQ(FieldEndTime, v))
 }
 
-// IsFinalized applies equality check predicate on the "is_finalized" field. It's identical to IsFinalizedEQ.
-func IsFinalized(v bool) predicate.ProposedDate {
-	return predicate.ProposedDate(sql.FieldEQ(FieldIsFinalized, v))
-}
-
 // Priority applies equality check predicate on the "priority" field. It's identical to PriorityEQ.
 func Priority(v int) predicate.ProposedDate {
 	return predicate.ProposedDate(sql.FieldEQ(FieldPriority, v))
@@ -234,16 +229,6 @@ func EndTimeLT(v time.Time) predicate.ProposedDate {
 // EndTimeLTE applies the LTE predicate on the "end_time" field.
 func EndTimeLTE(v time.Time) predicate.ProposedDate {
 	return predicate.ProposedDate(sql.FieldLTE(FieldEndTime, v))
-}
-
-// IsFinalizedEQ applies the EQ predicate on the "is_finalized" field.
-func IsFinalizedEQ(v bool) predicate.ProposedDate {
-	return predicate.ProposedDate(sql.FieldEQ(FieldIsFinalized, v))
-}
-
-// IsFinalizedNEQ applies the NEQ predicate on the "is_finalized" field.
-func IsFinalizedNEQ(v bool) predicate.ProposedDate {
-	return predicate.ProposedDate(sql.FieldNEQ(FieldIsFinalized, v))
 }
 
 // PriorityEQ applies the EQ predicate on the "priority" field.

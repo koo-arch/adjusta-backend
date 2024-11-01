@@ -69,6 +69,11 @@ func Location(v string) predicate.Event {
 	return predicate.Event(sql.FieldEQ(FieldLocation, v))
 }
 
+// ConfirmedDateID applies equality check predicate on the "confirmed_date_id" field. It's identical to ConfirmedDateIDEQ.
+func ConfirmedDateID(v uuid.UUID) predicate.Event {
+	return predicate.Event(sql.FieldEQ(FieldConfirmedDateID, v))
+}
+
 // SummaryEQ applies the EQ predicate on the "summary" field.
 func SummaryEQ(v string) predicate.Event {
 	return predicate.Event(sql.FieldEQ(FieldSummary, v))
@@ -292,6 +297,76 @@ func LocationEqualFold(v string) predicate.Event {
 // LocationContainsFold applies the ContainsFold predicate on the "location" field.
 func LocationContainsFold(v string) predicate.Event {
 	return predicate.Event(sql.FieldContainsFold(FieldLocation, v))
+}
+
+// StatusEQ applies the EQ predicate on the "status" field.
+func StatusEQ(v Status) predicate.Event {
+	return predicate.Event(sql.FieldEQ(FieldStatus, v))
+}
+
+// StatusNEQ applies the NEQ predicate on the "status" field.
+func StatusNEQ(v Status) predicate.Event {
+	return predicate.Event(sql.FieldNEQ(FieldStatus, v))
+}
+
+// StatusIn applies the In predicate on the "status" field.
+func StatusIn(vs ...Status) predicate.Event {
+	return predicate.Event(sql.FieldIn(FieldStatus, vs...))
+}
+
+// StatusNotIn applies the NotIn predicate on the "status" field.
+func StatusNotIn(vs ...Status) predicate.Event {
+	return predicate.Event(sql.FieldNotIn(FieldStatus, vs...))
+}
+
+// ConfirmedDateIDEQ applies the EQ predicate on the "confirmed_date_id" field.
+func ConfirmedDateIDEQ(v uuid.UUID) predicate.Event {
+	return predicate.Event(sql.FieldEQ(FieldConfirmedDateID, v))
+}
+
+// ConfirmedDateIDNEQ applies the NEQ predicate on the "confirmed_date_id" field.
+func ConfirmedDateIDNEQ(v uuid.UUID) predicate.Event {
+	return predicate.Event(sql.FieldNEQ(FieldConfirmedDateID, v))
+}
+
+// ConfirmedDateIDIn applies the In predicate on the "confirmed_date_id" field.
+func ConfirmedDateIDIn(vs ...uuid.UUID) predicate.Event {
+	return predicate.Event(sql.FieldIn(FieldConfirmedDateID, vs...))
+}
+
+// ConfirmedDateIDNotIn applies the NotIn predicate on the "confirmed_date_id" field.
+func ConfirmedDateIDNotIn(vs ...uuid.UUID) predicate.Event {
+	return predicate.Event(sql.FieldNotIn(FieldConfirmedDateID, vs...))
+}
+
+// ConfirmedDateIDGT applies the GT predicate on the "confirmed_date_id" field.
+func ConfirmedDateIDGT(v uuid.UUID) predicate.Event {
+	return predicate.Event(sql.FieldGT(FieldConfirmedDateID, v))
+}
+
+// ConfirmedDateIDGTE applies the GTE predicate on the "confirmed_date_id" field.
+func ConfirmedDateIDGTE(v uuid.UUID) predicate.Event {
+	return predicate.Event(sql.FieldGTE(FieldConfirmedDateID, v))
+}
+
+// ConfirmedDateIDLT applies the LT predicate on the "confirmed_date_id" field.
+func ConfirmedDateIDLT(v uuid.UUID) predicate.Event {
+	return predicate.Event(sql.FieldLT(FieldConfirmedDateID, v))
+}
+
+// ConfirmedDateIDLTE applies the LTE predicate on the "confirmed_date_id" field.
+func ConfirmedDateIDLTE(v uuid.UUID) predicate.Event {
+	return predicate.Event(sql.FieldLTE(FieldConfirmedDateID, v))
+}
+
+// ConfirmedDateIDIsNil applies the IsNil predicate on the "confirmed_date_id" field.
+func ConfirmedDateIDIsNil() predicate.Event {
+	return predicate.Event(sql.FieldIsNull(FieldConfirmedDateID))
+}
+
+// ConfirmedDateIDNotNil applies the NotNil predicate on the "confirmed_date_id" field.
+func ConfirmedDateIDNotNil() predicate.Event {
+	return predicate.Event(sql.FieldNotNull(FieldConfirmedDateID))
 }
 
 // HasCalendar applies the HasEdge predicate on the "calendar" edge.

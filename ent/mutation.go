@@ -1399,6 +1399,8 @@ type EventMutation struct {
 	summary               *string
 	description           *string
 	location              *string
+	status                *event.Status
+	confirmed_date_id     *uuid.UUID
 	clearedFields         map[string]struct{}
 	calendar              *uuid.UUID
 	clearedcalendar       bool
@@ -1661,6 +1663,91 @@ func (m *EventMutation) ResetLocation() {
 	delete(m.clearedFields, event.FieldLocation)
 }
 
+// SetStatus sets the "status" field.
+func (m *EventMutation) SetStatus(e event.Status) {
+	m.status = &e
+}
+
+// Status returns the value of the "status" field in the mutation.
+func (m *EventMutation) Status() (r event.Status, exists bool) {
+	v := m.status
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldStatus returns the old "status" field's value of the Event entity.
+// If the Event object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *EventMutation) OldStatus(ctx context.Context) (v event.Status, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldStatus is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldStatus requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldStatus: %w", err)
+	}
+	return oldValue.Status, nil
+}
+
+// ResetStatus resets all changes to the "status" field.
+func (m *EventMutation) ResetStatus() {
+	m.status = nil
+}
+
+// SetConfirmedDateID sets the "confirmed_date_id" field.
+func (m *EventMutation) SetConfirmedDateID(u uuid.UUID) {
+	m.confirmed_date_id = &u
+}
+
+// ConfirmedDateID returns the value of the "confirmed_date_id" field in the mutation.
+func (m *EventMutation) ConfirmedDateID() (r uuid.UUID, exists bool) {
+	v := m.confirmed_date_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldConfirmedDateID returns the old "confirmed_date_id" field's value of the Event entity.
+// If the Event object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *EventMutation) OldConfirmedDateID(ctx context.Context) (v uuid.UUID, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldConfirmedDateID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldConfirmedDateID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldConfirmedDateID: %w", err)
+	}
+	return oldValue.ConfirmedDateID, nil
+}
+
+// ClearConfirmedDateID clears the value of the "confirmed_date_id" field.
+func (m *EventMutation) ClearConfirmedDateID() {
+	m.confirmed_date_id = nil
+	m.clearedFields[event.FieldConfirmedDateID] = struct{}{}
+}
+
+// ConfirmedDateIDCleared returns if the "confirmed_date_id" field was cleared in this mutation.
+func (m *EventMutation) ConfirmedDateIDCleared() bool {
+	_, ok := m.clearedFields[event.FieldConfirmedDateID]
+	return ok
+}
+
+// ResetConfirmedDateID resets all changes to the "confirmed_date_id" field.
+func (m *EventMutation) ResetConfirmedDateID() {
+	m.confirmed_date_id = nil
+	delete(m.clearedFields, event.FieldConfirmedDateID)
+}
+
 // SetCalendarID sets the "calendar" edge to the Calendar entity by id.
 func (m *EventMutation) SetCalendarID(id uuid.UUID) {
 	m.calendar = &id
@@ -1788,7 +1875,7 @@ func (m *EventMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *EventMutation) Fields() []string {
-	fields := make([]string, 0, 3)
+	fields := make([]string, 0, 5)
 	if m.summary != nil {
 		fields = append(fields, event.FieldSummary)
 	}
@@ -1797,6 +1884,12 @@ func (m *EventMutation) Fields() []string {
 	}
 	if m.location != nil {
 		fields = append(fields, event.FieldLocation)
+	}
+	if m.status != nil {
+		fields = append(fields, event.FieldStatus)
+	}
+	if m.confirmed_date_id != nil {
+		fields = append(fields, event.FieldConfirmedDateID)
 	}
 	return fields
 }
@@ -1812,6 +1905,10 @@ func (m *EventMutation) Field(name string) (ent.Value, bool) {
 		return m.Description()
 	case event.FieldLocation:
 		return m.Location()
+	case event.FieldStatus:
+		return m.Status()
+	case event.FieldConfirmedDateID:
+		return m.ConfirmedDateID()
 	}
 	return nil, false
 }
@@ -1827,6 +1924,10 @@ func (m *EventMutation) OldField(ctx context.Context, name string) (ent.Value, e
 		return m.OldDescription(ctx)
 	case event.FieldLocation:
 		return m.OldLocation(ctx)
+	case event.FieldStatus:
+		return m.OldStatus(ctx)
+	case event.FieldConfirmedDateID:
+		return m.OldConfirmedDateID(ctx)
 	}
 	return nil, fmt.Errorf("unknown Event field %s", name)
 }
@@ -1856,6 +1957,20 @@ func (m *EventMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetLocation(v)
+		return nil
+	case event.FieldStatus:
+		v, ok := value.(event.Status)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetStatus(v)
+		return nil
+	case event.FieldConfirmedDateID:
+		v, ok := value.(uuid.UUID)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetConfirmedDateID(v)
 		return nil
 	}
 	return fmt.Errorf("unknown Event field %s", name)
@@ -1896,6 +2011,9 @@ func (m *EventMutation) ClearedFields() []string {
 	if m.FieldCleared(event.FieldLocation) {
 		fields = append(fields, event.FieldLocation)
 	}
+	if m.FieldCleared(event.FieldConfirmedDateID) {
+		fields = append(fields, event.FieldConfirmedDateID)
+	}
 	return fields
 }
 
@@ -1919,6 +2037,9 @@ func (m *EventMutation) ClearField(name string) error {
 	case event.FieldLocation:
 		m.ClearLocation()
 		return nil
+	case event.FieldConfirmedDateID:
+		m.ClearConfirmedDateID()
+		return nil
 	}
 	return fmt.Errorf("unknown Event nullable field %s", name)
 }
@@ -1935,6 +2056,12 @@ func (m *EventMutation) ResetField(name string) error {
 		return nil
 	case event.FieldLocation:
 		m.ResetLocation()
+		return nil
+	case event.FieldStatus:
+		m.ResetStatus()
+		return nil
+	case event.FieldConfirmedDateID:
+		m.ResetConfirmedDateID()
 		return nil
 	}
 	return fmt.Errorf("unknown Event field %s", name)
@@ -2539,7 +2666,6 @@ type ProposedDateMutation struct {
 	google_event_id *string
 	start_time      *time.Time
 	end_time        *time.Time
-	is_finalized    *bool
 	priority        *int
 	addpriority     *int
 	clearedFields   map[string]struct{}
@@ -2775,42 +2901,6 @@ func (m *ProposedDateMutation) ResetEndTime() {
 	m.end_time = nil
 }
 
-// SetIsFinalized sets the "is_finalized" field.
-func (m *ProposedDateMutation) SetIsFinalized(b bool) {
-	m.is_finalized = &b
-}
-
-// IsFinalized returns the value of the "is_finalized" field in the mutation.
-func (m *ProposedDateMutation) IsFinalized() (r bool, exists bool) {
-	v := m.is_finalized
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldIsFinalized returns the old "is_finalized" field's value of the ProposedDate entity.
-// If the ProposedDate object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *ProposedDateMutation) OldIsFinalized(ctx context.Context) (v bool, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldIsFinalized is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldIsFinalized requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldIsFinalized: %w", err)
-	}
-	return oldValue.IsFinalized, nil
-}
-
-// ResetIsFinalized resets all changes to the "is_finalized" field.
-func (m *ProposedDateMutation) ResetIsFinalized() {
-	m.is_finalized = nil
-}
-
 // SetPriority sets the "priority" field.
 func (m *ProposedDateMutation) SetPriority(i int) {
 	m.priority = &i
@@ -2940,7 +3030,7 @@ func (m *ProposedDateMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *ProposedDateMutation) Fields() []string {
-	fields := make([]string, 0, 5)
+	fields := make([]string, 0, 4)
 	if m.google_event_id != nil {
 		fields = append(fields, proposeddate.FieldGoogleEventID)
 	}
@@ -2949,9 +3039,6 @@ func (m *ProposedDateMutation) Fields() []string {
 	}
 	if m.end_time != nil {
 		fields = append(fields, proposeddate.FieldEndTime)
-	}
-	if m.is_finalized != nil {
-		fields = append(fields, proposeddate.FieldIsFinalized)
 	}
 	if m.priority != nil {
 		fields = append(fields, proposeddate.FieldPriority)
@@ -2970,8 +3057,6 @@ func (m *ProposedDateMutation) Field(name string) (ent.Value, bool) {
 		return m.StartTime()
 	case proposeddate.FieldEndTime:
 		return m.EndTime()
-	case proposeddate.FieldIsFinalized:
-		return m.IsFinalized()
 	case proposeddate.FieldPriority:
 		return m.Priority()
 	}
@@ -2989,8 +3074,6 @@ func (m *ProposedDateMutation) OldField(ctx context.Context, name string) (ent.V
 		return m.OldStartTime(ctx)
 	case proposeddate.FieldEndTime:
 		return m.OldEndTime(ctx)
-	case proposeddate.FieldIsFinalized:
-		return m.OldIsFinalized(ctx)
 	case proposeddate.FieldPriority:
 		return m.OldPriority(ctx)
 	}
@@ -3022,13 +3105,6 @@ func (m *ProposedDateMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetEndTime(v)
-		return nil
-	case proposeddate.FieldIsFinalized:
-		v, ok := value.(bool)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetIsFinalized(v)
 		return nil
 	case proposeddate.FieldPriority:
 		v, ok := value.(int)
@@ -3118,9 +3194,6 @@ func (m *ProposedDateMutation) ResetField(name string) error {
 		return nil
 	case proposeddate.FieldEndTime:
 		m.ResetEndTime()
-		return nil
-	case proposeddate.FieldIsFinalized:
-		m.ResetIsFinalized()
 		return nil
 	case proposeddate.FieldPriority:
 		m.ResetPriority()

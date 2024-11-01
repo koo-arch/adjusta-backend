@@ -25,8 +25,6 @@ type ProposedDate struct {
 	StartTime time.Time `json:"start_time,omitempty"`
 	// EndTime holds the value of the "end_time" field.
 	EndTime time.Time `json:"end_time,omitempty"`
-	// IsFinalized holds the value of the "is_finalized" field.
-	IsFinalized bool `json:"is_finalized,omitempty"`
 	// Priority holds the value of the "priority" field.
 	Priority int `json:"priority,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
@@ -61,8 +59,6 @@ func (*ProposedDate) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case proposeddate.FieldIsFinalized:
-			values[i] = new(sql.NullBool)
 		case proposeddate.FieldPriority:
 			values[i] = new(sql.NullInt64)
 		case proposeddate.FieldGoogleEventID:
@@ -111,12 +107,6 @@ func (pd *ProposedDate) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field end_time", values[i])
 			} else if value.Valid {
 				pd.EndTime = value.Time
-			}
-		case proposeddate.FieldIsFinalized:
-			if value, ok := values[i].(*sql.NullBool); !ok {
-				return fmt.Errorf("unexpected type %T for field is_finalized", values[i])
-			} else if value.Valid {
-				pd.IsFinalized = value.Bool
 			}
 		case proposeddate.FieldPriority:
 			if value, ok := values[i].(*sql.NullInt64); !ok {
@@ -180,9 +170,6 @@ func (pd *ProposedDate) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("end_time=")
 	builder.WriteString(pd.EndTime.Format(time.ANSIC))
-	builder.WriteString(", ")
-	builder.WriteString("is_finalized=")
-	builder.WriteString(fmt.Sprintf("%v", pd.IsFinalized))
 	builder.WriteString(", ")
 	builder.WriteString("priority=")
 	builder.WriteString(fmt.Sprintf("%v", pd.Priority))

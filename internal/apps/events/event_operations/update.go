@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"log"
 	"sync"
-	"time"
 
 	"github.com/google/uuid"
 	"github.com/koo-arch/adjusta-backend/ent"
+	"github.com/koo-arch/adjusta-backend/internal/repo/event"
 	"github.com/koo-arch/adjusta-backend/internal/apps/events"
 	customCalendar "github.com/koo-arch/adjusta-backend/internal/google/calendar"
 	"github.com/koo-arch/adjusta-backend/internal/models"
@@ -59,11 +59,15 @@ func (eum *EventUpdateManager) UpdateDraftedEvents(ctx context.Context, userID, 
 	if err != nil {
 		return fmt.Errorf("failed to get primary calendar for account: %s, error: %w", email, err)
 	}
-	// calendar.Event型に変換
-	convEvent := eum.event.CalendarApp.ConvertToCalendarEvent(nil, eventReq.Title, eventReq.Location, eventReq.Description, time.Time{}, time.Time{})
 
 	// イベントの詳細を更新
-	entEvent, err := eum.event.EventRepo.Update(ctx, tx, eventID, convEvent)
+	eventOptions := event.EventQueryOptions{
+		Summary:      &eventReq.Title,
+		Location:     &eventReq.Location,
+		Description:  &eventReq.Description,
+		Status:       &eventReq.Status,
+	}
+	entEvent, err := eum.event.EventRepo.Update(ctx, tx, eventID, eventOptions)
 	if err != nil {
 		return fmt.Errorf("failed to get event for account: %s, error: %w", email, err)
 	}
@@ -74,17 +78,55 @@ func (eum *EventUpdateManager) UpdateDraftedEvents(ctx context.Context, userID, 
 		return fmt.Errorf("failed to get proposed dates, error: %w", err)
 	}
 
-	// Googleカレンダーイベントの新規登録または既存イベントのIDチェック
-	operationMap, err := eum.SyncUpdateGoogleEvents(ctx, tx, calendarService, eventReq, existingDates)
-	if err != nil {
-		return fmt.Errorf("failed to handle google event for account: %s, error: %w", email, err)
-	}
+	// イベントのステータスによって処理を分岐
+	if eventReq.Status == models.StatusConfirmed {
+		// 確定済みの場合
+		confirmDate := models.ConfirmDate{
+			ID: 			eventReq.ProposedDates[0].ID,
+			GoogleEventID: 	eventReq.ProposedDates[0].GoogleEventID,
+			Start:  		eventReq.ProposedDates[0].Start,
+			End:    		eventReq.ProposedDates[0].End,
+			Priority: 		eventReq.ProposedDates[0].Priority,
+		}
+		confirmEvent := models.ConfirmEvent{
+			ConfirmDate: confirmDate,
+		}
 
-	// DB上の日程候補を更新
-	err = eum.updateProposedDates(ctx, tx, eventReq, entEvent, existingDates)
-	if err != nil {
-		if rollbackErr := eum.RollbackGoogleEvents(ctx, tx, calendarService, operationMap); rollbackErr != nil {
-			return fmt.Errorf("failed to rollback google events: %w", rollbackErr)
+		// Googleカレンダーイベントの新規登録または既存イベントのIDチェック
+		googleEventID, err := eum.event.HandleGoogleEvent(calendarService, entEvent, &confirmEvent)
+		if err != nil {
+			return fmt.Errorf("failed to handle google event for account: %s, error: %w", email, err)
+		}
+		// いずれかの日程候補を確定
+		err = eum.event.ConfirmEventDate(ctx, tx, googleEventID, &confirmEvent, entEvent)
+		if err != nil {
+			return fmt.Errorf("failed to confirm event date for account: %s, error: %w", email, err)
+		}
+
+		// ConfirmedDateID以外の日程をGoogleカレンダーから削除
+		err = eum.event.CleanupNotConfirmedDates(ctx, tx, calendarService, eventID)
+		if err != nil {
+			return fmt.Errorf("failed to cleanup not finalized dates for account: %s, error: %w", email, err)
+		}
+
+		// DB上の日程候補を更新
+		err = eum.updateProposedDates(ctx, tx, eventReq, entEvent, existingDates)
+		if err != nil {
+			return fmt.Errorf("failed to update proposed dates, error: %w", err)
+		}
+	} else if eventReq.Status == models.StatusPending {
+		// Googleカレンダーイベントの新規登録または既存イベントのIDチェック
+		operationMap, err := eum.SyncUpdateGoogleEvents(ctx, tx, calendarService, eventReq, existingDates)
+		if err != nil {
+			return fmt.Errorf("failed to handle google event for account: %s, error: %w", email, err)
+		}
+	
+		// DB上の日程候補を更新
+		err = eum.updateProposedDates(ctx, tx, eventReq, entEvent, existingDates)
+		if err != nil {
+			if rollbackErr := eum.RollbackGoogleEvents(ctx, tx, calendarService, operationMap); rollbackErr != nil {
+				return fmt.Errorf("failed to rollback google events: %w", rollbackErr)
+			}
 		}
 	}
 
@@ -216,7 +258,12 @@ func (eum *EventUpdateManager) updateProposedDates(ctx context.Context, tx *ent.
 	// 提案された日程候補のハッシュテーブルを作成
 	updateDateMap := make(map[uuid.UUID]models.ProposedDate)
 	for _, date := range eventReq.ProposedDates {
-		updateDateMap[date.ID] = date
+		if date.ID != nil {
+			updateDateMap[*date.ID] = date
+		} else {
+			// 新規の日程候補の場合、なんでもいいので一意なマップキーを生成
+			updateDateMap[uuid.New()] = date
+		}
 	}
 
 	// 既存の日程候補を更新または削除
@@ -228,7 +275,6 @@ func (eum *EventUpdateManager) updateProposedDates(ctx context.Context, tx *ent.
 				StartTime:     updateDate.Start,
 				EndTime:       updateDate.End,
 				Priority:      &updateDate.Priority,
-				IsFinalized:   &updateDate.IsFinalized,
 			}
 			_, err := eum.event.DateRepo.Update(ctx, tx, date.ID, dateOptions)
 			if err != nil {

@@ -48,20 +48,6 @@ func (pdc *ProposedDateCreate) SetEndTime(t time.Time) *ProposedDateCreate {
 	return pdc
 }
 
-// SetIsFinalized sets the "is_finalized" field.
-func (pdc *ProposedDateCreate) SetIsFinalized(b bool) *ProposedDateCreate {
-	pdc.mutation.SetIsFinalized(b)
-	return pdc
-}
-
-// SetNillableIsFinalized sets the "is_finalized" field if the given value is not nil.
-func (pdc *ProposedDateCreate) SetNillableIsFinalized(b *bool) *ProposedDateCreate {
-	if b != nil {
-		pdc.SetIsFinalized(*b)
-	}
-	return pdc
-}
-
 // SetPriority sets the "priority" field.
 func (pdc *ProposedDateCreate) SetPriority(i int) *ProposedDateCreate {
 	pdc.mutation.SetPriority(i)
@@ -146,10 +132,6 @@ func (pdc *ProposedDateCreate) ExecX(ctx context.Context) {
 
 // defaults sets the default values of the builder before save.
 func (pdc *ProposedDateCreate) defaults() error {
-	if _, ok := pdc.mutation.IsFinalized(); !ok {
-		v := proposeddate.DefaultIsFinalized
-		pdc.mutation.SetIsFinalized(v)
-	}
 	if _, ok := pdc.mutation.Priority(); !ok {
 		v := proposeddate.DefaultPriority
 		pdc.mutation.SetPriority(v)
@@ -171,9 +153,6 @@ func (pdc *ProposedDateCreate) check() error {
 	}
 	if _, ok := pdc.mutation.EndTime(); !ok {
 		return &ValidationError{Name: "end_time", err: errors.New(`ent: missing required field "ProposedDate.end_time"`)}
-	}
-	if _, ok := pdc.mutation.IsFinalized(); !ok {
-		return &ValidationError{Name: "is_finalized", err: errors.New(`ent: missing required field "ProposedDate.is_finalized"`)}
 	}
 	if _, ok := pdc.mutation.Priority(); !ok {
 		return &ValidationError{Name: "priority", err: errors.New(`ent: missing required field "ProposedDate.priority"`)}
@@ -224,10 +203,6 @@ func (pdc *ProposedDateCreate) createSpec() (*ProposedDate, *sqlgraph.CreateSpec
 	if value, ok := pdc.mutation.EndTime(); ok {
 		_spec.SetField(proposeddate.FieldEndTime, field.TypeTime, value)
 		_node.EndTime = value
-	}
-	if value, ok := pdc.mutation.IsFinalized(); ok {
-		_spec.SetField(proposeddate.FieldIsFinalized, field.TypeBool, value)
-		_node.IsFinalized = value
 	}
 	if value, ok := pdc.mutation.Priority(); ok {
 		_spec.SetField(proposeddate.FieldPriority, field.TypeInt, value)

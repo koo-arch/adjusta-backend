@@ -38,14 +38,13 @@ func (r *ProposedDateRepositoryImpl) FilterByEventID(ctx context.Context, tx *en
 		All(ctx)
 }
 
-func (r *ProposedDateRepositoryImpl) FilterByEventIDWithFinalized(ctx context.Context, tx *ent.Tx, eventID uuid.UUID, isFinalized bool) ([]*ent.ProposedDate, error) {
+func (r* ProposedDateRepositoryImpl) ExclusionEventID(ctx context.Context, tx *ent.Tx, eventID uuid.UUID) ([]*ent.ProposedDate, error) {
 	filterProposedDate := r.client.ProposedDate.Query()
 	if tx != nil {
 		filterProposedDate = tx.ProposedDate.Query()
 	}
 	return filterProposedDate.
-		Where(proposeddate.HasEventWith(event.IDEQ(eventID))).
-		Where(proposeddate.IsFinalized(isFinalized)).
+		Where(proposeddate.Not(proposeddate.HasEventWith(event.IDEQ(eventID)))).
 		All(ctx)
 }
 
@@ -64,10 +63,6 @@ func (r *ProposedDateRepositoryImpl) Create(ctx context.Context, tx *ent.Tx, goo
 		SetEndTime(*opt.EndTime).
 		SetPriority(*opt.Priority).
 		SetEvent(entEvent)
-	
-	if opt.IsFinalized != nil {
-		proposedDateCreate = proposedDateCreate.SetIsFinalized(*opt.IsFinalized)
-	}
 
 	return proposedDateCreate.Save(ctx)
 }
@@ -92,10 +87,6 @@ func (r *ProposedDateRepositoryImpl) Update(ctx context.Context, tx *ent.Tx, id 
 
 	if opt.Priority != nil {
 		proposedDateUpdate = proposedDateUpdate.SetPriority(*opt.Priority)
-	}
-
-	if opt.IsFinalized != nil {
-		proposedDateUpdate = proposedDateUpdate.SetIsFinalized(*opt.IsFinalized)
 	}
 
 	return proposedDateUpdate.Save(ctx)
@@ -138,20 +129,6 @@ func (r *ProposedDateRepositoryImpl) CreateBulk(ctx context.Context, tx *ent.Tx,
 	return r.client.ProposedDate.CreateBulk(proposedDateCreates...).Save(ctx)
 }
 
-func (r *ProposedDateRepositoryImpl) ResetFinalized(ctx context.Context, tx *ent.Tx, eventID uuid.UUID) error {
-	reset := r.client.ProposedDate.Update()
-	if tx != nil {
-		reset = tx.ProposedDate.Update()
-	}
-
-	_, err := reset.
-		Where(proposeddate.HasEventWith(event.IDEQ(eventID))).
-		SetIsFinalized(false).
-		Save(ctx)
-	
-	return err
-}
-
 func (r *ProposedDateRepositoryImpl) UpdateByGoogleEventID(ctx context.Context, tx *ent.Tx, oldGoogleEvent *string, opt ProposedDateQueryOptions) error {
 	update := r.client.ProposedDate.Update()
 	if tx != nil {
@@ -174,10 +151,6 @@ func (r *ProposedDateRepositoryImpl) UpdateByGoogleEventID(ctx context.Context, 
 
 	if opt.Priority != nil {
 		update = update.SetPriority(*opt.Priority)
-	}
-
-	if opt.IsFinalized != nil {
-		update = update.SetIsFinalized(*opt.IsFinalized)
 	}
 
 	_, err := update.Save(ctx)

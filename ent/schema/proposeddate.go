@@ -24,7 +24,6 @@ func (ProposedDate) Fields() []ent.Field {
 		field.String("google_event_id").Optional(),
 		field.Time("start_time"),
 		field.Time("end_time"),
-		field.Bool("is_finalized").Default(false),
 		field.Int("priority").Default(0),
 	}
 }

@@ -78,20 +78,6 @@ func (pdu *ProposedDateUpdate) SetNillableEndTime(t *time.Time) *ProposedDateUpd
 	return pdu
 }
 
-// SetIsFinalized sets the "is_finalized" field.
-func (pdu *ProposedDateUpdate) SetIsFinalized(b bool) *ProposedDateUpdate {
-	pdu.mutation.SetIsFinalized(b)
-	return pdu
-}
-
-// SetNillableIsFinalized sets the "is_finalized" field if the given value is not nil.
-func (pdu *ProposedDateUpdate) SetNillableIsFinalized(b *bool) *ProposedDateUpdate {
-	if b != nil {
-		pdu.SetIsFinalized(*b)
-	}
-	return pdu
-}
-
 // SetPriority sets the "priority" field.
 func (pdu *ProposedDateUpdate) SetPriority(i int) *ProposedDateUpdate {
 	pdu.mutation.ResetPriority()
@@ -190,9 +176,6 @@ func (pdu *ProposedDateUpdate) sqlSave(ctx context.Context) (n int, err error) {
 	}
 	if value, ok := pdu.mutation.EndTime(); ok {
 		_spec.SetField(proposeddate.FieldEndTime, field.TypeTime, value)
-	}
-	if value, ok := pdu.mutation.IsFinalized(); ok {
-		_spec.SetField(proposeddate.FieldIsFinalized, field.TypeBool, value)
 	}
 	if value, ok := pdu.mutation.Priority(); ok {
 		_spec.SetField(proposeddate.FieldPriority, field.TypeInt, value)
@@ -293,20 +276,6 @@ func (pduo *ProposedDateUpdateOne) SetEndTime(t time.Time) *ProposedDateUpdateOn
 func (pduo *ProposedDateUpdateOne) SetNillableEndTime(t *time.Time) *ProposedDateUpdateOne {
 	if t != nil {
 		pduo.SetEndTime(*t)
-	}
-	return pduo
-}
-
-// SetIsFinalized sets the "is_finalized" field.
-func (pduo *ProposedDateUpdateOne) SetIsFinalized(b bool) *ProposedDateUpdateOne {
-	pduo.mutation.SetIsFinalized(b)
-	return pduo
-}
-
-// SetNillableIsFinalized sets the "is_finalized" field if the given value is not nil.
-func (pduo *ProposedDateUpdateOne) SetNillableIsFinalized(b *bool) *ProposedDateUpdateOne {
-	if b != nil {
-		pduo.SetIsFinalized(*b)
 	}
 	return pduo
 }
@@ -439,9 +408,6 @@ func (pduo *ProposedDateUpdateOne) sqlSave(ctx context.Context) (_node *Proposed
 	}
 	if value, ok := pduo.mutation.EndTime(); ok {
 		_spec.SetField(proposeddate.FieldEndTime, field.TypeTime, value)
-	}
-	if value, ok := pduo.mutation.IsFinalized(); ok {
-		_spec.SetField(proposeddate.FieldIsFinalized, field.TypeBool, value)
 	}
 	if value, ok := pduo.mutation.Priority(); ok {
 		_spec.SetField(proposeddate.FieldPriority, field.TypeInt, value)

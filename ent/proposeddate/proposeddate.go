@@ -20,8 +20,6 @@ const (
 	FieldStartTime = "start_time"
 	// FieldEndTime holds the string denoting the end_time field in the database.
 	FieldEndTime = "end_time"
-	// FieldIsFinalized holds the string denoting the is_finalized field in the database.
-	FieldIsFinalized = "is_finalized"
 	// FieldPriority holds the string denoting the priority field in the database.
 	FieldPriority = "priority"
 	// EdgeEvent holds the string denoting the event edge name in mutations.
@@ -43,7 +41,6 @@ var Columns = []string{
 	FieldGoogleEventID,
 	FieldStartTime,
 	FieldEndTime,
-	FieldIsFinalized,
 	FieldPriority,
 }
 
@@ -75,8 +72,6 @@ func ValidColumn(column string) bool {
 //	import _ "github.com/koo-arch/adjusta-backend/ent/runtime"
 var (
 	Hooks [1]ent.Hook
-	// DefaultIsFinalized holds the default value on creation for the "is_finalized" field.
-	DefaultIsFinalized bool
 	// DefaultPriority holds the default value on creation for the "priority" field.
 	DefaultPriority int
 	// DefaultID holds the default value on creation for the "id" field.
@@ -104,11 +99,6 @@ func ByStartTime(opts ...sql.OrderTermOption) OrderOption {
 // ByEndTime orders the results by the end_time field.
 func ByEndTime(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldEndTime, opts...).ToFunc()
-}
-
-// ByIsFinalized orders the results by the is_finalized field.
-func ByIsFinalized(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldIsFinalized, opts...).ToFunc()
 }
 
 // ByPriority orders the results by the priority field.

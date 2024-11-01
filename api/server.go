@@ -25,9 +25,9 @@ type Server struct {
 	AuthManager   			 *auth.AuthManager
 	JWTManager    			 *auth.JWTManager
 	KeyManager    			 *auth.KeyManager
+	EventManager 			 *appEvents.EventManager
 	EventCreationManager     *event_operations.EventCreationManager
 	EventFetchingManager     *event_operations.EventFetchingManager
-	EventFinalizationManager *event_operations.EventFinalizationManager
 	EventUpdateManager       *event_operations.EventUpdateManager
 	EventDeleteManager 	 	 *event_operations.EventDeleteManager
 }
@@ -58,9 +58,9 @@ func NewServer(client *ent.Client) *Server {
 		AuthManager:   			  authManager,
 		JWTManager:    			  jwtManager,
 		KeyManager:    			  keyManager,
+		EventManager:  			  eventManager,
 		EventCreationManager:     event_operations.NewEventCreationManager(eventManager),
 		EventFetchingManager:     event_operations.NewEventFetchingManager(eventManager),
-		EventFinalizationManager: event_operations.NewEventFinalizationManager(eventManager),
 		EventUpdateManager:       event_operations.NewEventUpdateManager(eventManager),
 		EventDeleteManager:       event_operations.NewEventDeleteManager(eventManager),
 	}

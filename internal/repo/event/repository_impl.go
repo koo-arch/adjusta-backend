@@ -65,31 +65,47 @@ func (r *EventRepositoryImpl) FilterByCalendarID(ctx context.Context, tx *ent.Tx
 }
 
 
-func (r *EventRepositoryImpl) Create(ctx context.Context, tx *ent.Tx, event *calendar.Event, entCalendar *ent.Calendar) (*ent.Event, error) {
+func (r *EventRepositoryImpl) Create(ctx context.Context, tx *ent.Tx, googleEvent *calendar.Event, entCalendar *ent.Calendar) (*ent.Event, error) {
 	eventCreate := r.client.Event.Create()
 	if tx != nil {
 		eventCreate = tx.Event.Create()
 	}
 
 	eventCreate = eventCreate.
-		SetSummary(event.Summary).
-		SetDescription(event.Description).
-		SetLocation(event.Location).
+		SetSummary(googleEvent.Summary).
+		SetDescription(googleEvent.Description).
+		SetLocation(googleEvent.Location).
 		SetCalendar(entCalendar)
 
 	return eventCreate.Save(ctx)
 }
 
-func (r *EventRepositoryImpl) Update(ctx context.Context, tx *ent.Tx, id uuid.UUID, event *calendar.Event) (*ent.Event, error) {
+func (r *EventRepositoryImpl) Update(ctx context.Context, tx *ent.Tx, id uuid.UUID, opt EventQueryOptions) (*ent.Event, error) {
 	eventUpdate := r.client.Event.UpdateOneID(id)
 	if tx != nil {
 		eventUpdate = tx.Event.UpdateOneID(id)
 	}
 
-	eventUpdate = eventUpdate.
-		SetSummary(event.Summary).
-		SetDescription(event.Description).
-		SetLocation(event.Location)
+	if opt.Summary != nil {
+		eventUpdate = eventUpdate.SetSummary(*opt.Summary)
+	}
+
+	if opt.Location != nil {
+		eventUpdate = eventUpdate.SetLocation(*opt.Location)
+	}
+
+	if opt.Description != nil {
+		eventUpdate = eventUpdate.SetDescription(*opt.Description)
+	}
+
+	if opt.Status != nil {
+		status := event.Status(*opt.Status)
+		eventUpdate = eventUpdate.SetStatus(status)
+	}
+
+	if opt.ConfirmedDateID != nil {
+		eventUpdate = eventUpdate.SetConfirmedDateID(*opt.ConfirmedDateID)
+	}
 
 	return eventUpdate.Save(ctx)
 }
