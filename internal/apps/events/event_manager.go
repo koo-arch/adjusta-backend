@@ -14,7 +14,6 @@ import (
 	customCalendar "github.com/koo-arch/adjusta-backend/internal/google/calendar"
 	"github.com/koo-arch/adjusta-backend/internal/transaction"
 	"github.com/koo-arch/adjusta-backend/internal/models"
-	"google.golang.org/api/calendar/v3"
 )
 
 type EventManager struct {
@@ -82,12 +81,6 @@ func (em *EventManager) FinalizeProposedDate(ctx context.Context, userID, eventI
 		return fmt.Errorf("failed to confirm event date for account: %s, error: %w", email, err)
 	}
 
-	// is_finalizedがfalseの日程をGoogleカレンダーから削除
-	err = em.CleanupNotConfirmedDates(ctx, tx, calendarService, eventID)
-	if err != nil {
-		return fmt.Errorf("failed to cleanup not finalized dates for account: %s, error: %w", email, err)
-	}
-
 	// トランザクションをコミット
 	return nil
 }
@@ -153,52 +146,6 @@ func (em *EventManager) ConfirmEventDate(ctx context.Context, tx *ent.Tx, google
 	_, err := em.EventRepo.Update(ctx, tx, entEvent.ID, eventOptions)
 	if err != nil {
 		return fmt.Errorf("failed to update event status error: %w", err)
-	}
-
-	return nil
-}
-
-func (em *EventManager) CleanupNotConfirmedDates(ctx context.Context, tx *ent.Tx, calendarService *customCalendar.Calendar, eventID uuid.UUID) error {
-	eventOptions := event.EventQueryOptions{
-		WithProposedDates: true,
-	}
-	entEvent, err := em.EventRepo.Read(ctx, tx, eventID, eventOptions)
-	if err != nil {
-		return fmt.Errorf("failed to get event error: %w", err)
-	}
-
-	if entEvent.Edges.ProposedDates == nil {
-		return fmt.Errorf("failed to get proposed dates error: %w", err)
-	}
-
-	// ConfirmDateIDではない日程候補を取得
-	notConfirmedDates := make([]ent.ProposedDate, 0)
-	for _, date := range entEvent.Edges.ProposedDates {
-		if date.ID != entEvent.ConfirmedDateID {
-			notConfirmedDates = append(notConfirmedDates, *date)
-		}
-	}
-
-	convEvents := make([]*calendar.Event, len(notConfirmedDates))
-	for i, date := range notConfirmedDates {
-		convEvents[i] = em.CalendarApp.ConvertToCalendarEvent(&date.GoogleEventID, "", "", "", date.StartTime, date.EndTime)
-	}
-	// Googleカレンダーのイベントを削除
-	err = em.CalendarApp.DeleteGoogleEvents(calendarService, convEvents)
-	if err != nil {
-		return fmt.Errorf("failed to delete events error: %w", err)
-	}
-
-	empty := ""
-	// Googleイベントを削除した日程候補のgoogle_event_idを削除
-	for _, date := range notConfirmedDates {
-		dateOptions := proposeddate.ProposedDateQueryOptions{
-			GoogleEventID: &empty,
-		}
-		_, err = em.DateRepo.Update(ctx, tx, date.ID, dateOptions)
-		if err != nil {
-			return fmt.Errorf("failed to update proposed date error: %w", err)
-		}
 	}
 
 	return nil
