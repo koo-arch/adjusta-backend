@@ -6,6 +6,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/koo-arch/adjusta-backend/ent/calendar"
 	"github.com/koo-arch/adjusta-backend/ent/event"
+	"github.com/koo-arch/adjusta-backend/ent/googlecalendarinfo"
 	"github.com/koo-arch/adjusta-backend/ent/jwtkey"
 	"github.com/koo-arch/adjusta-backend/ent/oauthtoken"
 	"github.com/koo-arch/adjusta-backend/ent/proposeddate"
@@ -19,10 +20,6 @@ import (
 func init() {
 	calendarFields := schema.Calendar{}.Fields()
 	_ = calendarFields
-	// calendarDescIsPrimary is the schema descriptor for is_primary field.
-	calendarDescIsPrimary := calendarFields[3].Descriptor()
-	// calendar.DefaultIsPrimary holds the default value on creation for the is_primary field.
-	calendar.DefaultIsPrimary = calendarDescIsPrimary.Default.(bool)
 	// calendarDescID is the schema descriptor for id field.
 	calendarDescID := calendarFields[0].Descriptor()
 	// calendar.DefaultID holds the default value on creation for the id field.
@@ -33,6 +30,20 @@ func init() {
 	eventDescID := eventFields[0].Descriptor()
 	// event.DefaultID holds the default value on creation for the id field.
 	event.DefaultID = eventDescID.Default.(func() uuid.UUID)
+	googlecalendarinfoFields := schema.GoogleCalendarInfo{}.Fields()
+	_ = googlecalendarinfoFields
+	// googlecalendarinfoDescGoogleCalendarID is the schema descriptor for google_calendar_id field.
+	googlecalendarinfoDescGoogleCalendarID := googlecalendarinfoFields[1].Descriptor()
+	// googlecalendarinfo.GoogleCalendarIDValidator is a validator for the "google_calendar_id" field. It is called by the builders before save.
+	googlecalendarinfo.GoogleCalendarIDValidator = googlecalendarinfoDescGoogleCalendarID.Validators[0].(func(string) error)
+	// googlecalendarinfoDescIsPrimary is the schema descriptor for is_primary field.
+	googlecalendarinfoDescIsPrimary := googlecalendarinfoFields[3].Descriptor()
+	// googlecalendarinfo.DefaultIsPrimary holds the default value on creation for the is_primary field.
+	googlecalendarinfo.DefaultIsPrimary = googlecalendarinfoDescIsPrimary.Default.(bool)
+	// googlecalendarinfoDescID is the schema descriptor for id field.
+	googlecalendarinfoDescID := googlecalendarinfoFields[0].Descriptor()
+	// googlecalendarinfo.DefaultID holds the default value on creation for the id field.
+	googlecalendarinfo.DefaultID = googlecalendarinfoDescID.Default.(func() uuid.UUID)
 	jwtkeyFields := schema.JWTKey{}.Fields()
 	_ = jwtkeyFields
 	// jwtkeyDescKey is the schema descriptor for key field.

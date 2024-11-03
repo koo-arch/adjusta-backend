@@ -23,7 +23,7 @@ func NewGoogleCalendarManager(client *ent.Client) *GoogleCalendarManager {
 	}
 }
 
-func (gcm *GoogleCalendarManager) FetchEventsFromCalendars(calendarService *customCalendar.Calendar, calendars []*ent.Calendar, startTime, endTime time.Time) ([]*models.Event, error) {
+func (gcm *GoogleCalendarManager) FetchEventsFromCalendars(calendarService *customCalendar.Calendar, calendars []*ent.GoogleCalendarInfo, startTime, endTime time.Time) ([]*models.Event, error) {
 	var events []*models.Event
 	var wg sync.WaitGroup
 	var mu sync.Mutex
@@ -31,10 +31,10 @@ func (gcm *GoogleCalendarManager) FetchEventsFromCalendars(calendarService *cust
 
 	for _, cal := range calendars {
 		wg.Add(1)
-		go func(cal *ent.Calendar) {
+		go func(cal *ent.GoogleCalendarInfo) {
 			defer wg.Done()
 
-			calEvents, err := calendarService.FetchEvents(cal.CalendarID, startTime, endTime)
+			calEvents, err := calendarService.FetchEvents(cal.GoogleCalendarID, startTime, endTime)
 			if err != nil {
 				errCh <- fmt.Errorf("failed to fetch events from calendar: %s, error: %w", cal.Summary, err)
 				return

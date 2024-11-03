@@ -33,13 +33,13 @@ func (r *EventRepositoryImpl) Read(ctx context.Context, tx *ent.Tx, id uuid.UUID
 	return query.Where(event.IDEQ(id)).Only(ctx)
 }
 
-func (r *EventRepositoryImpl) FilterByCalendarID(ctx context.Context, tx *ent.Tx, calendarID string, opt EventQueryOptions) ([]*ent.Event, error) {
+func (r *EventRepositoryImpl) FilterByCalendarID(ctx context.Context, tx *ent.Tx, calendarID uuid.UUID, opt EventQueryOptions) ([]*ent.Event, error) {
 	filterEvent := r.client.Event.Query()
 	if tx != nil {
 		filterEvent = tx.Event.Query()
 	}
 
-	filterEvent = filterEvent.Where(event.HasCalendarWith(dbCalendar.CalendarIDEQ(calendarID)))
+	filterEvent = filterEvent.Where(event.HasCalendarWith(dbCalendar.IDEQ(calendarID)))
 
 	// イベントに対するオフセットとリミットを適用
 	if opt.EventOffset > 0 {

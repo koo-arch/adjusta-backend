@@ -18,6 +18,7 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/koo-arch/adjusta-backend/ent/calendar"
 	"github.com/koo-arch/adjusta-backend/ent/event"
+	"github.com/koo-arch/adjusta-backend/ent/googlecalendarinfo"
 	"github.com/koo-arch/adjusta-backend/ent/jwtkey"
 	"github.com/koo-arch/adjusta-backend/ent/oauthtoken"
 	"github.com/koo-arch/adjusta-backend/ent/proposeddate"
@@ -33,6 +34,8 @@ type Client struct {
 	Calendar *CalendarClient
 	// Event is the client for interacting with the Event builders.
 	Event *EventClient
+	// GoogleCalendarInfo is the client for interacting with the GoogleCalendarInfo builders.
+	GoogleCalendarInfo *GoogleCalendarInfoClient
 	// JWTKey is the client for interacting with the JWTKey builders.
 	JWTKey *JWTKeyClient
 	// OAuthToken is the client for interacting with the OAuthToken builders.
@@ -54,6 +57,7 @@ func (c *Client) init() {
 	c.Schema = migrate.NewSchema(c.driver)
 	c.Calendar = NewCalendarClient(c.config)
 	c.Event = NewEventClient(c.config)
+	c.GoogleCalendarInfo = NewGoogleCalendarInfoClient(c.config)
 	c.JWTKey = NewJWTKeyClient(c.config)
 	c.OAuthToken = NewOAuthTokenClient(c.config)
 	c.ProposedDate = NewProposedDateClient(c.config)
@@ -148,14 +152,15 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 	cfg := c.config
 	cfg.driver = tx
 	return &Tx{
-		ctx:          ctx,
-		config:       cfg,
-		Calendar:     NewCalendarClient(cfg),
-		Event:        NewEventClient(cfg),
-		JWTKey:       NewJWTKeyClient(cfg),
-		OAuthToken:   NewOAuthTokenClient(cfg),
-		ProposedDate: NewProposedDateClient(cfg),
-		User:         NewUserClient(cfg),
+		ctx:                ctx,
+		config:             cfg,
+		Calendar:           NewCalendarClient(cfg),
+		Event:              NewEventClient(cfg),
+		GoogleCalendarInfo: NewGoogleCalendarInfoClient(cfg),
+		JWTKey:             NewJWTKeyClient(cfg),
+		OAuthToken:         NewOAuthTokenClient(cfg),
+		ProposedDate:       NewProposedDateClient(cfg),
+		User:               NewUserClient(cfg),
 	}, nil
 }
 
@@ -173,14 +178,15 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 	cfg := c.config
 	cfg.driver = &txDriver{tx: tx, drv: c.driver}
 	return &Tx{
-		ctx:          ctx,
-		config:       cfg,
-		Calendar:     NewCalendarClient(cfg),
-		Event:        NewEventClient(cfg),
-		JWTKey:       NewJWTKeyClient(cfg),
-		OAuthToken:   NewOAuthTokenClient(cfg),
-		ProposedDate: NewProposedDateClient(cfg),
-		User:         NewUserClient(cfg),
+		ctx:                ctx,
+		config:             cfg,
+		Calendar:           NewCalendarClient(cfg),
+		Event:              NewEventClient(cfg),
+		GoogleCalendarInfo: NewGoogleCalendarInfoClient(cfg),
+		JWTKey:             NewJWTKeyClient(cfg),
+		OAuthToken:         NewOAuthTokenClient(cfg),
+		ProposedDate:       NewProposedDateClient(cfg),
+		User:               NewUserClient(cfg),
 	}, nil
 }
 
@@ -210,7 +216,8 @@ func (c *Client) Close() error {
 // In order to add hooks to a specific client, call: `client.Node.Use(...)`.
 func (c *Client) Use(hooks ...Hook) {
 	for _, n := range []interface{ Use(...Hook) }{
-		c.Calendar, c.Event, c.JWTKey, c.OAuthToken, c.ProposedDate, c.User,
+		c.Calendar, c.Event, c.GoogleCalendarInfo, c.JWTKey, c.OAuthToken,
+		c.ProposedDate, c.User,
 	} {
 		n.Use(hooks...)
 	}
@@ -220,7 +227,8 @@ func (c *Client) Use(hooks ...Hook) {
 // In order to add interceptors to a specific client, call: `client.Node.Intercept(...)`.
 func (c *Client) Intercept(interceptors ...Interceptor) {
 	for _, n := range []interface{ Intercept(...Interceptor) }{
-		c.Calendar, c.Event, c.JWTKey, c.OAuthToken, c.ProposedDate, c.User,
+		c.Calendar, c.Event, c.GoogleCalendarInfo, c.JWTKey, c.OAuthToken,
+		c.ProposedDate, c.User,
 	} {
 		n.Intercept(interceptors...)
 	}
@@ -233,6 +241,8 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 		return c.Calendar.mutate(ctx, m)
 	case *EventMutation:
 		return c.Event.mutate(ctx, m)
+	case *GoogleCalendarInfoMutation:
+		return c.GoogleCalendarInfo.mutate(ctx, m)
 	case *JWTKeyMutation:
 		return c.JWTKey.mutate(ctx, m)
 	case *OAuthTokenMutation:
@@ -363,6 +373,22 @@ func (c *CalendarClient) QueryUser(ca *Calendar) *UserQuery {
 			sqlgraph.From(calendar.Table, calendar.FieldID, id),
 			sqlgraph.To(user.Table, user.FieldID),
 			sqlgraph.Edge(sqlgraph.M2O, true, calendar.UserTable, calendar.UserColumn),
+		)
+		fromV = sqlgraph.Neighbors(ca.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryGoogleCalendarInfos queries the google_calendar_infos edge of a Calendar.
+func (c *CalendarClient) QueryGoogleCalendarInfos(ca *Calendar) *GoogleCalendarInfoQuery {
+	query := (&GoogleCalendarInfoClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := ca.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(calendar.Table, calendar.FieldID, id),
+			sqlgraph.To(googlecalendarinfo.Table, googlecalendarinfo.FieldID),
+			sqlgraph.Edge(sqlgraph.M2M, false, calendar.GoogleCalendarInfosTable, calendar.GoogleCalendarInfosPrimaryKey...),
 		)
 		fromV = sqlgraph.Neighbors(ca.driver.Dialect(), step)
 		return fromV, nil
@@ -573,6 +599,155 @@ func (c *EventClient) mutate(ctx context.Context, m *EventMutation) (Value, erro
 		return (&EventDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
 	default:
 		return nil, fmt.Errorf("ent: unknown Event mutation op: %q", m.Op())
+	}
+}
+
+// GoogleCalendarInfoClient is a client for the GoogleCalendarInfo schema.
+type GoogleCalendarInfoClient struct {
+	config
+}
+
+// NewGoogleCalendarInfoClient returns a client for the GoogleCalendarInfo from the given config.
+func NewGoogleCalendarInfoClient(c config) *GoogleCalendarInfoClient {
+	return &GoogleCalendarInfoClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `googlecalendarinfo.Hooks(f(g(h())))`.
+func (c *GoogleCalendarInfoClient) Use(hooks ...Hook) {
+	c.hooks.GoogleCalendarInfo = append(c.hooks.GoogleCalendarInfo, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `googlecalendarinfo.Intercept(f(g(h())))`.
+func (c *GoogleCalendarInfoClient) Intercept(interceptors ...Interceptor) {
+	c.inters.GoogleCalendarInfo = append(c.inters.GoogleCalendarInfo, interceptors...)
+}
+
+// Create returns a builder for creating a GoogleCalendarInfo entity.
+func (c *GoogleCalendarInfoClient) Create() *GoogleCalendarInfoCreate {
+	mutation := newGoogleCalendarInfoMutation(c.config, OpCreate)
+	return &GoogleCalendarInfoCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of GoogleCalendarInfo entities.
+func (c *GoogleCalendarInfoClient) CreateBulk(builders ...*GoogleCalendarInfoCreate) *GoogleCalendarInfoCreateBulk {
+	return &GoogleCalendarInfoCreateBulk{config: c.config, builders: builders}
+}
+
+// MapCreateBulk creates a bulk creation builder from the given slice. For each item in the slice, the function creates
+// a builder and applies setFunc on it.
+func (c *GoogleCalendarInfoClient) MapCreateBulk(slice any, setFunc func(*GoogleCalendarInfoCreate, int)) *GoogleCalendarInfoCreateBulk {
+	rv := reflect.ValueOf(slice)
+	if rv.Kind() != reflect.Slice {
+		return &GoogleCalendarInfoCreateBulk{err: fmt.Errorf("calling to GoogleCalendarInfoClient.MapCreateBulk with wrong type %T, need slice", slice)}
+	}
+	builders := make([]*GoogleCalendarInfoCreate, rv.Len())
+	for i := 0; i < rv.Len(); i++ {
+		builders[i] = c.Create()
+		setFunc(builders[i], i)
+	}
+	return &GoogleCalendarInfoCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for GoogleCalendarInfo.
+func (c *GoogleCalendarInfoClient) Update() *GoogleCalendarInfoUpdate {
+	mutation := newGoogleCalendarInfoMutation(c.config, OpUpdate)
+	return &GoogleCalendarInfoUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *GoogleCalendarInfoClient) UpdateOne(gci *GoogleCalendarInfo) *GoogleCalendarInfoUpdateOne {
+	mutation := newGoogleCalendarInfoMutation(c.config, OpUpdateOne, withGoogleCalendarInfo(gci))
+	return &GoogleCalendarInfoUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *GoogleCalendarInfoClient) UpdateOneID(id uuid.UUID) *GoogleCalendarInfoUpdateOne {
+	mutation := newGoogleCalendarInfoMutation(c.config, OpUpdateOne, withGoogleCalendarInfoID(id))
+	return &GoogleCalendarInfoUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for GoogleCalendarInfo.
+func (c *GoogleCalendarInfoClient) Delete() *GoogleCalendarInfoDelete {
+	mutation := newGoogleCalendarInfoMutation(c.config, OpDelete)
+	return &GoogleCalendarInfoDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *GoogleCalendarInfoClient) DeleteOne(gci *GoogleCalendarInfo) *GoogleCalendarInfoDeleteOne {
+	return c.DeleteOneID(gci.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *GoogleCalendarInfoClient) DeleteOneID(id uuid.UUID) *GoogleCalendarInfoDeleteOne {
+	builder := c.Delete().Where(googlecalendarinfo.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &GoogleCalendarInfoDeleteOne{builder}
+}
+
+// Query returns a query builder for GoogleCalendarInfo.
+func (c *GoogleCalendarInfoClient) Query() *GoogleCalendarInfoQuery {
+	return &GoogleCalendarInfoQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeGoogleCalendarInfo},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a GoogleCalendarInfo entity by its id.
+func (c *GoogleCalendarInfoClient) Get(ctx context.Context, id uuid.UUID) (*GoogleCalendarInfo, error) {
+	return c.Query().Where(googlecalendarinfo.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *GoogleCalendarInfoClient) GetX(ctx context.Context, id uuid.UUID) *GoogleCalendarInfo {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// QueryCalendars queries the calendars edge of a GoogleCalendarInfo.
+func (c *GoogleCalendarInfoClient) QueryCalendars(gci *GoogleCalendarInfo) *CalendarQuery {
+	query := (&CalendarClient{config: c.config}).Query()
+	query.path = func(context.Context) (fromV *sql.Selector, _ error) {
+		id := gci.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(googlecalendarinfo.Table, googlecalendarinfo.FieldID, id),
+			sqlgraph.To(calendar.Table, calendar.FieldID),
+			sqlgraph.Edge(sqlgraph.M2M, true, googlecalendarinfo.CalendarsTable, googlecalendarinfo.CalendarsPrimaryKey...),
+		)
+		fromV = sqlgraph.Neighbors(gci.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// Hooks returns the client hooks.
+func (c *GoogleCalendarInfoClient) Hooks() []Hook {
+	return c.hooks.GoogleCalendarInfo
+}
+
+// Interceptors returns the client interceptors.
+func (c *GoogleCalendarInfoClient) Interceptors() []Interceptor {
+	return c.inters.GoogleCalendarInfo
+}
+
+func (c *GoogleCalendarInfoClient) mutate(ctx context.Context, m *GoogleCalendarInfoMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&GoogleCalendarInfoCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&GoogleCalendarInfoUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&GoogleCalendarInfoUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&GoogleCalendarInfoDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown GoogleCalendarInfo mutation op: %q", m.Op())
 	}
 }
 
@@ -1177,9 +1352,11 @@ func (c *UserClient) mutate(ctx context.Context, m *UserMutation) (Value, error)
 // hooks and interceptors per client, for fast access.
 type (
 	hooks struct {
-		Calendar, Event, JWTKey, OAuthToken, ProposedDate, User []ent.Hook
+		Calendar, Event, GoogleCalendarInfo, JWTKey, OAuthToken, ProposedDate,
+		User []ent.Hook
 	}
 	inters struct {
-		Calendar, Event, JWTKey, OAuthToken, ProposedDate, User []ent.Interceptor
+		Calendar, Event, GoogleCalendarInfo, JWTKey, OAuthToken, ProposedDate,
+		User []ent.Interceptor
 	}
 )

@@ -3,7 +3,6 @@ package calendar
 import (
 	"context"
 	"time"
-	"fmt"
 
 	"golang.org/x/oauth2"
 	"google.golang.org/api/calendar/v3"
@@ -60,8 +59,6 @@ func (c *Calendar) FetchEvents(calendarID string, startTime, endTime time.Time) 
 	}
 
 	var eventsList []*models.Event
-
-	fmt.Printf("events: %v\n", events)
 
 	for _, item := range events.Items {
 		// nilチェックを追加

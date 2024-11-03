@@ -4,7 +4,6 @@ package ent
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"entgo.io/ent/dialect/sql/sqlgraph"
@@ -12,6 +11,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/koo-arch/adjusta-backend/ent/calendar"
 	"github.com/koo-arch/adjusta-backend/ent/event"
+	"github.com/koo-arch/adjusta-backend/ent/googlecalendarinfo"
 	"github.com/koo-arch/adjusta-backend/ent/user"
 )
 
@@ -20,32 +20,6 @@ type CalendarCreate struct {
 	config
 	mutation *CalendarMutation
 	hooks    []Hook
-}
-
-// SetCalendarID sets the "calendar_id" field.
-func (cc *CalendarCreate) SetCalendarID(s string) *CalendarCreate {
-	cc.mutation.SetCalendarID(s)
-	return cc
-}
-
-// SetSummary sets the "summary" field.
-func (cc *CalendarCreate) SetSummary(s string) *CalendarCreate {
-	cc.mutation.SetSummary(s)
-	return cc
-}
-
-// SetIsPrimary sets the "is_primary" field.
-func (cc *CalendarCreate) SetIsPrimary(b bool) *CalendarCreate {
-	cc.mutation.SetIsPrimary(b)
-	return cc
-}
-
-// SetNillableIsPrimary sets the "is_primary" field if the given value is not nil.
-func (cc *CalendarCreate) SetNillableIsPrimary(b *bool) *CalendarCreate {
-	if b != nil {
-		cc.SetIsPrimary(*b)
-	}
-	return cc
 }
 
 // SetID sets the "id" field.
@@ -79,6 +53,21 @@ func (cc *CalendarCreate) SetNillableUserID(id *uuid.UUID) *CalendarCreate {
 // SetUser sets the "user" edge to the User entity.
 func (cc *CalendarCreate) SetUser(u *User) *CalendarCreate {
 	return cc.SetUserID(u.ID)
+}
+
+// AddGoogleCalendarInfoIDs adds the "google_calendar_infos" edge to the GoogleCalendarInfo entity by IDs.
+func (cc *CalendarCreate) AddGoogleCalendarInfoIDs(ids ...uuid.UUID) *CalendarCreate {
+	cc.mutation.AddGoogleCalendarInfoIDs(ids...)
+	return cc
+}
+
+// AddGoogleCalendarInfos adds the "google_calendar_infos" edges to the GoogleCalendarInfo entity.
+func (cc *CalendarCreate) AddGoogleCalendarInfos(g ...*GoogleCalendarInfo) *CalendarCreate {
+	ids := make([]uuid.UUID, len(g))
+	for i := range g {
+		ids[i] = g[i].ID
+	}
+	return cc.AddGoogleCalendarInfoIDs(ids...)
 }
 
 // AddEventIDs adds the "events" edge to the Event entity by IDs.
@@ -131,10 +120,6 @@ func (cc *CalendarCreate) ExecX(ctx context.Context) {
 
 // defaults sets the default values of the builder before save.
 func (cc *CalendarCreate) defaults() {
-	if _, ok := cc.mutation.IsPrimary(); !ok {
-		v := calendar.DefaultIsPrimary
-		cc.mutation.SetIsPrimary(v)
-	}
 	if _, ok := cc.mutation.ID(); !ok {
 		v := calendar.DefaultID()
 		cc.mutation.SetID(v)
@@ -143,15 +128,6 @@ func (cc *CalendarCreate) defaults() {
 
 // check runs all checks and user-defined validators on the builder.
 func (cc *CalendarCreate) check() error {
-	if _, ok := cc.mutation.CalendarID(); !ok {
-		return &ValidationError{Name: "calendar_id", err: errors.New(`ent: missing required field "Calendar.calendar_id"`)}
-	}
-	if _, ok := cc.mutation.Summary(); !ok {
-		return &ValidationError{Name: "summary", err: errors.New(`ent: missing required field "Calendar.summary"`)}
-	}
-	if _, ok := cc.mutation.IsPrimary(); !ok {
-		return &ValidationError{Name: "is_primary", err: errors.New(`ent: missing required field "Calendar.is_primary"`)}
-	}
 	return nil
 }
 
@@ -187,18 +163,6 @@ func (cc *CalendarCreate) createSpec() (*Calendar, *sqlgraph.CreateSpec) {
 		_node.ID = id
 		_spec.ID.Value = &id
 	}
-	if value, ok := cc.mutation.CalendarID(); ok {
-		_spec.SetField(calendar.FieldCalendarID, field.TypeString, value)
-		_node.CalendarID = value
-	}
-	if value, ok := cc.mutation.Summary(); ok {
-		_spec.SetField(calendar.FieldSummary, field.TypeString, value)
-		_node.Summary = value
-	}
-	if value, ok := cc.mutation.IsPrimary(); ok {
-		_spec.SetField(calendar.FieldIsPrimary, field.TypeBool, value)
-		_node.IsPrimary = value
-	}
 	if nodes := cc.mutation.UserIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
 			Rel:     sqlgraph.M2O,
@@ -214,6 +178,22 @@ func (cc *CalendarCreate) createSpec() (*Calendar, *sqlgraph.CreateSpec) {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
 		_node.user_calendars = &nodes[0]
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := cc.mutation.GoogleCalendarInfosIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: false,
+			Table:   calendar.GoogleCalendarInfosTable,
+			Columns: calendar.GoogleCalendarInfosPrimaryKey,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: sqlgraph.NewFieldSpec(googlecalendarinfo.FieldID, field.TypeUUID),
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
 		_spec.Edges = append(_spec.Edges, edge)
 	}
 	if nodes := cc.mutation.EventsIDs(); len(nodes) > 0 {

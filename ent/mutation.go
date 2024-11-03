@@ -14,6 +14,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/koo-arch/adjusta-backend/ent/calendar"
 	"github.com/koo-arch/adjusta-backend/ent/event"
+	"github.com/koo-arch/adjusta-backend/ent/googlecalendarinfo"
 	"github.com/koo-arch/adjusta-backend/ent/jwtkey"
 	"github.com/koo-arch/adjusta-backend/ent/oauthtoken"
 	"github.com/koo-arch/adjusta-backend/ent/predicate"
@@ -30,32 +31,33 @@ const (
 	OpUpdateOne = ent.OpUpdateOne
 
 	// Node types.
-	TypeCalendar     = "Calendar"
-	TypeEvent        = "Event"
-	TypeJWTKey       = "JWTKey"
-	TypeOAuthToken   = "OAuthToken"
-	TypeProposedDate = "ProposedDate"
-	TypeUser         = "User"
+	TypeCalendar           = "Calendar"
+	TypeEvent              = "Event"
+	TypeGoogleCalendarInfo = "GoogleCalendarInfo"
+	TypeJWTKey             = "JWTKey"
+	TypeOAuthToken         = "OAuthToken"
+	TypeProposedDate       = "ProposedDate"
+	TypeUser               = "User"
 )
 
 // CalendarMutation represents an operation that mutates the Calendar nodes in the graph.
 type CalendarMutation struct {
 	config
-	op            Op
-	typ           string
-	id            *uuid.UUID
-	calendar_id   *string
-	summary       *string
-	is_primary    *bool
-	clearedFields map[string]struct{}
-	user          *uuid.UUID
-	cleareduser   bool
-	events        map[uuid.UUID]struct{}
-	removedevents map[uuid.UUID]struct{}
-	clearedevents bool
-	done          bool
-	oldValue      func(context.Context) (*Calendar, error)
-	predicates    []predicate.Calendar
+	op                           Op
+	typ                          string
+	id                           *uuid.UUID
+	clearedFields                map[string]struct{}
+	user                         *uuid.UUID
+	cleareduser                  bool
+	google_calendar_infos        map[uuid.UUID]struct{}
+	removedgoogle_calendar_infos map[uuid.UUID]struct{}
+	clearedgoogle_calendar_infos bool
+	events                       map[uuid.UUID]struct{}
+	removedevents                map[uuid.UUID]struct{}
+	clearedevents                bool
+	done                         bool
+	oldValue                     func(context.Context) (*Calendar, error)
+	predicates                   []predicate.Calendar
 }
 
 var _ ent.Mutation = (*CalendarMutation)(nil)
@@ -162,114 +164,6 @@ func (m *CalendarMutation) IDs(ctx context.Context) ([]uuid.UUID, error) {
 	}
 }
 
-// SetCalendarID sets the "calendar_id" field.
-func (m *CalendarMutation) SetCalendarID(s string) {
-	m.calendar_id = &s
-}
-
-// CalendarID returns the value of the "calendar_id" field in the mutation.
-func (m *CalendarMutation) CalendarID() (r string, exists bool) {
-	v := m.calendar_id
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldCalendarID returns the old "calendar_id" field's value of the Calendar entity.
-// If the Calendar object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *CalendarMutation) OldCalendarID(ctx context.Context) (v string, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldCalendarID is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldCalendarID requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldCalendarID: %w", err)
-	}
-	return oldValue.CalendarID, nil
-}
-
-// ResetCalendarID resets all changes to the "calendar_id" field.
-func (m *CalendarMutation) ResetCalendarID() {
-	m.calendar_id = nil
-}
-
-// SetSummary sets the "summary" field.
-func (m *CalendarMutation) SetSummary(s string) {
-	m.summary = &s
-}
-
-// Summary returns the value of the "summary" field in the mutation.
-func (m *CalendarMutation) Summary() (r string, exists bool) {
-	v := m.summary
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldSummary returns the old "summary" field's value of the Calendar entity.
-// If the Calendar object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *CalendarMutation) OldSummary(ctx context.Context) (v string, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldSummary is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldSummary requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldSummary: %w", err)
-	}
-	return oldValue.Summary, nil
-}
-
-// ResetSummary resets all changes to the "summary" field.
-func (m *CalendarMutation) ResetSummary() {
-	m.summary = nil
-}
-
-// SetIsPrimary sets the "is_primary" field.
-func (m *CalendarMutation) SetIsPrimary(b bool) {
-	m.is_primary = &b
-}
-
-// IsPrimary returns the value of the "is_primary" field in the mutation.
-func (m *CalendarMutation) IsPrimary() (r bool, exists bool) {
-	v := m.is_primary
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldIsPrimary returns the old "is_primary" field's value of the Calendar entity.
-// If the Calendar object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *CalendarMutation) OldIsPrimary(ctx context.Context) (v bool, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldIsPrimary is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldIsPrimary requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldIsPrimary: %w", err)
-	}
-	return oldValue.IsPrimary, nil
-}
-
-// ResetIsPrimary resets all changes to the "is_primary" field.
-func (m *CalendarMutation) ResetIsPrimary() {
-	m.is_primary = nil
-}
-
 // SetUserID sets the "user" edge to the User entity by id.
 func (m *CalendarMutation) SetUserID(id uuid.UUID) {
 	m.user = &id
@@ -307,6 +201,60 @@ func (m *CalendarMutation) UserIDs() (ids []uuid.UUID) {
 func (m *CalendarMutation) ResetUser() {
 	m.user = nil
 	m.cleareduser = false
+}
+
+// AddGoogleCalendarInfoIDs adds the "google_calendar_infos" edge to the GoogleCalendarInfo entity by ids.
+func (m *CalendarMutation) AddGoogleCalendarInfoIDs(ids ...uuid.UUID) {
+	if m.google_calendar_infos == nil {
+		m.google_calendar_infos = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		m.google_calendar_infos[ids[i]] = struct{}{}
+	}
+}
+
+// ClearGoogleCalendarInfos clears the "google_calendar_infos" edge to the GoogleCalendarInfo entity.
+func (m *CalendarMutation) ClearGoogleCalendarInfos() {
+	m.clearedgoogle_calendar_infos = true
+}
+
+// GoogleCalendarInfosCleared reports if the "google_calendar_infos" edge to the GoogleCalendarInfo entity was cleared.
+func (m *CalendarMutation) GoogleCalendarInfosCleared() bool {
+	return m.clearedgoogle_calendar_infos
+}
+
+// RemoveGoogleCalendarInfoIDs removes the "google_calendar_infos" edge to the GoogleCalendarInfo entity by IDs.
+func (m *CalendarMutation) RemoveGoogleCalendarInfoIDs(ids ...uuid.UUID) {
+	if m.removedgoogle_calendar_infos == nil {
+		m.removedgoogle_calendar_infos = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		delete(m.google_calendar_infos, ids[i])
+		m.removedgoogle_calendar_infos[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedGoogleCalendarInfos returns the removed IDs of the "google_calendar_infos" edge to the GoogleCalendarInfo entity.
+func (m *CalendarMutation) RemovedGoogleCalendarInfosIDs() (ids []uuid.UUID) {
+	for id := range m.removedgoogle_calendar_infos {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// GoogleCalendarInfosIDs returns the "google_calendar_infos" edge IDs in the mutation.
+func (m *CalendarMutation) GoogleCalendarInfosIDs() (ids []uuid.UUID) {
+	for id := range m.google_calendar_infos {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetGoogleCalendarInfos resets all changes to the "google_calendar_infos" edge.
+func (m *CalendarMutation) ResetGoogleCalendarInfos() {
+	m.google_calendar_infos = nil
+	m.clearedgoogle_calendar_infos = false
+	m.removedgoogle_calendar_infos = nil
 }
 
 // AddEventIDs adds the "events" edge to the Event entity by ids.
@@ -397,16 +345,7 @@ func (m *CalendarMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *CalendarMutation) Fields() []string {
-	fields := make([]string, 0, 3)
-	if m.calendar_id != nil {
-		fields = append(fields, calendar.FieldCalendarID)
-	}
-	if m.summary != nil {
-		fields = append(fields, calendar.FieldSummary)
-	}
-	if m.is_primary != nil {
-		fields = append(fields, calendar.FieldIsPrimary)
-	}
+	fields := make([]string, 0, 0)
 	return fields
 }
 
@@ -414,14 +353,6 @@ func (m *CalendarMutation) Fields() []string {
 // return value indicates that this field was not set, or was not defined in the
 // schema.
 func (m *CalendarMutation) Field(name string) (ent.Value, bool) {
-	switch name {
-	case calendar.FieldCalendarID:
-		return m.CalendarID()
-	case calendar.FieldSummary:
-		return m.Summary()
-	case calendar.FieldIsPrimary:
-		return m.IsPrimary()
-	}
 	return nil, false
 }
 
@@ -429,14 +360,6 @@ func (m *CalendarMutation) Field(name string) (ent.Value, bool) {
 // returned if the mutation operation is not UpdateOne, or the query to the
 // database failed.
 func (m *CalendarMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
-	switch name {
-	case calendar.FieldCalendarID:
-		return m.OldCalendarID(ctx)
-	case calendar.FieldSummary:
-		return m.OldSummary(ctx)
-	case calendar.FieldIsPrimary:
-		return m.OldIsPrimary(ctx)
-	}
 	return nil, fmt.Errorf("unknown Calendar field %s", name)
 }
 
@@ -445,27 +368,6 @@ func (m *CalendarMutation) OldField(ctx context.Context, name string) (ent.Value
 // type.
 func (m *CalendarMutation) SetField(name string, value ent.Value) error {
 	switch name {
-	case calendar.FieldCalendarID:
-		v, ok := value.(string)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetCalendarID(v)
-		return nil
-	case calendar.FieldSummary:
-		v, ok := value.(string)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetSummary(v)
-		return nil
-	case calendar.FieldIsPrimary:
-		v, ok := value.(bool)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetIsPrimary(v)
-		return nil
 	}
 	return fmt.Errorf("unknown Calendar field %s", name)
 }
@@ -487,8 +389,6 @@ func (m *CalendarMutation) AddedField(name string) (ent.Value, bool) {
 // the field is not defined in the schema, or if the type mismatched the field
 // type.
 func (m *CalendarMutation) AddField(name string, value ent.Value) error {
-	switch name {
-	}
 	return fmt.Errorf("unknown Calendar numeric field %s", name)
 }
 
@@ -514,25 +414,17 @@ func (m *CalendarMutation) ClearField(name string) error {
 // ResetField resets all changes in the mutation for the field with the given name.
 // It returns an error if the field is not defined in the schema.
 func (m *CalendarMutation) ResetField(name string) error {
-	switch name {
-	case calendar.FieldCalendarID:
-		m.ResetCalendarID()
-		return nil
-	case calendar.FieldSummary:
-		m.ResetSummary()
-		return nil
-	case calendar.FieldIsPrimary:
-		m.ResetIsPrimary()
-		return nil
-	}
 	return fmt.Errorf("unknown Calendar field %s", name)
 }
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *CalendarMutation) AddedEdges() []string {
-	edges := make([]string, 0, 2)
+	edges := make([]string, 0, 3)
 	if m.user != nil {
 		edges = append(edges, calendar.EdgeUser)
+	}
+	if m.google_calendar_infos != nil {
+		edges = append(edges, calendar.EdgeGoogleCalendarInfos)
 	}
 	if m.events != nil {
 		edges = append(edges, calendar.EdgeEvents)
@@ -548,6 +440,12 @@ func (m *CalendarMutation) AddedIDs(name string) []ent.Value {
 		if id := m.user; id != nil {
 			return []ent.Value{*id}
 		}
+	case calendar.EdgeGoogleCalendarInfos:
+		ids := make([]ent.Value, 0, len(m.google_calendar_infos))
+		for id := range m.google_calendar_infos {
+			ids = append(ids, id)
+		}
+		return ids
 	case calendar.EdgeEvents:
 		ids := make([]ent.Value, 0, len(m.events))
 		for id := range m.events {
@@ -560,7 +458,10 @@ func (m *CalendarMutation) AddedIDs(name string) []ent.Value {
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *CalendarMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 2)
+	edges := make([]string, 0, 3)
+	if m.removedgoogle_calendar_infos != nil {
+		edges = append(edges, calendar.EdgeGoogleCalendarInfos)
+	}
 	if m.removedevents != nil {
 		edges = append(edges, calendar.EdgeEvents)
 	}
@@ -571,6 +472,12 @@ func (m *CalendarMutation) RemovedEdges() []string {
 // the given name in this mutation.
 func (m *CalendarMutation) RemovedIDs(name string) []ent.Value {
 	switch name {
+	case calendar.EdgeGoogleCalendarInfos:
+		ids := make([]ent.Value, 0, len(m.removedgoogle_calendar_infos))
+		for id := range m.removedgoogle_calendar_infos {
+			ids = append(ids, id)
+		}
+		return ids
 	case calendar.EdgeEvents:
 		ids := make([]ent.Value, 0, len(m.removedevents))
 		for id := range m.removedevents {
@@ -583,9 +490,12 @@ func (m *CalendarMutation) RemovedIDs(name string) []ent.Value {
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *CalendarMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 2)
+	edges := make([]string, 0, 3)
 	if m.cleareduser {
 		edges = append(edges, calendar.EdgeUser)
+	}
+	if m.clearedgoogle_calendar_infos {
+		edges = append(edges, calendar.EdgeGoogleCalendarInfos)
 	}
 	if m.clearedevents {
 		edges = append(edges, calendar.EdgeEvents)
@@ -599,6 +509,8 @@ func (m *CalendarMutation) EdgeCleared(name string) bool {
 	switch name {
 	case calendar.EdgeUser:
 		return m.cleareduser
+	case calendar.EdgeGoogleCalendarInfos:
+		return m.clearedgoogle_calendar_infos
 	case calendar.EdgeEvents:
 		return m.clearedevents
 	}
@@ -622,6 +534,9 @@ func (m *CalendarMutation) ResetEdge(name string) error {
 	switch name {
 	case calendar.EdgeUser:
 		m.ResetUser()
+		return nil
+	case calendar.EdgeGoogleCalendarInfos:
+		m.ResetGoogleCalendarInfos()
 		return nil
 	case calendar.EdgeEvents:
 		m.ResetEvents()
@@ -1407,6 +1322,561 @@ func (m *EventMutation) ResetEdge(name string) error {
 		return nil
 	}
 	return fmt.Errorf("unknown Event edge %s", name)
+}
+
+// GoogleCalendarInfoMutation represents an operation that mutates the GoogleCalendarInfo nodes in the graph.
+type GoogleCalendarInfoMutation struct {
+	config
+	op                 Op
+	typ                string
+	id                 *uuid.UUID
+	google_calendar_id *string
+	summary            *string
+	is_primary         *bool
+	clearedFields      map[string]struct{}
+	calendars          map[uuid.UUID]struct{}
+	removedcalendars   map[uuid.UUID]struct{}
+	clearedcalendars   bool
+	done               bool
+	oldValue           func(context.Context) (*GoogleCalendarInfo, error)
+	predicates         []predicate.GoogleCalendarInfo
+}
+
+var _ ent.Mutation = (*GoogleCalendarInfoMutation)(nil)
+
+// googlecalendarinfoOption allows management of the mutation configuration using functional options.
+type googlecalendarinfoOption func(*GoogleCalendarInfoMutation)
+
+// newGoogleCalendarInfoMutation creates new mutation for the GoogleCalendarInfo entity.
+func newGoogleCalendarInfoMutation(c config, op Op, opts ...googlecalendarinfoOption) *GoogleCalendarInfoMutation {
+	m := &GoogleCalendarInfoMutation{
+		config:        c,
+		op:            op,
+		typ:           TypeGoogleCalendarInfo,
+		clearedFields: make(map[string]struct{}),
+	}
+	for _, opt := range opts {
+		opt(m)
+	}
+	return m
+}
+
+// withGoogleCalendarInfoID sets the ID field of the mutation.
+func withGoogleCalendarInfoID(id uuid.UUID) googlecalendarinfoOption {
+	return func(m *GoogleCalendarInfoMutation) {
+		var (
+			err   error
+			once  sync.Once
+			value *GoogleCalendarInfo
+		)
+		m.oldValue = func(ctx context.Context) (*GoogleCalendarInfo, error) {
+			once.Do(func() {
+				if m.done {
+					err = errors.New("querying old values post mutation is not allowed")
+				} else {
+					value, err = m.Client().GoogleCalendarInfo.Get(ctx, id)
+				}
+			})
+			return value, err
+		}
+		m.id = &id
+	}
+}
+
+// withGoogleCalendarInfo sets the old GoogleCalendarInfo of the mutation.
+func withGoogleCalendarInfo(node *GoogleCalendarInfo) googlecalendarinfoOption {
+	return func(m *GoogleCalendarInfoMutation) {
+		m.oldValue = func(context.Context) (*GoogleCalendarInfo, error) {
+			return node, nil
+		}
+		m.id = &node.ID
+	}
+}
+
+// Client returns a new `ent.Client` from the mutation. If the mutation was
+// executed in a transaction (ent.Tx), a transactional client is returned.
+func (m GoogleCalendarInfoMutation) Client() *Client {
+	client := &Client{config: m.config}
+	client.init()
+	return client
+}
+
+// Tx returns an `ent.Tx` for mutations that were executed in transactions;
+// it returns an error otherwise.
+func (m GoogleCalendarInfoMutation) Tx() (*Tx, error) {
+	if _, ok := m.driver.(*txDriver); !ok {
+		return nil, errors.New("ent: mutation is not running in a transaction")
+	}
+	tx := &Tx{config: m.config}
+	tx.init()
+	return tx, nil
+}
+
+// SetID sets the value of the id field. Note that this
+// operation is only accepted on creation of GoogleCalendarInfo entities.
+func (m *GoogleCalendarInfoMutation) SetID(id uuid.UUID) {
+	m.id = &id
+}
+
+// ID returns the ID value in the mutation. Note that the ID is only available
+// if it was provided to the builder or after it was returned from the database.
+func (m *GoogleCalendarInfoMutation) ID() (id uuid.UUID, exists bool) {
+	if m.id == nil {
+		return
+	}
+	return *m.id, true
+}
+
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *GoogleCalendarInfoMutation) IDs(ctx context.Context) ([]uuid.UUID, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []uuid.UUID{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().GoogleCalendarInfo.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
+// SetGoogleCalendarID sets the "google_calendar_id" field.
+func (m *GoogleCalendarInfoMutation) SetGoogleCalendarID(s string) {
+	m.google_calendar_id = &s
+}
+
+// GoogleCalendarID returns the value of the "google_calendar_id" field in the mutation.
+func (m *GoogleCalendarInfoMutation) GoogleCalendarID() (r string, exists bool) {
+	v := m.google_calendar_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldGoogleCalendarID returns the old "google_calendar_id" field's value of the GoogleCalendarInfo entity.
+// If the GoogleCalendarInfo object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *GoogleCalendarInfoMutation) OldGoogleCalendarID(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldGoogleCalendarID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldGoogleCalendarID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldGoogleCalendarID: %w", err)
+	}
+	return oldValue.GoogleCalendarID, nil
+}
+
+// ResetGoogleCalendarID resets all changes to the "google_calendar_id" field.
+func (m *GoogleCalendarInfoMutation) ResetGoogleCalendarID() {
+	m.google_calendar_id = nil
+}
+
+// SetSummary sets the "summary" field.
+func (m *GoogleCalendarInfoMutation) SetSummary(s string) {
+	m.summary = &s
+}
+
+// Summary returns the value of the "summary" field in the mutation.
+func (m *GoogleCalendarInfoMutation) Summary() (r string, exists bool) {
+	v := m.summary
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldSummary returns the old "summary" field's value of the GoogleCalendarInfo entity.
+// If the GoogleCalendarInfo object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *GoogleCalendarInfoMutation) OldSummary(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldSummary is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldSummary requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldSummary: %w", err)
+	}
+	return oldValue.Summary, nil
+}
+
+// ClearSummary clears the value of the "summary" field.
+func (m *GoogleCalendarInfoMutation) ClearSummary() {
+	m.summary = nil
+	m.clearedFields[googlecalendarinfo.FieldSummary] = struct{}{}
+}
+
+// SummaryCleared returns if the "summary" field was cleared in this mutation.
+func (m *GoogleCalendarInfoMutation) SummaryCleared() bool {
+	_, ok := m.clearedFields[googlecalendarinfo.FieldSummary]
+	return ok
+}
+
+// ResetSummary resets all changes to the "summary" field.
+func (m *GoogleCalendarInfoMutation) ResetSummary() {
+	m.summary = nil
+	delete(m.clearedFields, googlecalendarinfo.FieldSummary)
+}
+
+// SetIsPrimary sets the "is_primary" field.
+func (m *GoogleCalendarInfoMutation) SetIsPrimary(b bool) {
+	m.is_primary = &b
+}
+
+// IsPrimary returns the value of the "is_primary" field in the mutation.
+func (m *GoogleCalendarInfoMutation) IsPrimary() (r bool, exists bool) {
+	v := m.is_primary
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldIsPrimary returns the old "is_primary" field's value of the GoogleCalendarInfo entity.
+// If the GoogleCalendarInfo object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *GoogleCalendarInfoMutation) OldIsPrimary(ctx context.Context) (v bool, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldIsPrimary is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldIsPrimary requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldIsPrimary: %w", err)
+	}
+	return oldValue.IsPrimary, nil
+}
+
+// ResetIsPrimary resets all changes to the "is_primary" field.
+func (m *GoogleCalendarInfoMutation) ResetIsPrimary() {
+	m.is_primary = nil
+}
+
+// AddCalendarIDs adds the "calendars" edge to the Calendar entity by ids.
+func (m *GoogleCalendarInfoMutation) AddCalendarIDs(ids ...uuid.UUID) {
+	if m.calendars == nil {
+		m.calendars = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		m.calendars[ids[i]] = struct{}{}
+	}
+}
+
+// ClearCalendars clears the "calendars" edge to the Calendar entity.
+func (m *GoogleCalendarInfoMutation) ClearCalendars() {
+	m.clearedcalendars = true
+}
+
+// CalendarsCleared reports if the "calendars" edge to the Calendar entity was cleared.
+func (m *GoogleCalendarInfoMutation) CalendarsCleared() bool {
+	return m.clearedcalendars
+}
+
+// RemoveCalendarIDs removes the "calendars" edge to the Calendar entity by IDs.
+func (m *GoogleCalendarInfoMutation) RemoveCalendarIDs(ids ...uuid.UUID) {
+	if m.removedcalendars == nil {
+		m.removedcalendars = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		delete(m.calendars, ids[i])
+		m.removedcalendars[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedCalendars returns the removed IDs of the "calendars" edge to the Calendar entity.
+func (m *GoogleCalendarInfoMutation) RemovedCalendarsIDs() (ids []uuid.UUID) {
+	for id := range m.removedcalendars {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// CalendarsIDs returns the "calendars" edge IDs in the mutation.
+func (m *GoogleCalendarInfoMutation) CalendarsIDs() (ids []uuid.UUID) {
+	for id := range m.calendars {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetCalendars resets all changes to the "calendars" edge.
+func (m *GoogleCalendarInfoMutation) ResetCalendars() {
+	m.calendars = nil
+	m.clearedcalendars = false
+	m.removedcalendars = nil
+}
+
+// Where appends a list predicates to the GoogleCalendarInfoMutation builder.
+func (m *GoogleCalendarInfoMutation) Where(ps ...predicate.GoogleCalendarInfo) {
+	m.predicates = append(m.predicates, ps...)
+}
+
+// WhereP appends storage-level predicates to the GoogleCalendarInfoMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *GoogleCalendarInfoMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.GoogleCalendarInfo, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
+// Op returns the operation name.
+func (m *GoogleCalendarInfoMutation) Op() Op {
+	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *GoogleCalendarInfoMutation) SetOp(op Op) {
+	m.op = op
+}
+
+// Type returns the node type of this mutation (GoogleCalendarInfo).
+func (m *GoogleCalendarInfoMutation) Type() string {
+	return m.typ
+}
+
+// Fields returns all fields that were changed during this mutation. Note that in
+// order to get all numeric fields that were incremented/decremented, call
+// AddedFields().
+func (m *GoogleCalendarInfoMutation) Fields() []string {
+	fields := make([]string, 0, 3)
+	if m.google_calendar_id != nil {
+		fields = append(fields, googlecalendarinfo.FieldGoogleCalendarID)
+	}
+	if m.summary != nil {
+		fields = append(fields, googlecalendarinfo.FieldSummary)
+	}
+	if m.is_primary != nil {
+		fields = append(fields, googlecalendarinfo.FieldIsPrimary)
+	}
+	return fields
+}
+
+// Field returns the value of a field with the given name. The second boolean
+// return value indicates that this field was not set, or was not defined in the
+// schema.
+func (m *GoogleCalendarInfoMutation) Field(name string) (ent.Value, bool) {
+	switch name {
+	case googlecalendarinfo.FieldGoogleCalendarID:
+		return m.GoogleCalendarID()
+	case googlecalendarinfo.FieldSummary:
+		return m.Summary()
+	case googlecalendarinfo.FieldIsPrimary:
+		return m.IsPrimary()
+	}
+	return nil, false
+}
+
+// OldField returns the old value of the field from the database. An error is
+// returned if the mutation operation is not UpdateOne, or the query to the
+// database failed.
+func (m *GoogleCalendarInfoMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+	switch name {
+	case googlecalendarinfo.FieldGoogleCalendarID:
+		return m.OldGoogleCalendarID(ctx)
+	case googlecalendarinfo.FieldSummary:
+		return m.OldSummary(ctx)
+	case googlecalendarinfo.FieldIsPrimary:
+		return m.OldIsPrimary(ctx)
+	}
+	return nil, fmt.Errorf("unknown GoogleCalendarInfo field %s", name)
+}
+
+// SetField sets the value of a field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *GoogleCalendarInfoMutation) SetField(name string, value ent.Value) error {
+	switch name {
+	case googlecalendarinfo.FieldGoogleCalendarID:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetGoogleCalendarID(v)
+		return nil
+	case googlecalendarinfo.FieldSummary:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetSummary(v)
+		return nil
+	case googlecalendarinfo.FieldIsPrimary:
+		v, ok := value.(bool)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetIsPrimary(v)
+		return nil
+	}
+	return fmt.Errorf("unknown GoogleCalendarInfo field %s", name)
+}
+
+// AddedFields returns all numeric fields that were incremented/decremented during
+// this mutation.
+func (m *GoogleCalendarInfoMutation) AddedFields() []string {
+	return nil
+}
+
+// AddedField returns the numeric value that was incremented/decremented on a field
+// with the given name. The second boolean return value indicates that this field
+// was not set, or was not defined in the schema.
+func (m *GoogleCalendarInfoMutation) AddedField(name string) (ent.Value, bool) {
+	return nil, false
+}
+
+// AddField adds the value to the field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *GoogleCalendarInfoMutation) AddField(name string, value ent.Value) error {
+	switch name {
+	}
+	return fmt.Errorf("unknown GoogleCalendarInfo numeric field %s", name)
+}
+
+// ClearedFields returns all nullable fields that were cleared during this
+// mutation.
+func (m *GoogleCalendarInfoMutation) ClearedFields() []string {
+	var fields []string
+	if m.FieldCleared(googlecalendarinfo.FieldSummary) {
+		fields = append(fields, googlecalendarinfo.FieldSummary)
+	}
+	return fields
+}
+
+// FieldCleared returns a boolean indicating if a field with the given name was
+// cleared in this mutation.
+func (m *GoogleCalendarInfoMutation) FieldCleared(name string) bool {
+	_, ok := m.clearedFields[name]
+	return ok
+}
+
+// ClearField clears the value of the field with the given name. It returns an
+// error if the field is not defined in the schema.
+func (m *GoogleCalendarInfoMutation) ClearField(name string) error {
+	switch name {
+	case googlecalendarinfo.FieldSummary:
+		m.ClearSummary()
+		return nil
+	}
+	return fmt.Errorf("unknown GoogleCalendarInfo nullable field %s", name)
+}
+
+// ResetField resets all changes in the mutation for the field with the given name.
+// It returns an error if the field is not defined in the schema.
+func (m *GoogleCalendarInfoMutation) ResetField(name string) error {
+	switch name {
+	case googlecalendarinfo.FieldGoogleCalendarID:
+		m.ResetGoogleCalendarID()
+		return nil
+	case googlecalendarinfo.FieldSummary:
+		m.ResetSummary()
+		return nil
+	case googlecalendarinfo.FieldIsPrimary:
+		m.ResetIsPrimary()
+		return nil
+	}
+	return fmt.Errorf("unknown GoogleCalendarInfo field %s", name)
+}
+
+// AddedEdges returns all edge names that were set/added in this mutation.
+func (m *GoogleCalendarInfoMutation) AddedEdges() []string {
+	edges := make([]string, 0, 1)
+	if m.calendars != nil {
+		edges = append(edges, googlecalendarinfo.EdgeCalendars)
+	}
+	return edges
+}
+
+// AddedIDs returns all IDs (to other nodes) that were added for the given edge
+// name in this mutation.
+func (m *GoogleCalendarInfoMutation) AddedIDs(name string) []ent.Value {
+	switch name {
+	case googlecalendarinfo.EdgeCalendars:
+		ids := make([]ent.Value, 0, len(m.calendars))
+		for id := range m.calendars {
+			ids = append(ids, id)
+		}
+		return ids
+	}
+	return nil
+}
+
+// RemovedEdges returns all edge names that were removed in this mutation.
+func (m *GoogleCalendarInfoMutation) RemovedEdges() []string {
+	edges := make([]string, 0, 1)
+	if m.removedcalendars != nil {
+		edges = append(edges, googlecalendarinfo.EdgeCalendars)
+	}
+	return edges
+}
+
+// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
+// the given name in this mutation.
+func (m *GoogleCalendarInfoMutation) RemovedIDs(name string) []ent.Value {
+	switch name {
+	case googlecalendarinfo.EdgeCalendars:
+		ids := make([]ent.Value, 0, len(m.removedcalendars))
+		for id := range m.removedcalendars {
+			ids = append(ids, id)
+		}
+		return ids
+	}
+	return nil
+}
+
+// ClearedEdges returns all edge names that were cleared in this mutation.
+func (m *GoogleCalendarInfoMutation) ClearedEdges() []string {
+	edges := make([]string, 0, 1)
+	if m.clearedcalendars {
+		edges = append(edges, googlecalendarinfo.EdgeCalendars)
+	}
+	return edges
+}
+
+// EdgeCleared returns a boolean which indicates if the edge with the given name
+// was cleared in this mutation.
+func (m *GoogleCalendarInfoMutation) EdgeCleared(name string) bool {
+	switch name {
+	case googlecalendarinfo.EdgeCalendars:
+		return m.clearedcalendars
+	}
+	return false
+}
+
+// ClearEdge clears the value of the edge with the given name. It returns an error
+// if that edge is not defined in the schema.
+func (m *GoogleCalendarInfoMutation) ClearEdge(name string) error {
+	switch name {
+	}
+	return fmt.Errorf("unknown GoogleCalendarInfo unique edge %s", name)
+}
+
+// ResetEdge resets all changes to the edge with the given name in this mutation.
+// It returns an error if the edge is not defined in the schema.
+func (m *GoogleCalendarInfoMutation) ResetEdge(name string) error {
+	switch name {
+	case googlecalendarinfo.EdgeCalendars:
+		m.ResetCalendars()
+		return nil
+	}
+	return fmt.Errorf("unknown GoogleCalendarInfo edge %s", name)
 }
 
 // JWTKeyMutation represents an operation that mutates the JWTKey nodes in the graph.

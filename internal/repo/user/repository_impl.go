@@ -34,11 +34,16 @@ func (r *UserRepositoryImpl) Read(ctx context.Context, tx *ent.Tx, id uuid.UUID,
 		Only(ctx)
 }
 
-func (r *UserRepositoryImpl) FindByEmail(ctx context.Context, tx *ent.Tx, email string) (*ent.User, error) {
+func (r *UserRepositoryImpl) FindByEmail(ctx context.Context, tx *ent.Tx, email string, opt UserQueryOptions) (*ent.User, error) {
 	findUser := r.client.User.Query()
 	if tx != nil {
 		findUser = tx.User.Query()
 	}
+
+	if opt.WithOAuthToken {
+		findUser = findUser.WithOauthToken()
+	}
+	
 	return findUser.
 		Where(user.EmailEQ(email)).
 		Only(ctx)

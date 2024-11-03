@@ -3,6 +3,7 @@
 package migrate
 
 import (
+	"entgo.io/ent/dialect/entsql"
 	"entgo.io/ent/dialect/sql/schema"
 	"entgo.io/ent/schema/field"
 )
@@ -11,9 +12,6 @@ var (
 	// CalendarsColumns holds the columns for the "calendars" table.
 	CalendarsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID, Unique: true},
-		{Name: "calendar_id", Type: field.TypeString},
-		{Name: "summary", Type: field.TypeString},
-		{Name: "is_primary", Type: field.TypeBool, Default: false},
 		{Name: "user_calendars", Type: field.TypeUUID, Nullable: true},
 	}
 	// CalendarsTable holds the schema information for the "calendars" table.
@@ -24,7 +22,7 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "calendars_users_calendars",
-				Columns:    []*schema.Column{CalendarsColumns[4]},
+				Columns:    []*schema.Column{CalendarsColumns[1]},
 				RefColumns: []*schema.Column{UsersColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
@@ -53,6 +51,19 @@ var (
 				OnDelete:   schema.Cascade,
 			},
 		},
+	}
+	// GoogleCalendarInfosColumns holds the columns for the "google_calendar_infos" table.
+	GoogleCalendarInfosColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID, Unique: true},
+		{Name: "google_calendar_id", Type: field.TypeString, Unique: true},
+		{Name: "summary", Type: field.TypeString, Nullable: true},
+		{Name: "is_primary", Type: field.TypeBool, Default: false},
+	}
+	// GoogleCalendarInfosTable holds the schema information for the "google_calendar_infos" table.
+	GoogleCalendarInfosTable = &schema.Table{
+		Name:       "google_calendar_infos",
+		Columns:    GoogleCalendarInfosColumns,
+		PrimaryKey: []*schema.Column{GoogleCalendarInfosColumns[0]},
 	}
 	// JwtKeysColumns holds the columns for the "jwt_keys" table.
 	JwtKeysColumns = []*schema.Column{
@@ -133,14 +144,41 @@ var (
 		Columns:    UsersColumns,
 		PrimaryKey: []*schema.Column{UsersColumns[0]},
 	}
+	// CalendarGoogleCalendarInfosColumns holds the columns for the "calendar_google_calendar_infos" table.
+	CalendarGoogleCalendarInfosColumns = []*schema.Column{
+		{Name: "calendar_id", Type: field.TypeUUID},
+		{Name: "google_calendar_info_id", Type: field.TypeUUID},
+	}
+	// CalendarGoogleCalendarInfosTable holds the schema information for the "calendar_google_calendar_infos" table.
+	CalendarGoogleCalendarInfosTable = &schema.Table{
+		Name:       "calendar_google_calendar_infos",
+		Columns:    CalendarGoogleCalendarInfosColumns,
+		PrimaryKey: []*schema.Column{CalendarGoogleCalendarInfosColumns[0], CalendarGoogleCalendarInfosColumns[1]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "calendar_google_calendar_infos_calendar_id",
+				Columns:    []*schema.Column{CalendarGoogleCalendarInfosColumns[0]},
+				RefColumns: []*schema.Column{CalendarsColumns[0]},
+				OnDelete:   schema.Cascade,
+			},
+			{
+				Symbol:     "calendar_google_calendar_infos_google_calendar_info_id",
+				Columns:    []*schema.Column{CalendarGoogleCalendarInfosColumns[1]},
+				RefColumns: []*schema.Column{GoogleCalendarInfosColumns[0]},
+				OnDelete:   schema.Cascade,
+			},
+		},
+	}
 	// Tables holds all the tables in the schema.
 	Tables = []*schema.Table{
 		CalendarsTable,
 		EventsTable,
+		GoogleCalendarInfosTable,
 		JwtKeysTable,
 		OauthTokensTable,
 		ProposedDatesTable,
 		UsersTable,
+		CalendarGoogleCalendarInfosTable,
 	}
 )
 
@@ -149,4 +187,7 @@ func init() {
 	EventsTable.ForeignKeys[0].RefTable = CalendarsTable
 	OauthTokensTable.ForeignKeys[0].RefTable = UsersTable
 	ProposedDatesTable.ForeignKeys[0].RefTable = EventsTable
+	CalendarGoogleCalendarInfosTable.ForeignKeys[0].RefTable = CalendarsTable
+	CalendarGoogleCalendarInfosTable.ForeignKeys[1].RefTable = GoogleCalendarInfosTable
+	CalendarGoogleCalendarInfosTable.Annotation = &entsql.Annotation{}
 }

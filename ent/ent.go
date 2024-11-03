@@ -14,6 +14,7 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/koo-arch/adjusta-backend/ent/calendar"
 	"github.com/koo-arch/adjusta-backend/ent/event"
+	"github.com/koo-arch/adjusta-backend/ent/googlecalendarinfo"
 	"github.com/koo-arch/adjusta-backend/ent/jwtkey"
 	"github.com/koo-arch/adjusta-backend/ent/oauthtoken"
 	"github.com/koo-arch/adjusta-backend/ent/proposeddate"
@@ -78,12 +79,13 @@ var (
 func checkColumn(table, column string) error {
 	initCheck.Do(func() {
 		columnCheck = sql.NewColumnCheck(map[string]func(string) bool{
-			calendar.Table:     calendar.ValidColumn,
-			event.Table:        event.ValidColumn,
-			jwtkey.Table:       jwtkey.ValidColumn,
-			oauthtoken.Table:   oauthtoken.ValidColumn,
-			proposeddate.Table: proposeddate.ValidColumn,
-			user.Table:         user.ValidColumn,
+			calendar.Table:           calendar.ValidColumn,
+			event.Table:              event.ValidColumn,
+			googlecalendarinfo.Table: googlecalendarinfo.ValidColumn,
+			jwtkey.Table:             jwtkey.ValidColumn,
+			oauthtoken.Table:         oauthtoken.ValidColumn,
+			proposeddate.Table:       proposeddate.ValidColumn,
+			user.Table:               user.ValidColumn,
 		})
 	})
 	return columnCheck(table, column)

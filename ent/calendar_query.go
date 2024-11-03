@@ -14,6 +14,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/koo-arch/adjusta-backend/ent/calendar"
 	"github.com/koo-arch/adjusta-backend/ent/event"
+	"github.com/koo-arch/adjusta-backend/ent/googlecalendarinfo"
 	"github.com/koo-arch/adjusta-backend/ent/predicate"
 	"github.com/koo-arch/adjusta-backend/ent/user"
 )
@@ -21,13 +22,14 @@ import (
 // CalendarQuery is the builder for querying Calendar entities.
 type CalendarQuery struct {
 	config
-	ctx        *QueryContext
-	order      []calendar.OrderOption
-	inters     []Interceptor
-	predicates []predicate.Calendar
-	withUser   *UserQuery
-	withEvents *EventQuery
-	withFKs    bool
+	ctx                     *QueryContext
+	order                   []calendar.OrderOption
+	inters                  []Interceptor
+	predicates              []predicate.Calendar
+	withUser                *UserQuery
+	withGoogleCalendarInfos *GoogleCalendarInfoQuery
+	withEvents              *EventQuery
+	withFKs                 bool
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -79,6 +81,28 @@ func (cq *CalendarQuery) QueryUser() *UserQuery {
 			sqlgraph.From(calendar.Table, calendar.FieldID, selector),
 			sqlgraph.To(user.Table, user.FieldID),
 			sqlgraph.Edge(sqlgraph.M2O, true, calendar.UserTable, calendar.UserColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(cq.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
+// QueryGoogleCalendarInfos chains the current query on the "google_calendar_infos" edge.
+func (cq *CalendarQuery) QueryGoogleCalendarInfos() *GoogleCalendarInfoQuery {
+	query := (&GoogleCalendarInfoClient{config: cq.config}).Query()
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := cq.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := cq.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(calendar.Table, calendar.FieldID, selector),
+			sqlgraph.To(googlecalendarinfo.Table, googlecalendarinfo.FieldID),
+			sqlgraph.Edge(sqlgraph.M2M, false, calendar.GoogleCalendarInfosTable, calendar.GoogleCalendarInfosPrimaryKey...),
 		)
 		fromU = sqlgraph.SetNeighbors(cq.driver.Dialect(), step)
 		return fromU, nil
@@ -295,13 +319,14 @@ func (cq *CalendarQuery) Clone() *CalendarQuery {
 		return nil
 	}
 	return &CalendarQuery{
-		config:     cq.config,
-		ctx:        cq.ctx.Clone(),
-		order:      append([]calendar.OrderOption{}, cq.order...),
-		inters:     append([]Interceptor{}, cq.inters...),
-		predicates: append([]predicate.Calendar{}, cq.predicates...),
-		withUser:   cq.withUser.Clone(),
-		withEvents: cq.withEvents.Clone(),
+		config:                  cq.config,
+		ctx:                     cq.ctx.Clone(),
+		order:                   append([]calendar.OrderOption{}, cq.order...),
+		inters:                  append([]Interceptor{}, cq.inters...),
+		predicates:              append([]predicate.Calendar{}, cq.predicates...),
+		withUser:                cq.withUser.Clone(),
+		withGoogleCalendarInfos: cq.withGoogleCalendarInfos.Clone(),
+		withEvents:              cq.withEvents.Clone(),
 		// clone intermediate query.
 		sql:  cq.sql.Clone(),
 		path: cq.path,
@@ -319,6 +344,17 @@ func (cq *CalendarQuery) WithUser(opts ...func(*UserQuery)) *CalendarQuery {
 	return cq
 }
 
+// WithGoogleCalendarInfos tells the query-builder to eager-load the nodes that are connected to
+// the "google_calendar_infos" edge. The optional arguments are used to configure the query builder of the edge.
+func (cq *CalendarQuery) WithGoogleCalendarInfos(opts ...func(*GoogleCalendarInfoQuery)) *CalendarQuery {
+	query := (&GoogleCalendarInfoClient{config: cq.config}).Query()
+	for _, opt := range opts {
+		opt(query)
+	}
+	cq.withGoogleCalendarInfos = query
+	return cq
+}
+
 // WithEvents tells the query-builder to eager-load the nodes that are connected to
 // the "events" edge. The optional arguments are used to configure the query builder of the edge.
 func (cq *CalendarQuery) WithEvents(opts ...func(*EventQuery)) *CalendarQuery {
@@ -332,18 +368,6 @@ func (cq *CalendarQuery) WithEvents(opts ...func(*EventQuery)) *CalendarQuery {
 
 // GroupBy is used to group vertices by one or more fields/columns.
 // It is often used with aggregate functions, like: count, max, mean, min, sum.
-//
-// Example:
-//
-//	var v []struct {
-//		CalendarID string `json:"calendar_id,omitempty"`
-//		Count int `json:"count,omitempty"`
-//	}
-//
-//	client.Calendar.Query().
-//		GroupBy(calendar.FieldCalendarID).
-//		Aggregate(ent.Count()).
-//		Scan(ctx, &v)
 func (cq *CalendarQuery) GroupBy(field string, fields ...string) *CalendarGroupBy {
 	cq.ctx.Fields = append([]string{field}, fields...)
 	grbuild := &CalendarGroupBy{build: cq}
@@ -355,16 +379,6 @@ func (cq *CalendarQuery) GroupBy(field string, fields ...string) *CalendarGroupB
 
 // Select allows the selection one or more fields/columns for the given query,
 // instead of selecting all fields in the entity.
-//
-// Example:
-//
-//	var v []struct {
-//		CalendarID string `json:"calendar_id,omitempty"`
-//	}
-//
-//	client.Calendar.Query().
-//		Select(calendar.FieldCalendarID).
-//		Scan(ctx, &v)
 func (cq *CalendarQuery) Select(fields ...string) *CalendarSelect {
 	cq.ctx.Fields = append(cq.ctx.Fields, fields...)
 	sbuild := &CalendarSelect{CalendarQuery: cq}
@@ -409,8 +423,9 @@ func (cq *CalendarQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Cal
 		nodes       = []*Calendar{}
 		withFKs     = cq.withFKs
 		_spec       = cq.querySpec()
-		loadedTypes = [2]bool{
+		loadedTypes = [3]bool{
 			cq.withUser != nil,
+			cq.withGoogleCalendarInfos != nil,
 			cq.withEvents != nil,
 		}
 	)
@@ -441,6 +456,15 @@ func (cq *CalendarQuery) sqlAll(ctx context.Context, hooks ...queryHook) ([]*Cal
 	if query := cq.withUser; query != nil {
 		if err := cq.loadUser(ctx, query, nodes, nil,
 			func(n *Calendar, e *User) { n.Edges.User = e }); err != nil {
+			return nil, err
+		}
+	}
+	if query := cq.withGoogleCalendarInfos; query != nil {
+		if err := cq.loadGoogleCalendarInfos(ctx, query, nodes,
+			func(n *Calendar) { n.Edges.GoogleCalendarInfos = []*GoogleCalendarInfo{} },
+			func(n *Calendar, e *GoogleCalendarInfo) {
+				n.Edges.GoogleCalendarInfos = append(n.Edges.GoogleCalendarInfos, e)
+			}); err != nil {
 			return nil, err
 		}
 	}
@@ -482,6 +506,67 @@ func (cq *CalendarQuery) loadUser(ctx context.Context, query *UserQuery, nodes [
 		}
 		for i := range nodes {
 			assign(nodes[i], n)
+		}
+	}
+	return nil
+}
+func (cq *CalendarQuery) loadGoogleCalendarInfos(ctx context.Context, query *GoogleCalendarInfoQuery, nodes []*Calendar, init func(*Calendar), assign func(*Calendar, *GoogleCalendarInfo)) error {
+	edgeIDs := make([]driver.Value, len(nodes))
+	byID := make(map[uuid.UUID]*Calendar)
+	nids := make(map[uuid.UUID]map[*Calendar]struct{})
+	for i, node := range nodes {
+		edgeIDs[i] = node.ID
+		byID[node.ID] = node
+		if init != nil {
+			init(node)
+		}
+	}
+	query.Where(func(s *sql.Selector) {
+		joinT := sql.Table(calendar.GoogleCalendarInfosTable)
+		s.Join(joinT).On(s.C(googlecalendarinfo.FieldID), joinT.C(calendar.GoogleCalendarInfosPrimaryKey[1]))
+		s.Where(sql.InValues(joinT.C(calendar.GoogleCalendarInfosPrimaryKey[0]), edgeIDs...))
+		columns := s.SelectedColumns()
+		s.Select(joinT.C(calendar.GoogleCalendarInfosPrimaryKey[0]))
+		s.AppendSelect(columns...)
+		s.SetDistinct(false)
+	})
+	if err := query.prepareQuery(ctx); err != nil {
+		return err
+	}
+	qr := QuerierFunc(func(ctx context.Context, q Query) (Value, error) {
+		return query.sqlAll(ctx, func(_ context.Context, spec *sqlgraph.QuerySpec) {
+			assign := spec.Assign
+			values := spec.ScanValues
+			spec.ScanValues = func(columns []string) ([]any, error) {
+				values, err := values(columns[1:])
+				if err != nil {
+					return nil, err
+				}
+				return append([]any{new(uuid.UUID)}, values...), nil
+			}
+			spec.Assign = func(columns []string, values []any) error {
+				outValue := *values[0].(*uuid.UUID)
+				inValue := *values[1].(*uuid.UUID)
+				if nids[inValue] == nil {
+					nids[inValue] = map[*Calendar]struct{}{byID[outValue]: {}}
+					return assign(columns[1:], values[1:])
+				}
+				nids[inValue][byID[outValue]] = struct{}{}
+				return nil
+			}
+		})
+	})
+	neighbors, err := withInterceptors[[]*GoogleCalendarInfo](ctx, query, qr, query.inters)
+	if err != nil {
+		return err
+	}
+	for _, n := range neighbors {
+		nodes, ok := nids[n.ID]
+		if !ok {
+			return fmt.Errorf(`unexpected "google_calendar_infos" node returned %v`, n.ID)
+		}
+		for kn := range nodes {
+			assign(kn, n)
 		}
 	}
 	return nil

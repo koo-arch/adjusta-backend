@@ -13,14 +13,10 @@ const (
 	Label = "calendar"
 	// FieldID holds the string denoting the id field in the database.
 	FieldID = "id"
-	// FieldCalendarID holds the string denoting the calendar_id field in the database.
-	FieldCalendarID = "calendar_id"
-	// FieldSummary holds the string denoting the summary field in the database.
-	FieldSummary = "summary"
-	// FieldIsPrimary holds the string denoting the is_primary field in the database.
-	FieldIsPrimary = "is_primary"
 	// EdgeUser holds the string denoting the user edge name in mutations.
 	EdgeUser = "user"
+	// EdgeGoogleCalendarInfos holds the string denoting the google_calendar_infos edge name in mutations.
+	EdgeGoogleCalendarInfos = "google_calendar_infos"
 	// EdgeEvents holds the string denoting the events edge name in mutations.
 	EdgeEvents = "events"
 	// Table holds the table name of the calendar in the database.
@@ -32,6 +28,11 @@ const (
 	UserInverseTable = "users"
 	// UserColumn is the table column denoting the user relation/edge.
 	UserColumn = "user_calendars"
+	// GoogleCalendarInfosTable is the table that holds the google_calendar_infos relation/edge. The primary key declared below.
+	GoogleCalendarInfosTable = "calendar_google_calendar_infos"
+	// GoogleCalendarInfosInverseTable is the table name for the GoogleCalendarInfo entity.
+	// It exists in this package in order to avoid circular dependency with the "googlecalendarinfo" package.
+	GoogleCalendarInfosInverseTable = "google_calendar_infos"
 	// EventsTable is the table that holds the events relation/edge.
 	EventsTable = "events"
 	// EventsInverseTable is the table name for the Event entity.
@@ -44,9 +45,6 @@ const (
 // Columns holds all SQL columns for calendar fields.
 var Columns = []string{
 	FieldID,
-	FieldCalendarID,
-	FieldSummary,
-	FieldIsPrimary,
 }
 
 // ForeignKeys holds the SQL foreign-keys that are owned by the "calendars"
@@ -54,6 +52,12 @@ var Columns = []string{
 var ForeignKeys = []string{
 	"user_calendars",
 }
+
+var (
+	// GoogleCalendarInfosPrimaryKey and GoogleCalendarInfosColumn2 are the table columns denoting the
+	// primary key for the google_calendar_infos relation (M2M).
+	GoogleCalendarInfosPrimaryKey = []string{"calendar_id", "google_calendar_info_id"}
+)
 
 // ValidColumn reports if the column name is valid (part of the table columns).
 func ValidColumn(column string) bool {
@@ -71,8 +75,6 @@ func ValidColumn(column string) bool {
 }
 
 var (
-	// DefaultIsPrimary holds the default value on creation for the "is_primary" field.
-	DefaultIsPrimary bool
 	// DefaultID holds the default value on creation for the "id" field.
 	DefaultID func() uuid.UUID
 )
@@ -85,25 +87,24 @@ func ByID(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldID, opts...).ToFunc()
 }
 
-// ByCalendarID orders the results by the calendar_id field.
-func ByCalendarID(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldCalendarID, opts...).ToFunc()
-}
-
-// BySummary orders the results by the summary field.
-func BySummary(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldSummary, opts...).ToFunc()
-}
-
-// ByIsPrimary orders the results by the is_primary field.
-func ByIsPrimary(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldIsPrimary, opts...).ToFunc()
-}
-
 // ByUserField orders the results by user field.
 func ByUserField(field string, opts ...sql.OrderTermOption) OrderOption {
 	return func(s *sql.Selector) {
 		sqlgraph.OrderByNeighborTerms(s, newUserStep(), sql.OrderByField(field, opts...))
+	}
+}
+
+// ByGoogleCalendarInfosCount orders the results by google_calendar_infos count.
+func ByGoogleCalendarInfosCount(opts ...sql.OrderTermOption) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborsCount(s, newGoogleCalendarInfosStep(), opts...)
+	}
+}
+
+// ByGoogleCalendarInfos orders the results by google_calendar_infos terms.
+func ByGoogleCalendarInfos(term sql.OrderTerm, terms ...sql.OrderTerm) OrderOption {
+	return func(s *sql.Selector) {
+		sqlgraph.OrderByNeighborTerms(s, newGoogleCalendarInfosStep(), append([]sql.OrderTerm{term}, terms...)...)
 	}
 }
 
@@ -125,6 +126,13 @@ func newUserStep() *sqlgraph.Step {
 		sqlgraph.From(Table, FieldID),
 		sqlgraph.To(UserInverseTable, FieldID),
 		sqlgraph.Edge(sqlgraph.M2O, true, UserTable, UserColumn),
+	)
+}
+func newGoogleCalendarInfosStep() *sqlgraph.Step {
+	return sqlgraph.NewStep(
+		sqlgraph.From(Table, FieldID),
+		sqlgraph.To(GoogleCalendarInfosInverseTable, FieldID),
+		sqlgraph.Edge(sqlgraph.M2M, false, GoogleCalendarInfosTable, GoogleCalendarInfosPrimaryKey...),
 	)
 }
 func newEventsStep() *sqlgraph.Step {

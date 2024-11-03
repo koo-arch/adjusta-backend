@@ -16,6 +16,8 @@ type Tx struct {
 	Calendar *CalendarClient
 	// Event is the client for interacting with the Event builders.
 	Event *EventClient
+	// GoogleCalendarInfo is the client for interacting with the GoogleCalendarInfo builders.
+	GoogleCalendarInfo *GoogleCalendarInfoClient
 	// JWTKey is the client for interacting with the JWTKey builders.
 	JWTKey *JWTKeyClient
 	// OAuthToken is the client for interacting with the OAuthToken builders.
@@ -157,6 +159,7 @@ func (tx *Tx) Client() *Client {
 func (tx *Tx) init() {
 	tx.Calendar = NewCalendarClient(tx.config)
 	tx.Event = NewEventClient(tx.config)
+	tx.GoogleCalendarInfo = NewGoogleCalendarInfoClient(tx.config)
 	tx.JWTKey = NewJWTKeyClient(tx.config)
 	tx.OAuthToken = NewOAuthTokenClient(tx.config)
 	tx.ProposedDate = NewProposedDateClient(tx.config)

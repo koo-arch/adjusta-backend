@@ -17,9 +17,6 @@ type Calendar struct {
 func (Calendar) Fields() []ent.Field {
 	return []ent.Field{
 		field.UUID("id", uuid.UUID{}).Default(uuid.New).Unique().Immutable(),
-		field.String("calendar_id"),
-		field.String("summary"),
-		field.Bool("is_primary").Default(false),
 	}
 }
 
@@ -27,6 +24,7 @@ func (Calendar) Fields() []ent.Field {
 func (Calendar) Edges() []ent.Edge {
 	return []ent.Edge{
 		edge.From("user", User.Type).Ref("calendars").Unique(),
+		edge.To("google_calendar_infos", GoogleCalendarInfo.Type).Annotations(entsql.OnDelete(entsql.Cascade)),
 		edge.To("events", Event.Type).Annotations(entsql.OnDelete(entsql.Cascade)),
 	}
 }

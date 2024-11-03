@@ -54,161 +54,6 @@ func IDLTE(id uuid.UUID) predicate.Calendar {
 	return predicate.Calendar(sql.FieldLTE(FieldID, id))
 }
 
-// CalendarID applies equality check predicate on the "calendar_id" field. It's identical to CalendarIDEQ.
-func CalendarID(v string) predicate.Calendar {
-	return predicate.Calendar(sql.FieldEQ(FieldCalendarID, v))
-}
-
-// Summary applies equality check predicate on the "summary" field. It's identical to SummaryEQ.
-func Summary(v string) predicate.Calendar {
-	return predicate.Calendar(sql.FieldEQ(FieldSummary, v))
-}
-
-// IsPrimary applies equality check predicate on the "is_primary" field. It's identical to IsPrimaryEQ.
-func IsPrimary(v bool) predicate.Calendar {
-	return predicate.Calendar(sql.FieldEQ(FieldIsPrimary, v))
-}
-
-// CalendarIDEQ applies the EQ predicate on the "calendar_id" field.
-func CalendarIDEQ(v string) predicate.Calendar {
-	return predicate.Calendar(sql.FieldEQ(FieldCalendarID, v))
-}
-
-// CalendarIDNEQ applies the NEQ predicate on the "calendar_id" field.
-func CalendarIDNEQ(v string) predicate.Calendar {
-	return predicate.Calendar(sql.FieldNEQ(FieldCalendarID, v))
-}
-
-// CalendarIDIn applies the In predicate on the "calendar_id" field.
-func CalendarIDIn(vs ...string) predicate.Calendar {
-	return predicate.Calendar(sql.FieldIn(FieldCalendarID, vs...))
-}
-
-// CalendarIDNotIn applies the NotIn predicate on the "calendar_id" field.
-func CalendarIDNotIn(vs ...string) predicate.Calendar {
-	return predicate.Calendar(sql.FieldNotIn(FieldCalendarID, vs...))
-}
-
-// CalendarIDGT applies the GT predicate on the "calendar_id" field.
-func CalendarIDGT(v string) predicate.Calendar {
-	return predicate.Calendar(sql.FieldGT(FieldCalendarID, v))
-}
-
-// CalendarIDGTE applies the GTE predicate on the "calendar_id" field.
-func CalendarIDGTE(v string) predicate.Calendar {
-	return predicate.Calendar(sql.FieldGTE(FieldCalendarID, v))
-}
-
-// CalendarIDLT applies the LT predicate on the "calendar_id" field.
-func CalendarIDLT(v string) predicate.Calendar {
-	return predicate.Calendar(sql.FieldLT(FieldCalendarID, v))
-}
-
-// CalendarIDLTE applies the LTE predicate on the "calendar_id" field.
-func CalendarIDLTE(v string) predicate.Calendar {
-	return predicate.Calendar(sql.FieldLTE(FieldCalendarID, v))
-}
-
-// CalendarIDContains applies the Contains predicate on the "calendar_id" field.
-func CalendarIDContains(v string) predicate.Calendar {
-	return predicate.Calendar(sql.FieldContains(FieldCalendarID, v))
-}
-
-// CalendarIDHasPrefix applies the HasPrefix predicate on the "calendar_id" field.
-func CalendarIDHasPrefix(v string) predicate.Calendar {
-	return predicate.Calendar(sql.FieldHasPrefix(FieldCalendarID, v))
-}
-
-// CalendarIDHasSuffix applies the HasSuffix predicate on the "calendar_id" field.
-func CalendarIDHasSuffix(v string) predicate.Calendar {
-	return predicate.Calendar(sql.FieldHasSuffix(FieldCalendarID, v))
-}
-
-// CalendarIDEqualFold applies the EqualFold predicate on the "calendar_id" field.
-func CalendarIDEqualFold(v string) predicate.Calendar {
-	return predicate.Calendar(sql.FieldEqualFold(FieldCalendarID, v))
-}
-
-// CalendarIDContainsFold applies the ContainsFold predicate on the "calendar_id" field.
-func CalendarIDContainsFold(v string) predicate.Calendar {
-	return predicate.Calendar(sql.FieldContainsFold(FieldCalendarID, v))
-}
-
-// SummaryEQ applies the EQ predicate on the "summary" field.
-func SummaryEQ(v string) predicate.Calendar {
-	return predicate.Calendar(sql.FieldEQ(FieldSummary, v))
-}
-
-// SummaryNEQ applies the NEQ predicate on the "summary" field.
-func SummaryNEQ(v string) predicate.Calendar {
-	return predicate.Calendar(sql.FieldNEQ(FieldSummary, v))
-}
-
-// SummaryIn applies the In predicate on the "summary" field.
-func SummaryIn(vs ...string) predicate.Calendar {
-	return predicate.Calendar(sql.FieldIn(FieldSummary, vs...))
-}
-
-// SummaryNotIn applies the NotIn predicate on the "summary" field.
-func SummaryNotIn(vs ...string) predicate.Calendar {
-	return predicate.Calendar(sql.FieldNotIn(FieldSummary, vs...))
-}
-
-// SummaryGT applies the GT predicate on the "summary" field.
-func SummaryGT(v string) predicate.Calendar {
-	return predicate.Calendar(sql.FieldGT(FieldSummary, v))
-}
-
-// SummaryGTE applies the GTE predicate on the "summary" field.
-func SummaryGTE(v string) predicate.Calendar {
-	return predicate.Calendar(sql.FieldGTE(FieldSummary, v))
-}
-
-// SummaryLT applies the LT predicate on the "summary" field.
-func SummaryLT(v string) predicate.Calendar {
-	return predicate.Calendar(sql.FieldLT(FieldSummary, v))
-}
-
-// SummaryLTE applies the LTE predicate on the "summary" field.
-func SummaryLTE(v string) predicate.Calendar {
-	return predicate.Calendar(sql.FieldLTE(FieldSummary, v))
-}
-
-// SummaryContains applies the Contains predicate on the "summary" field.
-func SummaryContains(v string) predicate.Calendar {
-	return predicate.Calendar(sql.FieldContains(FieldSummary, v))
-}
-
-// SummaryHasPrefix applies the HasPrefix predicate on the "summary" field.
-func SummaryHasPrefix(v string) predicate.Calendar {
-	return predicate.Calendar(sql.FieldHasPrefix(FieldSummary, v))
-}
-
-// SummaryHasSuffix applies the HasSuffix predicate on the "summary" field.
-func SummaryHasSuffix(v string) predicate.Calendar {
-	return predicate.Calendar(sql.FieldHasSuffix(FieldSummary, v))
-}
-
-// SummaryEqualFold applies the EqualFold predicate on the "summary" field.
-func SummaryEqualFold(v string) predicate.Calendar {
-	return predicate.Calendar(sql.FieldEqualFold(FieldSummary, v))
-}
-
-// SummaryContainsFold applies the ContainsFold predicate on the "summary" field.
-func SummaryContainsFold(v string) predicate.Calendar {
-	return predicate.Calendar(sql.FieldContainsFold(FieldSummary, v))
-}
-
-// IsPrimaryEQ applies the EQ predicate on the "is_primary" field.
-func IsPrimaryEQ(v bool) predicate.Calendar {
-	return predicate.Calendar(sql.FieldEQ(FieldIsPrimary, v))
-}
-
-// IsPrimaryNEQ applies the NEQ predicate on the "is_primary" field.
-func IsPrimaryNEQ(v bool) predicate.Calendar {
-	return predicate.Calendar(sql.FieldNEQ(FieldIsPrimary, v))
-}
-
 // HasUser applies the HasEdge predicate on the "user" edge.
 func HasUser() predicate.Calendar {
 	return predicate.Calendar(func(s *sql.Selector) {
@@ -224,6 +69,29 @@ func HasUser() predicate.Calendar {
 func HasUserWith(preds ...predicate.User) predicate.Calendar {
 	return predicate.Calendar(func(s *sql.Selector) {
 		step := newUserStep()
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasGoogleCalendarInfos applies the HasEdge predicate on the "google_calendar_infos" edge.
+func HasGoogleCalendarInfos() predicate.Calendar {
+	return predicate.Calendar(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.Edge(sqlgraph.M2M, false, GoogleCalendarInfosTable, GoogleCalendarInfosPrimaryKey...),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasGoogleCalendarInfosWith applies the HasEdge predicate on the "google_calendar_infos" edge with a given conditions (other predicates).
+func HasGoogleCalendarInfosWith(preds ...predicate.GoogleCalendarInfo) predicate.Calendar {
+	return predicate.Calendar(func(s *sql.Selector) {
+		step := newGoogleCalendarInfosStep()
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {
 				p(s)

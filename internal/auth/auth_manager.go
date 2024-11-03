@@ -30,7 +30,10 @@ func NewAuthManager(client *ent.Client, userRepo user.UserRepository, oauthRepo 
 }
 
 func (am *AuthManager) ProcessUserSignIn(ctx context.Context, userInfo *userinfo.UserInfo, jwtToken *models.JWTToken, oauthToken *oauth2.Token) (*ent.User, error) {
-	u, err := am.userRepo.FindByEmail(ctx, nil, userInfo.Email)
+	userOtions := user.UserQueryOptions{
+		WithOAuthToken: true,
+	}
+	u, err := am.userRepo.FindByEmail(ctx, nil, userInfo.Email, userOtions)
 	if err != nil {
 		if ent.IsNotFound(err) {
 			// ユーザーが存在しない場合は新規作成
@@ -41,7 +44,7 @@ func (am *AuthManager) ProcessUserSignIn(ctx context.Context, userInfo *userinfo
 	}
 	// ユーザーが存在する場合はトークンを更新
 	println("updating login token")
-	return am.UpdateJWTAndOAuth(ctx, u.ID, jwtToken, oauthToken)
+	return am.UpdateJWTAndOAuth(ctx, u.ID, u.Edges.OauthToken.ID, jwtToken, oauthToken)
 }
 
 func (am *AuthManager) CreateUser(ctx context.Context, userInfo *userinfo.UserInfo, jwtToken *models.JWTToken, oauthToken *oauth2.Token) (*ent.User, error) {
@@ -67,7 +70,7 @@ func (am *AuthManager) CreateUser(ctx context.Context, userInfo *userinfo.UserIn
 	return u, nil
 }
 
-func (am *AuthManager) UpdateJWTAndOAuth(ctx context.Context, userID uuid.UUID, jwtToken *models.JWTToken, oauthToken *oauth2.Token) (*ent.User, error) {
+func (am *AuthManager) UpdateJWTAndOAuth(ctx context.Context, userID, oauthTokenID uuid.UUID, jwtToken *models.JWTToken, oauthToken *oauth2.Token) (*ent.User, error) {
 	tx, err := am.client.Tx(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed starting transaction: %w", err)
@@ -85,7 +88,8 @@ func (am *AuthManager) UpdateJWTAndOAuth(ctx context.Context, userID uuid.UUID, 
 		RefreshToken: &oauthToken.RefreshToken,
 		Expiry:       &oauthToken.Expiry,
 	}
-	_, err = am.oauthRepo.Update(ctx, tx, u.ID, oauthOptions)
+
+	_, err = am.oauthRepo.Update(ctx, tx, oauthTokenID, oauthOptions)
 	if err != nil {
 		return nil, fmt.Errorf("error updating oauthtoken: %w", err)
 	}

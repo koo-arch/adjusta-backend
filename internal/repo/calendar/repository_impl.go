@@ -8,6 +8,7 @@ import (
 	"github.com/koo-arch/adjusta-backend/ent"
 	"github.com/koo-arch/adjusta-backend/ent/user"
 	"github.com/koo-arch/adjusta-backend/ent/calendar"
+	"github.com/koo-arch/adjusta-backend/ent/googlecalendarinfo"
 )
 
 type CalendarRepositoryImpl struct {
@@ -20,11 +21,17 @@ func NewCalendarRepository(client *ent.Client) *CalendarRepositoryImpl {
 	}
 }
 
-func (r *CalendarRepositoryImpl) Read(ctx context.Context, tx *ent.Tx, id uuid.UUID) (*ent.Calendar, error) {
+func (r *CalendarRepositoryImpl) Read(ctx context.Context, tx *ent.Tx, id uuid.UUID, opt CalendarQueryOptions) (*ent.Calendar, error) {
+	findCalendar := r.client.Calendar.Query()
 	if tx != nil {
-		return tx.Calendar.Get(ctx, id)
+		findCalendar = tx.Calendar.Query()
 	}
-	return r.client.Calendar.Get(ctx, id)
+	
+	if opt.WithGoogleCalendarInfo {
+		findCalendar = findCalendar.WithGoogleCalendarInfos()
+	}
+
+	return findCalendar.Only(ctx)
 }
 
 func (r *CalendarRepositoryImpl) FilterByUserID(ctx context.Context, tx *ent.Tx, userID uuid.UUID) ([]*ent.Calendar, error) {
@@ -46,6 +53,11 @@ func (r *CalendarRepositoryImpl) FindByFields(ctx context.Context, tx *ent.Tx, u
 	if tx != nil {
 		findCalendar = tx.Calendar.Query()
 	}
+
+	if opt.WithGoogleCalendarInfo {
+		findCalendar = findCalendar.WithGoogleCalendarInfos()
+	}
+
 	query := r.applyCalendarQueryOptions(findCalendar, userID, opt)
 
 	return query.Only(ctx)
@@ -60,32 +72,37 @@ func (r *CalendarRepositoryImpl) FilterByFields(ctx context.Context, tx *ent.Tx,
 	if tx != nil {
 		filterCalendar = tx.Calendar.Query()
 	}
+
+	if opt.WithGoogleCalendarInfo {
+		filterCalendar = filterCalendar.WithGoogleCalendarInfos()
+	}
 	
 	query := r.applyCalendarQueryOptions(filterCalendar, userID, opt)
 
 	return query.All(ctx)
 }
 
-func (r *CalendarRepositoryImpl) Create(ctx context.Context, tx *ent.Tx, calendarID string, summary string, is_primary bool, entUser *ent.User) (*ent.Calendar, error) {
+func (r *CalendarRepositoryImpl) Create(ctx context.Context, tx *ent.Tx, entUser *ent.User, entGoogleCalendar *ent.GoogleCalendarInfo) (*ent.Calendar, error) {
 	createCalendar := r.client.Calendar.Create()
 	if tx != nil {
 		createCalendar = tx.Calendar.Create()
 	}
+
+	if entGoogleCalendar != nil {
+		createCalendar = createCalendar.AddGoogleCalendarInfos(entGoogleCalendar)
+	}
+
 	return createCalendar.
-		SetCalendarID(calendarID).
-		SetSummary(summary).
 		SetUser(entUser).
-		SetIsPrimary(is_primary).
 		Save(ctx)
 }
 
-func (r *CalendarRepositoryImpl) Update(ctx context.Context, tx *ent.Tx, id uuid.UUID, summary string) (*ent.Calendar, error) {
+func (r *CalendarRepositoryImpl) Update(ctx context.Context, tx *ent.Tx, id uuid.UUID) (*ent.Calendar, error) {
 	updateCalendar := r.client.Calendar.UpdateOneID(id)
 	if tx != nil {
 		updateCalendar = tx.Calendar.UpdateOneID(id)
 	}
 	return updateCalendar.
-		SetSummary(summary).
 		Save(ctx)
 }
 
@@ -99,14 +116,14 @@ func (r *CalendarRepositoryImpl) Delete(ctx context.Context, tx *ent.Tx, id uuid
 func (r *CalendarRepositoryImpl) applyCalendarQueryOptions(query *ent.CalendarQuery, userID uuid.UUID, opt CalendarQueryOptions) *ent.CalendarQuery {
 	query = query.Where(calendar.HasUserWith(user.IDEQ(userID)))
 
-	if opt.CalendarID != nil {
-		query = query.Where(calendar.CalendarIDEQ(*opt.CalendarID))
+	if opt.GoogleCalendarID != nil {
+		query = query.Where(calendar.HasGoogleCalendarInfosWith(googlecalendarinfo.GoogleCalendarIDEQ(*opt.GoogleCalendarID)))
 	}
 	if opt.Summary != nil {
-		query = query.Where(calendar.SummaryEQ(*opt.Summary))
+		query = query.Where(calendar.HasGoogleCalendarInfosWith(googlecalendarinfo.SummaryEQ(*opt.Summary)))
 	}
 	if opt.IsPrimary != nil {
-		query = query.Where(calendar.IsPrimaryEQ(*opt.IsPrimary))
+		query = query.Where(calendar.HasGoogleCalendarInfosWith(googlecalendarinfo.IsPrimaryEQ(*opt.IsPrimary)))
 	}
 
 	if opt.WithEvents {

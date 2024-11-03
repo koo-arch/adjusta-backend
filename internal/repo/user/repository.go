@@ -14,7 +14,7 @@ type UserQueryOptions struct {
 
 type UserRepository interface {
 	Read(ctx context.Context, tx *ent.Tx, id uuid.UUID, opt UserQueryOptions) (*ent.User, error)
-	FindByEmail(ctx context.Context, tx *ent.Tx, email string) (*ent.User, error)
+	FindByEmail(ctx context.Context, tx *ent.Tx, email string, opt UserQueryOptions) (*ent.User, error)
 	Create(ctx context.Context, tx *ent.Tx, email string, jwtToken *models.JWTToken) (*ent.User, error)
 	Update(ctx context.Context, tx *ent.Tx, id uuid.UUID, jwtToken *models.JWTToken) (*ent.User, error)
 	Delete(ctx context.Context, tx *ent.Tx, id uuid.UUID) error

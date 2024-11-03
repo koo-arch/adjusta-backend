@@ -1,18 +1,20 @@
 package middlewares
 
 import (
-	"net/http"
 	"context"
 	"fmt"
+	"net/http"
 	"time"
-	"strings"
 
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/koo-arch/adjusta-backend/ent"
-	"github.com/koo-arch/adjusta-backend/internal/repo/user"
 	customCalendar "github.com/koo-arch/adjusta-backend/internal/google/calendar"
+	repoCalendar "github.com/koo-arch/adjusta-backend/internal/repo/calendar"
+	"github.com/koo-arch/adjusta-backend/internal/repo/googlecalendarinfo"
+	"github.com/koo-arch/adjusta-backend/internal/repo/user"
+	"github.com/koo-arch/adjusta-backend/internal/transaction"
 )
 
 type CalendarMiddleware struct {
@@ -107,35 +109,70 @@ func(cm *CalendarMiddleware) fetchAndCacheCalendars(ctx context.Context, entUser
 }
 
 func(cm *CalendarMiddleware) syncCalendar(ctx context.Context, calendars []*customCalendar.CalendarList, entUser *ent.User) error {
-	calendarRepo := cm.middleware.Server.CalendarRepo
-	dbCalendars, err := calendarRepo.FilterByUserID(ctx, nil, entUser.ID)
+	// トランザクションを開始
+	tx, err := cm.middleware.Server.Client.Tx(ctx)
 	if err != nil {
-		return fmt.Errorf("failed to get calendars from db for user: %s, error: %w", entUser.Email, err)
+		return fmt.Errorf("failed starting transaction: %w", err)
 	}
 
-	// Googleから取得したカレンダーとデータベースのカレンダーを比較
-	calendarMap := make(map[string]*customCalendar.CalendarList)
+	// トランザクションをデファーで処理
+	defer transaction.HandleTransaction(tx, &err)
+
+	calendarRepo := cm.middleware.Server.CalendarRepo
+	googleCalendarRepo := cm.middleware.Server.GoogleCalendarRepo
+
+	
+	// カレンダーがDBに存在するか確認
 	for _, cal := range calendars {
-		calendarMap[cal.CalendarID] = cal
-	}
-
-	// データベースに存在するカレンダーをマップから削除
-	for _, dbCal := range dbCalendars {
-		if _, ok := calendarMap[dbCal.CalendarID]; ok {
-			delete(calendarMap, dbCal.CalendarID)
+		// カレンダーがDBに存在するか確認
+		repoCalOptions := repoCalendar.CalendarQueryOptions{
+			WithGoogleCalendarInfo: true,
+			GoogleCalendarID: &cal.CalendarID,
 		}
-	}
-
-	// データベースに存在しないカレンダーを追加
-	for _, cal := range calendarMap {
-		if _, err := calendarRepo.Create(ctx, nil, cal.CalendarID, cal.Summary, cal.Primary, entUser); err != nil {
-			if strings.Contains(err.Error(), "is already in use by another account of the same user") {
-				fmt.Printf("calendar already exists: %s\n", cal.Summary)
-				continue
+		entCalendar, err := calendarRepo.FindByFields(ctx, tx, entUser.ID, repoCalOptions)
+		if err != nil {
+			if !ent.IsNotFound(err) {
+				return fmt.Errorf("failed to find calendar: %w", err)
 			}
-			return fmt.Errorf("failed to insert calendar to google calendar: %s, error: %w", cal.Summary, err)
+			
+			// カレンダーが存在しない場合は新規作成
+			entCalendar, err = calendarRepo.Create(ctx, tx, entUser, nil)
+			if err != nil {
+				return fmt.Errorf("failed to create calendar: %w", err)
+			}
+		}
+
+		// GoogleCalendarInfoにカレンダーが存在するか確認
+		gCalOptions := googlecalendarinfo.GoogleCalendarInfoQueryOptions{
+			GoogleCalendarID : &cal.CalendarID,
+		}
+		entGoogleCalendar, err := googleCalendarRepo.FindByFields(ctx, tx, gCalOptions)
+		if err != nil {
+			if !ent.IsNotFound(err) {
+				return fmt.Errorf("failed to find google calendar info: %w", err)
+			}
+
+			// 存在しない場合は新規作成
+			gCalOptions := googlecalendarinfo.GoogleCalendarInfoQueryOptions{
+				GoogleCalendarID: &cal.CalendarID,
+				Summary: &cal.Summary,
+				IsPrimary: &cal.Primary,
+			}
+			_, err := googleCalendarRepo.Create(ctx, tx, gCalOptions, entCalendar)
+			if err != nil {
+				return fmt.Errorf("failed to create google calendar info: %w", err)
+			}
+		}
+
+		// カレンダーが存在する場合は関連付け
+		if entGoogleCalendar != nil {
+			_, err := googleCalendarRepo.Update(ctx, tx, entGoogleCalendar.ID, googlecalendarinfo.GoogleCalendarInfoQueryOptions{}, entCalendar)
+			if err != nil {
+				return fmt.Errorf("failed to update google calendar info: %w", err)
+			}
 		}
 	}
 
+	// トランザクションをコミット
 	return nil
 }

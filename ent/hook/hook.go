@@ -33,6 +33,18 @@ func (f EventFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.EventMutation", m)
 }
 
+// The GoogleCalendarInfoFunc type is an adapter to allow the use of ordinary
+// function as GoogleCalendarInfo mutator.
+type GoogleCalendarInfoFunc func(context.Context, *ent.GoogleCalendarInfoMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f GoogleCalendarInfoFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.GoogleCalendarInfoMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.GoogleCalendarInfoMutation", m)
+}
+
 // The JWTKeyFunc type is an adapter to allow the use of ordinary
 // function as JWTKey mutator.
 type JWTKeyFunc func(context.Context, *ent.JWTKeyMutation) (ent.Value, error)

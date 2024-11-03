@@ -9,6 +9,7 @@ import (
 	"github.com/koo-arch/adjusta-backend/internal/auth"
 	"github.com/koo-arch/adjusta-backend/internal/repo/oauthtoken"
 	dbCalendar "github.com/koo-arch/adjusta-backend/internal/repo/calendar"
+	"github.com/koo-arch/adjusta-backend/internal/repo/googlecalendarinfo"
 	"github.com/koo-arch/adjusta-backend/internal/repo/event"
 	"github.com/koo-arch/adjusta-backend/internal/repo/proposeddate"
 	"github.com/koo-arch/adjusta-backend/internal/repo/user"
@@ -20,6 +21,7 @@ type Server struct {
 	UserRepo      			 user.UserRepository
 	OAuthRepo   			 oauthtoken.OAuthTokenRepository
 	CalendarRepo  			 dbCalendar.CalendarRepository
+	GoogleCalendarRepo   	 googlecalendarinfo.GoogleCalendarInfoRepository
 	EventRepo     			 event.EventRepository
 	DateRepo      			 proposeddate.ProposedDateRepository
 	AuthManager   			 *auth.AuthManager
@@ -38,6 +40,7 @@ func NewServer(client *ent.Client) *Server {
 	userRepo := user.NewUserRepository(client)
 	oauthRepo := oauthtoken.NewOAuthTokenRepository(client)
 	calendarRepo := dbCalendar.NewCalendarRepository(client)
+	googleCalendarRepo := googlecalendarinfo.NewGoogleCalendarInfoRepository(client)
 	eventRepo := event.NewEventRepository(client)
 	dateRepo := proposeddate.NewProposedDateRepository(client)
 	calendarApp := appCalendar.NewGoogleCalendarManager(client) // Google Calendar API manager
@@ -45,7 +48,7 @@ func NewServer(client *ent.Client) *Server {
 	jwtManager := auth.NewJWTManager(client, keyManager)
 	authManager := auth.NewAuthManager(client, userRepo, oauthRepo)
 
-	eventManager := appEvents.NewEventManager(client, authManager, calendarRepo, eventRepo, dateRepo, calendarApp)
+	eventManager := appEvents.NewEventManager(client, authManager, calendarRepo, googleCalendarRepo, eventRepo, dateRepo, calendarApp)
 
 	return &Server{
 		Client:        			  client,
@@ -53,6 +56,7 @@ func NewServer(client *ent.Client) *Server {
 		UserRepo:      			  userRepo,
 		OAuthRepo:     			  oauthRepo,
 		CalendarRepo:  			  calendarRepo,
+		GoogleCalendarRepo:      googleCalendarRepo,
 		EventRepo:     			  eventRepo,
 		DateRepo:      			  dateRepo,
 		AuthManager:   			  authManager,

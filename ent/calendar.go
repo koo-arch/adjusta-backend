@@ -15,15 +15,9 @@ import (
 
 // Calendar is the model entity for the Calendar schema.
 type Calendar struct {
-	config `json:"-"`
+	config
 	// ID of the ent.
 	ID uuid.UUID `json:"id,omitempty"`
-	// CalendarID holds the value of the "calendar_id" field.
-	CalendarID string `json:"calendar_id,omitempty"`
-	// Summary holds the value of the "summary" field.
-	Summary string `json:"summary,omitempty"`
-	// IsPrimary holds the value of the "is_primary" field.
-	IsPrimary bool `json:"is_primary,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the CalendarQuery when eager-loading is set.
 	Edges          CalendarEdges `json:"edges"`
@@ -35,11 +29,13 @@ type Calendar struct {
 type CalendarEdges struct {
 	// User holds the value of the user edge.
 	User *User `json:"user,omitempty"`
+	// GoogleCalendarInfos holds the value of the google_calendar_infos edge.
+	GoogleCalendarInfos []*GoogleCalendarInfo `json:"google_calendar_infos,omitempty"`
 	// Events holds the value of the events edge.
 	Events []*Event `json:"events,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [2]bool
+	loadedTypes [3]bool
 }
 
 // UserOrErr returns the User value or an error if the edge
@@ -53,10 +49,19 @@ func (e CalendarEdges) UserOrErr() (*User, error) {
 	return nil, &NotLoadedError{edge: "user"}
 }
 
+// GoogleCalendarInfosOrErr returns the GoogleCalendarInfos value or an error if the edge
+// was not loaded in eager-loading.
+func (e CalendarEdges) GoogleCalendarInfosOrErr() ([]*GoogleCalendarInfo, error) {
+	if e.loadedTypes[1] {
+		return e.GoogleCalendarInfos, nil
+	}
+	return nil, &NotLoadedError{edge: "google_calendar_infos"}
+}
+
 // EventsOrErr returns the Events value or an error if the edge
 // was not loaded in eager-loading.
 func (e CalendarEdges) EventsOrErr() ([]*Event, error) {
-	if e.loadedTypes[1] {
+	if e.loadedTypes[2] {
 		return e.Events, nil
 	}
 	return nil, &NotLoadedError{edge: "events"}
@@ -67,10 +72,6 @@ func (*Calendar) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case calendar.FieldIsPrimary:
-			values[i] = new(sql.NullBool)
-		case calendar.FieldCalendarID, calendar.FieldSummary:
-			values[i] = new(sql.NullString)
 		case calendar.FieldID:
 			values[i] = new(uuid.UUID)
 		case calendar.ForeignKeys[0]: // user_calendars
@@ -96,24 +97,6 @@ func (c *Calendar) assignValues(columns []string, values []any) error {
 			} else if value != nil {
 				c.ID = *value
 			}
-		case calendar.FieldCalendarID:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field calendar_id", values[i])
-			} else if value.Valid {
-				c.CalendarID = value.String
-			}
-		case calendar.FieldSummary:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field summary", values[i])
-			} else if value.Valid {
-				c.Summary = value.String
-			}
-		case calendar.FieldIsPrimary:
-			if value, ok := values[i].(*sql.NullBool); !ok {
-				return fmt.Errorf("unexpected type %T for field is_primary", values[i])
-			} else if value.Valid {
-				c.IsPrimary = value.Bool
-			}
 		case calendar.ForeignKeys[0]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
 				return fmt.Errorf("unexpected type %T for field user_calendars", values[i])
@@ -137,6 +120,11 @@ func (c *Calendar) Value(name string) (ent.Value, error) {
 // QueryUser queries the "user" edge of the Calendar entity.
 func (c *Calendar) QueryUser() *UserQuery {
 	return NewCalendarClient(c.config).QueryUser(c)
+}
+
+// QueryGoogleCalendarInfos queries the "google_calendar_infos" edge of the Calendar entity.
+func (c *Calendar) QueryGoogleCalendarInfos() *GoogleCalendarInfoQuery {
+	return NewCalendarClient(c.config).QueryGoogleCalendarInfos(c)
 }
 
 // QueryEvents queries the "events" edge of the Calendar entity.
@@ -166,15 +154,7 @@ func (c *Calendar) Unwrap() *Calendar {
 func (c *Calendar) String() string {
 	var builder strings.Builder
 	builder.WriteString("Calendar(")
-	builder.WriteString(fmt.Sprintf("id=%v, ", c.ID))
-	builder.WriteString("calendar_id=")
-	builder.WriteString(c.CalendarID)
-	builder.WriteString(", ")
-	builder.WriteString("summary=")
-	builder.WriteString(c.Summary)
-	builder.WriteString(", ")
-	builder.WriteString("is_primary=")
-	builder.WriteString(fmt.Sprintf("%v", c.IsPrimary))
+	builder.WriteString(fmt.Sprintf("id=%v", c.ID))
 	builder.WriteByte(')')
 	return builder.String()
 }

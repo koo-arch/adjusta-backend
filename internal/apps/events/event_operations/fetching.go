@@ -44,12 +44,22 @@ func (efm *EventFetchingManager) FetchAllGoogleEvents(ctx context.Context, userI
 	startTime := now.AddDate(0, -2, 0)
 	endTime := now.AddDate(1, 0, 0)
 
-	calendars, err := efm.event.CalendarRepo.FilterByUserID(ctx, nil, userID)
+	calendarOptions := repoCalendar.CalendarQueryOptions{
+		WithGoogleCalendarInfo: true,
+	}
+	calendars, err := efm.event.CalendarRepo.FilterByFields(ctx, nil, userID, calendarOptions)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get calendars from db for account: %s, error: %w", email, err)
 	}
 
-	events, err := efm.event.CalendarApp.FetchEventsFromCalendars(calendarService, calendars, startTime, endTime)
+	var entGoogleCalendars []*ent.GoogleCalendarInfo
+	for _, cal := range calendars {
+		if cal.Edges.GoogleCalendarInfos != nil {
+			entGoogleCalendars = append(entGoogleCalendars, cal.Edges.GoogleCalendarInfos...)
+		}
+	}
+
+	events, err := efm.event.CalendarApp.FetchEventsFromCalendars(calendarService, entGoogleCalendars, startTime, endTime)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch events for account: %s, error: %w", email, err)
 	}
