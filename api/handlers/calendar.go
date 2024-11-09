@@ -8,6 +8,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/koo-arch/adjusta-backend/internal/models"
+	"github.com/koo-arch/adjusta-backend/queryparser"
 )
 
 type CalendarHandler struct {
@@ -58,7 +59,7 @@ func (ch *CalendarHandler) FetchEventListHandler() gin.HandlerFunc {
 	}
 }
 
-func (ch *CalendarHandler) FetchEventDraftListHandler() gin.HandlerFunc {
+func (ch *CalendarHandler) FetchAllEventDraftListHandler() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		ctx := c.Request.Context()
 
@@ -88,7 +89,61 @@ func (ch *CalendarHandler) FetchEventDraftListHandler() gin.HandlerFunc {
 
 		eventFetchingManager := ch.handler.Server.EventFetchingManager
 
-		draftedEvents, err := eventFetchingManager.FetchDraftedEvents(ctx, userid, emailStr)
+		draftedEvents, err := eventFetchingManager.FetchAllDraftedEvents(ctx, userid, emailStr)
+		if err != nil {
+			fmt.Printf("failed to fetch events: %v", err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch events"})
+			c.Abort()
+			return
+		}
+
+		c.JSON(http.StatusOK, draftedEvents)
+	}
+}
+
+func (ch *CalendarHandler) SearchEventDraftHandler() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		// クエリパラメータの取得
+		queryparser := queryparser.NewQueryParser(c)
+
+		// クエリパラメータの解析
+		query, err := queryparser.ParseSearchEventQuery()
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "failed to parse query"})
+			c.Abort()
+			return
+		}
+		
+
+		ctx := c.Request.Context()
+
+		session := sessions.Default(c)
+		useridStr, ok := session.Get("userid").(string)
+		if !ok {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "failed to get userid from session"})
+			c.Abort()
+			return
+		}
+
+		userid, err := uuid.Parse(useridStr)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid userid format"})
+			c.Abort()
+			return
+		}
+
+		email, ok := c.Get("email")
+		if !ok {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "failed to get email from context"})
+			c.Abort()
+			return
+		}
+
+		emailStr, ok := email.(string)
+
+		eventFetchingManager := ch.handler.Server.EventFetchingManager
+
+		draftedEvents, err := eventFetchingManager.SearchDraftedEvents(ctx, userid, emailStr, *query)
 		if err != nil {
 			fmt.Printf("failed to fetch events: %v", err)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch events"})

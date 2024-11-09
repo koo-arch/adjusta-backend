@@ -8,6 +8,7 @@ import (
 	"github.com/koo-arch/adjusta-backend/ent"
 	dbCalendar "github.com/koo-arch/adjusta-backend/ent/calendar"
 	"github.com/koo-arch/adjusta-backend/ent/event"
+	"github.com/koo-arch/adjusta-backend/ent/proposeddate"
 )
 
 type EventRepositoryImpl struct {
@@ -115,4 +116,63 @@ func (r *EventRepositoryImpl) Delete(ctx context.Context, tx *ent.Tx, id uuid.UU
 		return tx.Event.DeleteOneID(id).Exec(ctx)
 	}
 	return r.client.Event.DeleteOneID(id).Exec(ctx)
+}
+
+func (r *EventRepositoryImpl) SearchEvents (ctx context.Context, tx *ent.Tx, id, calendarID uuid.UUID, opt EventQueryOptions) ([]*ent.Event, error) {
+	query := r.client.Event.Query()
+	if tx != nil {
+		query = tx.Event.Query()
+	}
+
+	query = query.Where(event.HasCalendarWith(dbCalendar.IDEQ(calendarID)))
+
+	if opt.Summary != nil {
+		query = query.Where(event.SummaryContains(*opt.Summary))
+	}
+
+	if opt.Location != nil {
+		query = query.Where(event.LocationContains(*opt.Location))
+	}
+
+	if opt.Description != nil {
+		query = query.Where(event.DescriptionContains(*opt.Description))
+	}
+
+	if opt.Status != nil {
+		query = query.Where(event.StatusEQ(event.Status(*opt.Status)))
+	}
+
+	if opt.ConfirmedDateID != nil {
+		query = query.Where(event.ConfirmedDateIDEQ(*opt.ConfirmedDateID))
+	}
+
+	// イベントに対するオフセットとリミットを適用
+	if opt.EventOffset > 0 {
+		query = query.Offset(opt.EventOffset)
+	}
+	if opt.EventLimit > 0 {
+		query = query.Limit(opt.EventLimit)
+	}
+
+	// イベントの提案日に対するオフセットとリミットを適用
+	if opt.WithProposedDates {
+		query = query.WithProposedDates(func(query *ent.ProposedDateQuery) {
+			if opt.ProposedDateOffset > 0 {
+				query = query.Offset(opt.ProposedDateOffset)
+			}
+			if opt.ProposedDateLimit > 0 {
+				query = query.Limit(opt.ProposedDateLimit)
+			}
+
+			if opt.ProposedDateStartTime != nil {
+				query = query.Where(proposeddate.StartTimeGTE(*opt.ProposedDateStartTime))
+			}
+
+			if opt.ProposedDateEndTime != nil {
+				query = query.Where(proposeddate.EndTimeLTE(*opt.ProposedDateEndTime))
+			}
+		})
+	}
+
+	return query.All(ctx)
 }

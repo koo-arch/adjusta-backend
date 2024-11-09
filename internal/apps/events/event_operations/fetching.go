@@ -67,7 +67,7 @@ func (efm *EventFetchingManager) FetchAllGoogleEvents(ctx context.Context, userI
 	return events, nil
 }
 
-func (efm *EventFetchingManager) FetchDraftedEvents(ctx context.Context, userID uuid.UUID, email string) ([]*models.EventDraftDetail, error) {
+func (efm *EventFetchingManager) FetchAllDraftedEvents(ctx context.Context, userID uuid.UUID, email string) ([]*models.EventDraftDetail, error) {
 	isPrimary := true
 	findOptions := repoCalendar.CalendarQueryOptions{
 		IsPrimary:         &isPrimary,
@@ -116,13 +116,13 @@ func (efm *EventFetchingManager) FetchDraftedEvents(ctx context.Context, userID 
 			// 同時に書き込むことがないようにミューテックスを使う
 			mu.Lock()
 			draftedEvents = append(draftedEvents, &models.EventDraftDetail{
-				ID:            entEvent.ID,
-				Title:         entEvent.Summary,
-				Location:      entEvent.Location,
-				Description:   entEvent.Description,
-				Status:		   models.EventStatus(entEvent.Status),
+				ID:              entEvent.ID,
+				Title:           entEvent.Summary,
+				Location:        entEvent.Location,
+				Description:     entEvent.Description,
+				Status:          models.EventStatus(entEvent.Status),
 				ConfirmedDateID: &entEvent.ConfirmedDateID,
-				ProposedDates: proposedDates,
+				ProposedDates:   proposedDates,
 			})
 			mu.Unlock()
 		}(entEvent)
@@ -136,6 +136,67 @@ func (efm *EventFetchingManager) FetchDraftedEvents(ctx context.Context, userID 
 	}
 
 	return draftedEvents, nil
+}
+
+func (efm *EventFetchingManager) SearchDraftedEvents (ctx context.Context, userID uuid.UUID, email string, query event.EventQueryOptions) ([]*models.EventDraftDetail, error) {
+	isPrimary := true
+	calendarOptions := repoCalendar.CalendarQueryOptions{
+		IsPrimary: &isPrimary,
+	}
+
+	entCalendar, err := efm.event.CalendarRepo.FindByFields(ctx, nil, userID, calendarOptions)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get primary calendar for account: %s, error: %w", email, err)
+	}
+
+	eventOptions := event.EventQueryOptions{
+		WithProposedDates: true,
+		Summary : query.Summary,
+		Location : query.Location,
+		Description : query.Description,
+		Status : query.Status,
+		ProposedDateStartTime: query.ProposedDateStartTime,
+		ProposedDateEndTime: query.ProposedDateEndTime,
+	}
+	entEvent, err := efm.event.EventRepo.SearchEvents(ctx, nil, userID, entCalendar.ID, eventOptions)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get events for account: %s, error: %w", email, err)
+	}
+
+	var serchResult []*models.EventDraftDetail
+	for _, event := range entEvent {
+		if event.Edges.ProposedDates == nil {
+			return nil, fmt.Errorf("failed to get proposed dates for account: %s", email)
+		}
+
+		var proposedDates []models.ProposedDate
+		for _, entDate := range event.Edges.ProposedDates {
+			proposedDates = append(proposedDates, models.ProposedDate{
+				ID:            &entDate.ID,
+				GoogleEventID: entDate.GoogleEventID,
+				Start:         &entDate.StartTime,
+				End:           &entDate.EndTime,
+				Priority:      entDate.Priority,
+			})
+		}
+
+		// Priorityに基づいてProposedDatesを昇順にソート
+		sort.Slice(proposedDates, func(i, j int) bool {
+			return proposedDates[i].Priority < proposedDates[j].Priority
+		})
+
+		serchResult = append(serchResult, &models.EventDraftDetail{
+			ID:              event.ID,
+			Title:           event.Summary,
+			Location:        event.Location,
+			Description:     event.Description,
+			Status:          models.EventStatus(event.Status),
+			ConfirmedDateID: &event.ConfirmedDateID,
+			ProposedDates:   proposedDates,
+		})
+	}
+	
+	return serchResult, nil
 }
 
 func (efm *EventFetchingManager) FetchDraftedEventDetail(ctx context.Context, userID uuid.UUID, email string, eventID uuid.UUID) (*models.EventDraftDetail, error) {
@@ -175,12 +236,12 @@ func (efm *EventFetchingManager) FetchDraftedEventDetail(ctx context.Context, us
 	})
 
 	return &models.EventDraftDetail{
-		ID:            entEvent.ID,
-		Title:         entEvent.Summary,
-		Location:      entEvent.Location,
-		Description:   entEvent.Description,
-		Status:        models.EventStatus(entEvent.Status),
+		ID:              entEvent.ID,
+		Title:           entEvent.Summary,
+		Location:        entEvent.Location,
+		Description:     entEvent.Description,
+		Status:          models.EventStatus(entEvent.Status),
 		ConfirmedDateID: &entEvent.ConfirmedDateID,
-		ProposedDates: proposedDates,
+		ProposedDates:   proposedDates,
 	}, nil
 }

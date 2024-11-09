@@ -2,6 +2,7 @@ package event
 
 import (
 	"context"
+	"time"
 
 	"github.com/google/uuid"
 	"google.golang.org/api/calendar/v3"
@@ -20,6 +21,8 @@ type EventQueryOptions struct {
 	EventLimit        int
 	ProposedDateOffset int
 	ProposedDateLimit  int
+	ProposedDateStartTime *time.Time
+	ProposedDateEndTime   *time.Time
 }
 
 type EventRepository interface {
@@ -28,4 +31,5 @@ type EventRepository interface {
 	Create(ctx context.Context, tx *ent.Tx, googleEvent *calendar.Event, entCalendar *ent.Calendar) (*ent.Event, error)
 	Update(ctx context.Context, tx *ent.Tx, id uuid.UUID, opt EventQueryOptions) (*ent.Event, error)
 	Delete(ctx context.Context, tx *ent.Tx, id uuid.UUID) error
+	SearchEvents(ctx context.Context, tx *ent.Tx, id, calendarID uuid.UUID, opt EventQueryOptions) ([]*ent.Event, error)
 }

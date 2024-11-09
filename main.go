@@ -118,13 +118,15 @@ func main() {
 		calendar := auth.Group("/calendar").Use(calendarMiddleware.SyncGoogleCalendars())
 		{
 			calendar.GET("/list", calendarHandler.FetchEventListHandler())
-			calendar.GET("/event/draft/list", calendarHandler.FetchEventDraftListHandler())
+			calendar.GET("/event/draft/list", calendarHandler.FetchAllEventDraftListHandler())
 			calendar.GET("/event/draft/:eventID", calendarHandler.FetchEventDraftDetailHandler())
 			calendar.POST("/event/draft", calendarHandler.CreateEventDraftHandler())
 			calendar.PATCH("/event/confirm/:eventID", calendarHandler.EventFinalizeHandler())
 			calendar.PUT("/event/draft/:eventID", calendarHandler.UpdateEventDraftHandler())
 			calendar.DELETE("/event/draft/:eventID", calendarHandler.DeleteEventDraftHandler())
 		}
+
+		auth.GET("/event/draft/search", calendarHandler.SearchEventDraftHandler())
 	}
 
 	// サーバー起動

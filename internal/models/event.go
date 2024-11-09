@@ -66,3 +66,12 @@ type ConfirmDate struct {
 	End           *time.Time `json:"end"`
 	Priority      int        `json:"priority"`
 }
+
+type EventDraftQueryOptions struct {
+	Title 	 string
+	Location string
+	Description string
+	Status   EventStatus
+	StartDate time.Time
+	EndDate   time.Time
+}
