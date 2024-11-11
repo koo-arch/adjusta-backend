@@ -14,8 +14,6 @@ const (
 	Label = "proposed_date"
 	// FieldID holds the string denoting the id field in the database.
 	FieldID = "id"
-	// FieldGoogleEventID holds the string denoting the google_event_id field in the database.
-	FieldGoogleEventID = "google_event_id"
 	// FieldStartTime holds the string denoting the start_time field in the database.
 	FieldStartTime = "start_time"
 	// FieldEndTime holds the string denoting the end_time field in the database.
@@ -38,7 +36,6 @@ const (
 // Columns holds all SQL columns for proposeddate fields.
 var Columns = []string{
 	FieldID,
-	FieldGoogleEventID,
 	FieldStartTime,
 	FieldEndTime,
 	FieldPriority,
@@ -84,11 +81,6 @@ type OrderOption func(*sql.Selector)
 // ByID orders the results by the id field.
 func ByID(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldID, opts...).ToFunc()
-}
-
-// ByGoogleEventID orders the results by the google_event_id field.
-func ByGoogleEventID(opts ...sql.OrderTermOption) OrderOption {
-	return sql.OrderByField(FieldGoogleEventID, opts...).ToFunc()
 }
 
 // ByStartTime orders the results by the start_time field.

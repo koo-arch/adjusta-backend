@@ -3,6 +3,7 @@ package events
 import (
 	"context"
 	"fmt"
+	"log"
 
 	"github.com/koo-arch/adjusta-backend/ent"
 	"github.com/google/uuid"
@@ -15,6 +16,7 @@ import (
 	customCalendar "github.com/koo-arch/adjusta-backend/internal/google/calendar"
 	"github.com/koo-arch/adjusta-backend/internal/transaction"
 	"github.com/koo-arch/adjusta-backend/internal/models"
+	"google.golang.org/api/googleapi"
 )
 
 type EventManager struct {
@@ -80,7 +82,7 @@ func (em *EventManager) FinalizeProposedDate(ctx context.Context, userID, eventI
 	}
 
 	// いずれかの日程候補を確定
-	err = em.ConfirmEventDate(ctx, tx, googleEventID, eventReq, entEvent)
+	err = em.ConfirmEventDate(ctx, tx, calendarService, googleEventID, eventReq, entEvent)
 	if err != nil {
 		return fmt.Errorf("failed to confirm event date for account: %s, error: %w", email, err)
 	}
@@ -120,24 +122,57 @@ func (em *EventManager) HandleGoogleEvent(calendarService *customCalendar.Calend
 	return googleEventID, nil
 }
 
-func (em *EventManager) ConfirmEventDate(ctx context.Context, tx *ent.Tx, googleEventID *string, eventReq *models.ConfirmEvent, entEvent *ent.Event) error {
-	priority := 0
-	// 優先度が設定されている場合は設定
-	if eventReq.ConfirmDate.Priority > 0 {
-		priority = eventReq.ConfirmDate.Priority
-	}
+func (em *EventManager) ConfirmEventDate(ctx context.Context, tx *ent.Tx, calendarService *customCalendar.Calendar, googleEventID *string, eventReq *models.ConfirmEvent, entEvent *ent.Event) error {
+	priority := 1
 	dateOptions := proposeddate.ProposedDateQueryOptions{
-		GoogleEventID: googleEventID,
-		StartTime:     eventReq.ConfirmDate.Start,
-		EndTime:       eventReq.ConfirmDate.End,
 		Priority:      &priority,
 	}
 
 	// 確定日程がDBに存在しない場合は新規作成
+	confirmDateID := eventReq.ConfirmDate.ID
 	if eventReq.ConfirmDate.ID == nil {
-		_, err := em.DateRepo.Create(ctx, tx, googleEventID, dateOptions, entEvent)
+		// オプションに確定日程を設定
+		dateOptions.StartTime = eventReq.ConfirmDate.Start
+		dateOptions.EndTime = eventReq.ConfirmDate.End
+
+		entDate, err := em.DateRepo.Create(ctx, tx, dateOptions, entEvent)
 		if err != nil {
 			return fmt.Errorf("failed to create proposed date error: %w", err)
+		}
+		confirmDateID = &entDate.ID
+
+		// 他の日程候補の優先度を下げる
+		err = em.DateRepo.DecrementPriorityExceptID(ctx, tx, entDate.ID)
+		if err != nil {
+			return fmt.Errorf("failed to decrement priority error: %w", err)
+		}
+	}
+
+	// 確定日程がDBに存在する場合は更新
+	if eventReq.ConfirmDate.ID != nil {
+		// 既存のGoogleカレンダーイベントを削除
+		err := calendarService.DeleteEvent(entEvent.GoogleEventID)
+		if err != nil {
+			// イベントが存在しないまたは削除済みの場合はエラーを無視
+			if gerr, ok := err.(*googleapi.Error); ok && gerr.Code != 410 && gerr.Code != 404 {
+				return fmt.Errorf("failed to delete event from Google Calendar: %w", err)
+			}
+			log.Printf("Event not found or already deleted in Google Calendar: %s", entEvent.GoogleEventID)
+		}
+
+		// オプションの優先順位を一度0に設定してから更新
+		zero := 0
+		dateOptions.Priority = &zero
+
+		_, err = em.DateRepo.Update(ctx, tx, *eventReq.ConfirmDate.ID, dateOptions)
+		if err != nil {
+			return fmt.Errorf("failed to update proposed date error: %w", err)
+		}
+
+		// Priorityを振り直す
+		err = em.DateRepo.ReorderPriority(ctx, tx, entEvent.ID)
+		if err != nil {
+			return fmt.Errorf("failed to reorder priority error: %w", err)
 		}
 	}
 
@@ -145,7 +180,8 @@ func (em *EventManager) ConfirmEventDate(ctx context.Context, tx *ent.Tx, google
 	status := models.StatusConfirmed
 	eventOptions := event.EventQueryOptions{
 		Status: &status,
-		ConfirmedDateID: eventReq.ConfirmDate.ID,
+		ConfirmedDateID: confirmDateID,
+		GoogleEventID: googleEventID,
 	}
 	_, err := em.EventRepo.Update(ctx, tx, entEvent.ID, eventOptions)
 	if err != nil {

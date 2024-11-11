@@ -43,12 +43,12 @@ type EventDraftDetail struct {
 	Description   string         `json:"description"`
 	Status        EventStatus    `json:"status"`
 	ConfirmedDateID *uuid.UUID    `json:"confirmed_date_id"`
+	GoogleEventID string     `json:"google_event_id"`
 	ProposedDates []ProposedDate `json:"proposed_dates"`
 }
 
 type ProposedDate struct {
 	ID            *uuid.UUID  `json:"id"`
-	GoogleEventID string     `json:"event_id"`
 	Start         *time.Time `json:"start"`
 	End           *time.Time `json:"end"`
 	Priority      int        `json:"priority"`
@@ -61,7 +61,7 @@ type ConfirmEvent struct {
 
 type ConfirmDate struct {
 	ID            *uuid.UUID `json:"id"`
-	GoogleEventID string     `json:"event_id"`
+	GoogleEventID string     `json:"google_event_id"`
 	Start         *time.Time `json:"start"`
 	End           *time.Time `json:"end"`
 	Priority      int        `json:"priority"`
@@ -74,4 +74,5 @@ type EventDraftQueryOptions struct {
 	Status   EventStatus
 	StartDate time.Time
 	EndDate   time.Time
+	GoogleEventID string
 }

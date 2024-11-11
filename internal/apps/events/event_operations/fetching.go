@@ -101,7 +101,6 @@ func (efm *EventFetchingManager) FetchAllDraftedEvents(ctx context.Context, user
 			for _, entDate := range entEvent.Edges.ProposedDates {
 				proposedDates = append(proposedDates, models.ProposedDate{
 					ID:            &entDate.ID,
-					GoogleEventID: entDate.GoogleEventID,
 					Start:         &entDate.StartTime,
 					End:           &entDate.EndTime,
 					Priority:      entDate.Priority,
@@ -122,6 +121,7 @@ func (efm *EventFetchingManager) FetchAllDraftedEvents(ctx context.Context, user
 				Description:     entEvent.Description,
 				Status:          models.EventStatus(entEvent.Status),
 				ConfirmedDateID: &entEvent.ConfirmedDateID,
+				GoogleEventID:   entEvent.GoogleEventID,
 				ProposedDates:   proposedDates,
 			})
 			mu.Unlock()
@@ -138,7 +138,7 @@ func (efm *EventFetchingManager) FetchAllDraftedEvents(ctx context.Context, user
 	return draftedEvents, nil
 }
 
-func (efm *EventFetchingManager) SearchDraftedEvents (ctx context.Context, userID uuid.UUID, email string, query event.EventQueryOptions) ([]*models.EventDraftDetail, error) {
+func (efm *EventFetchingManager) SearchDraftedEvents(ctx context.Context, userID uuid.UUID, email string, query event.EventQueryOptions) ([]*models.EventDraftDetail, error) {
 	isPrimary := true
 	calendarOptions := repoCalendar.CalendarQueryOptions{
 		IsPrimary: &isPrimary,
@@ -173,7 +173,6 @@ func (efm *EventFetchingManager) SearchDraftedEvents (ctx context.Context, userI
 		for _, entDate := range event.Edges.ProposedDates {
 			proposedDates = append(proposedDates, models.ProposedDate{
 				ID:            &entDate.ID,
-				GoogleEventID: entDate.GoogleEventID,
 				Start:         &entDate.StartTime,
 				End:           &entDate.EndTime,
 				Priority:      entDate.Priority,
@@ -192,6 +191,7 @@ func (efm *EventFetchingManager) SearchDraftedEvents (ctx context.Context, userI
 			Description:     event.Description,
 			Status:          models.EventStatus(event.Status),
 			ConfirmedDateID: &event.ConfirmedDateID,
+			GoogleEventID:   event.GoogleEventID,
 			ProposedDates:   proposedDates,
 		})
 	}
@@ -223,7 +223,6 @@ func (efm *EventFetchingManager) FetchDraftedEventDetail(ctx context.Context, us
 	for _, entDate := range entEvent.Edges.ProposedDates {
 		proposedDates = append(proposedDates, models.ProposedDate{
 			ID:            &entDate.ID,
-			GoogleEventID: entDate.GoogleEventID,
 			Start:         &entDate.StartTime,
 			End:           &entDate.EndTime,
 			Priority:      entDate.Priority,
@@ -242,6 +241,7 @@ func (efm *EventFetchingManager) FetchDraftedEventDetail(ctx context.Context, us
 		Description:     entEvent.Description,
 		Status:          models.EventStatus(entEvent.Status),
 		ConfirmedDateID: &entEvent.ConfirmedDateID,
+		GoogleEventID:   entEvent.GoogleEventID,
 		ProposedDates:   proposedDates,
 	}, nil
 }

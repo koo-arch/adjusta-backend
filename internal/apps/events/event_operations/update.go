@@ -67,7 +67,6 @@ func (eum *EventUpdateManager) UpdateDraftedEvents(ctx context.Context, userID, 
 		// 確定済みの場合
 		confirmDate := models.ConfirmDate{
 			ID: 			eventReq.ProposedDates[0].ID,
-			GoogleEventID: 	eventReq.ProposedDates[0].GoogleEventID,
 			Start:  		eventReq.ProposedDates[0].Start,
 			End:    		eventReq.ProposedDates[0].End,
 			Priority: 		eventReq.ProposedDates[0].Priority,
@@ -95,7 +94,7 @@ func (eum *EventUpdateManager) UpdateDraftedEvents(ctx context.Context, userID, 
 		}
 
 		// いずれかの日程候補を確定
-		err = eum.event.ConfirmEventDate(ctx, tx, googleEventID, &confirmEvent, entEvent)
+		err = eum.event.ConfirmEventDate(ctx, tx, calendarService, googleEventID, &confirmEvent, entEvent)
 		if err != nil {
 			return fmt.Errorf("failed to confirm event date for account: %s, error: %w", email, err)
 		}
@@ -129,7 +128,6 @@ func (eum *EventUpdateManager) updateProposedDates(ctx context.Context, tx *ent.
 		if updateDate, ok := updateDateMap[date.ID]; ok {
 			// 既存のイベントを更新
 			dateOptions := proposeddate.ProposedDateQueryOptions{
-				GoogleEventID: &updateDate.GoogleEventID,
 				StartTime:     updateDate.Start,
 				EndTime:       updateDate.End,
 				Priority:      &updateDate.Priority,
@@ -157,9 +155,8 @@ func (eum *EventUpdateManager) updateProposedDates(ctx context.Context, tx *ent.
 			StartTime:     date.Start,
 			EndTime:       date.End,
 			Priority:      &date.Priority,
-			GoogleEventID: &date.GoogleEventID,
 		}
-		_, err := eum.event.DateRepo.Create(ctx, tx, &date.GoogleEventID, dateOptions, entEvent)
+		_, err := eum.event.DateRepo.Create(ctx, tx, dateOptions, entEvent)
 		if err != nil {
 			return fmt.Errorf("failed to create proposed dates, error: %w", err)
 		}

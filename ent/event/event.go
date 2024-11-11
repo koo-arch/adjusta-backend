@@ -25,6 +25,8 @@ const (
 	FieldStatus = "status"
 	// FieldConfirmedDateID holds the string denoting the confirmed_date_id field in the database.
 	FieldConfirmedDateID = "confirmed_date_id"
+	// FieldGoogleEventID holds the string denoting the google_event_id field in the database.
+	FieldGoogleEventID = "google_event_id"
 	// EdgeCalendar holds the string denoting the calendar edge name in mutations.
 	EdgeCalendar = "calendar"
 	// EdgeProposedDates holds the string denoting the proposed_dates edge name in mutations.
@@ -55,6 +57,7 @@ var Columns = []string{
 	FieldLocation,
 	FieldStatus,
 	FieldConfirmedDateID,
+	FieldGoogleEventID,
 }
 
 // ForeignKeys holds the SQL foreign-keys that are owned by the "events"
@@ -141,6 +144,11 @@ func ByStatus(opts ...sql.OrderTermOption) OrderOption {
 // ByConfirmedDateID orders the results by the confirmed_date_id field.
 func ByConfirmedDateID(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldConfirmedDateID, opts...).ToFunc()
+}
+
+// ByGoogleEventID orders the results by the google_event_id field.
+func ByGoogleEventID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldGoogleEventID, opts...).ToFunc()
 }
 
 // ByCalendarField orders the results by calendar field.

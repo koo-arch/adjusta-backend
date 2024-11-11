@@ -72,6 +72,10 @@ func (r *EventRepositoryImpl) Create(ctx context.Context, tx *ent.Tx, googleEven
 		eventCreate = tx.Event.Create()
 	}
 
+	if googleEvent.Id != "" {
+		eventCreate = eventCreate.SetGoogleEventID(googleEvent.Id)
+	}
+
 	eventCreate = eventCreate.
 		SetSummary(googleEvent.Summary).
 		SetDescription(googleEvent.Description).
@@ -106,6 +110,10 @@ func (r *EventRepositoryImpl) Update(ctx context.Context, tx *ent.Tx, id uuid.UU
 
 	if opt.ConfirmedDateID != nil {
 		eventUpdate = eventUpdate.SetConfirmedDateID(*opt.ConfirmedDateID)
+	}
+
+	if opt.GoogleEventID != nil {
+		eventUpdate = eventUpdate.SetGoogleEventID(*opt.GoogleEventID)
 	}
 
 	return eventUpdate.Save(ctx)
@@ -144,6 +152,10 @@ func (r *EventRepositoryImpl) SearchEvents (ctx context.Context, tx *ent.Tx, id,
 
 	if opt.ConfirmedDateID != nil {
 		query = query.Where(event.ConfirmedDateIDEQ(*opt.ConfirmedDateID))
+	}
+
+	if opt.GoogleEventID != nil {
+		query = query.Where(event.GoogleEventIDEQ(*opt.GoogleEventID))
 	}
 
 	// イベントに対するオフセットとリミットを適用

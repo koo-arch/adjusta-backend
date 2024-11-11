@@ -16,6 +16,7 @@ type EventQueryOptions struct {
 	Description	   *string
 	Status 		     *models.EventStatus
 	ConfirmedDateID *uuid.UUID
+	GoogleEventID   *string
 	WithProposedDates bool
 	EventOffset       int
 	EventLimit        int

@@ -67,7 +67,7 @@ func init() {
 	proposeddateFields := schema.ProposedDate{}.Fields()
 	_ = proposeddateFields
 	// proposeddateDescPriority is the schema descriptor for priority field.
-	proposeddateDescPriority := proposeddateFields[4].Descriptor()
+	proposeddateDescPriority := proposeddateFields[3].Descriptor()
 	// proposeddate.DefaultPriority holds the default value on creation for the priority field.
 	proposeddate.DefaultPriority = proposeddateDescPriority.Default.(int)
 	// proposeddateDescID is the schema descriptor for id field.

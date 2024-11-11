@@ -31,6 +31,8 @@ func (Event) Fields() []ent.Field {
 			Values(string(StatusPending), string(StatusConfirmed), string(StatusCancelled)).
 			Default(string(StatusPending)),
 		field.UUID("confirmed_date_id", uuid.UUID{}).Optional(),
+		field.String("google_event_id").Optional(),
+
 	}
 }
 

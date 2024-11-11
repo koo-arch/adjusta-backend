@@ -46,7 +46,7 @@ func (ecm *EventCreationManager) CreateDraftedEvents(ctx context.Context, userID
 		return fmt.Errorf("failed to get event for account: %s, error: %w", email, err)
 	}
 
-	_, err = ecm.event.DateRepo.CreateBulk(ctx, tx, eventReq.SelectedDates, nil, entEvent)
+	_, err = ecm.event.DateRepo.CreateBulk(ctx, tx, eventReq.SelectedDates, entEvent)
 	if err != nil {
 		return fmt.Errorf("failed to create proposed dates for account: %s, error: %w", email, err)
 	}

@@ -30,26 +30,6 @@ func (pdu *ProposedDateUpdate) Where(ps ...predicate.ProposedDate) *ProposedDate
 	return pdu
 }
 
-// SetGoogleEventID sets the "google_event_id" field.
-func (pdu *ProposedDateUpdate) SetGoogleEventID(s string) *ProposedDateUpdate {
-	pdu.mutation.SetGoogleEventID(s)
-	return pdu
-}
-
-// SetNillableGoogleEventID sets the "google_event_id" field if the given value is not nil.
-func (pdu *ProposedDateUpdate) SetNillableGoogleEventID(s *string) *ProposedDateUpdate {
-	if s != nil {
-		pdu.SetGoogleEventID(*s)
-	}
-	return pdu
-}
-
-// ClearGoogleEventID clears the value of the "google_event_id" field.
-func (pdu *ProposedDateUpdate) ClearGoogleEventID() *ProposedDateUpdate {
-	pdu.mutation.ClearGoogleEventID()
-	return pdu
-}
-
 // SetStartTime sets the "start_time" field.
 func (pdu *ProposedDateUpdate) SetStartTime(t time.Time) *ProposedDateUpdate {
 	pdu.mutation.SetStartTime(t)
@@ -165,12 +145,6 @@ func (pdu *ProposedDateUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			}
 		}
 	}
-	if value, ok := pdu.mutation.GoogleEventID(); ok {
-		_spec.SetField(proposeddate.FieldGoogleEventID, field.TypeString, value)
-	}
-	if pdu.mutation.GoogleEventIDCleared() {
-		_spec.ClearField(proposeddate.FieldGoogleEventID, field.TypeString)
-	}
 	if value, ok := pdu.mutation.StartTime(); ok {
 		_spec.SetField(proposeddate.FieldStartTime, field.TypeTime, value)
 	}
@@ -230,26 +204,6 @@ type ProposedDateUpdateOne struct {
 	fields   []string
 	hooks    []Hook
 	mutation *ProposedDateMutation
-}
-
-// SetGoogleEventID sets the "google_event_id" field.
-func (pduo *ProposedDateUpdateOne) SetGoogleEventID(s string) *ProposedDateUpdateOne {
-	pduo.mutation.SetGoogleEventID(s)
-	return pduo
-}
-
-// SetNillableGoogleEventID sets the "google_event_id" field if the given value is not nil.
-func (pduo *ProposedDateUpdateOne) SetNillableGoogleEventID(s *string) *ProposedDateUpdateOne {
-	if s != nil {
-		pduo.SetGoogleEventID(*s)
-	}
-	return pduo
-}
-
-// ClearGoogleEventID clears the value of the "google_event_id" field.
-func (pduo *ProposedDateUpdateOne) ClearGoogleEventID() *ProposedDateUpdateOne {
-	pduo.mutation.ClearGoogleEventID()
-	return pduo
 }
 
 // SetStartTime sets the "start_time" field.
@@ -396,12 +350,6 @@ func (pduo *ProposedDateUpdateOne) sqlSave(ctx context.Context) (_node *Proposed
 				ps[i](selector)
 			}
 		}
-	}
-	if value, ok := pduo.mutation.GoogleEventID(); ok {
-		_spec.SetField(proposeddate.FieldGoogleEventID, field.TypeString, value)
-	}
-	if pduo.mutation.GoogleEventIDCleared() {
-		_spec.ClearField(proposeddate.FieldGoogleEventID, field.TypeString)
 	}
 	if value, ok := pduo.mutation.StartTime(); ok {
 		_spec.SetField(proposeddate.FieldStartTime, field.TypeTime, value)

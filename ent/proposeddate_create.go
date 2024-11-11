@@ -22,20 +22,6 @@ type ProposedDateCreate struct {
 	hooks    []Hook
 }
 
-// SetGoogleEventID sets the "google_event_id" field.
-func (pdc *ProposedDateCreate) SetGoogleEventID(s string) *ProposedDateCreate {
-	pdc.mutation.SetGoogleEventID(s)
-	return pdc
-}
-
-// SetNillableGoogleEventID sets the "google_event_id" field if the given value is not nil.
-func (pdc *ProposedDateCreate) SetNillableGoogleEventID(s *string) *ProposedDateCreate {
-	if s != nil {
-		pdc.SetGoogleEventID(*s)
-	}
-	return pdc
-}
-
 // SetStartTime sets the "start_time" field.
 func (pdc *ProposedDateCreate) SetStartTime(t time.Time) *ProposedDateCreate {
 	pdc.mutation.SetStartTime(t)
@@ -191,10 +177,6 @@ func (pdc *ProposedDateCreate) createSpec() (*ProposedDate, *sqlgraph.CreateSpec
 	if id, ok := pdc.mutation.ID(); ok {
 		_node.ID = id
 		_spec.ID.Value = &id
-	}
-	if value, ok := pdc.mutation.GoogleEventID(); ok {
-		_spec.SetField(proposeddate.FieldGoogleEventID, field.TypeString, value)
-		_node.GoogleEventID = value
 	}
 	if value, ok := pdc.mutation.StartTime(); ok {
 		_spec.SetField(proposeddate.FieldStartTime, field.TypeTime, value)

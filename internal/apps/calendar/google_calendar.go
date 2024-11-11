@@ -130,16 +130,16 @@ func (gcm *GoogleCalendarManager) UpdateGoogleCalendarEvents(calendarService *cu
 		go func(date models.ProposedDate) {
 			defer wg.Done()
 
-			event := gcm.ConvertToCalendarEvent(&date.GoogleEventID, eventReq.Title, eventReq.Location, eventReq.Description, *date.Start, *date.End)
+			event := gcm.ConvertToCalendarEvent(&eventReq.GoogleEventID, eventReq.Title, eventReq.Location, eventReq.Description, *date.Start, *date.End)
 
 			// 更新前にイベントをバックアップできるように、Googleカレンダーからイベントを取得
-			backupEvent, err := calendarService.FetchEvent(date.GoogleEventID)
+			backupEvent, err := calendarService.FetchEvent(eventReq.GoogleEventID)
 			if err != nil {
 				errCh <- fmt.Errorf("failed to fetch event from Google Calendar: %w", err)
 				return
 			}
 
-			_, err = calendarService.UpdateEvent(date.GoogleEventID, event)
+			_, err = calendarService.UpdateEvent(eventReq.GoogleEventID, event)
 			if err != nil {
 				errCh <- fmt.Errorf("failed to insert event to Google Calendar: %w", err)
 				return
@@ -183,13 +183,13 @@ func (gcm *GoogleCalendarManager) DeleteGoogleCalendarEvents(calendarService *cu
 			defer wg.Done()
 
 			// 削除前にイベントをバックアップできるように、Googleカレンダーからイベントを取得
-			backupEvent, err := calendarService.FetchEvent(date.GoogleEventID)
+			backupEvent, err := calendarService.FetchEvent(eventReq.GoogleEventID)
 			if err != nil {
 				errCh <- fmt.Errorf("failed to fetch event from Google Calendar: %w", err)
 				return
 			}
 
-			err = calendarService.DeleteEvent(date.GoogleEventID)
+			err = calendarService.DeleteEvent(eventReq.GoogleEventID)
 			if err != nil {
 				errCh <- fmt.Errorf("failed to delete event from Google Calendar: %w", err)
 				return

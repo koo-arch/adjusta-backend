@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"github.com/google/uuid"
-	"google.golang.org/api/calendar/v3"
 	"github.com/koo-arch/adjusta-backend/ent"
 	"github.com/koo-arch/adjusta-backend/ent/proposeddate"
 	"github.com/koo-arch/adjusta-backend/ent/event"
@@ -48,14 +47,10 @@ func (r* ProposedDateRepositoryImpl) ExclusionEventID(ctx context.Context, tx *e
 		All(ctx)
 }
 
-func (r *ProposedDateRepositoryImpl) Create(ctx context.Context, tx *ent.Tx, googleEventID *string, opt ProposedDateQueryOptions, entEvent *ent.Event) (*ent.ProposedDate, error) {
+func (r *ProposedDateRepositoryImpl) Create(ctx context.Context, tx *ent.Tx, opt ProposedDateQueryOptions, entEvent *ent.Event) (*ent.ProposedDate, error) {
 	proposedDateCreate := r.client.ProposedDate.Create()
 	if tx != nil {
 		proposedDateCreate = tx.ProposedDate.Create()
-	}
-
-	if googleEventID != nil {
-		proposedDateCreate = proposedDateCreate.SetGoogleEventID(*googleEventID)
 	}
 
 	proposedDateCreate = proposedDateCreate.
@@ -71,10 +66,6 @@ func (r *ProposedDateRepositoryImpl) Update(ctx context.Context, tx *ent.Tx, id 
 	proposedDateUpdate := r.client.ProposedDate.UpdateOneID(id)
 	if tx != nil {
 		proposedDateUpdate = tx.ProposedDate.UpdateOneID(id)
-	}
-
-	if opt.GoogleEventID != nil {
-		proposedDateUpdate = proposedDateUpdate.SetGoogleEventID(*opt.GoogleEventID)
 	}
 
 	if opt.StartTime!= nil {
@@ -100,10 +91,10 @@ func (r *ProposedDateRepositoryImpl) Delete(ctx context.Context, tx *ent.Tx, id 
 }
 
 
-func (r *ProposedDateRepositoryImpl) CreateBulk(ctx context.Context, tx *ent.Tx, selectedDates []models.SelectedDate, googleEvents []*calendar.Event, entEvent *ent.Event) ([]*ent.ProposedDate, error) {
+func (r *ProposedDateRepositoryImpl) CreateBulk(ctx context.Context, tx *ent.Tx, selectedDates []models.SelectedDate, entEvent *ent.Event) ([]*ent.ProposedDate, error) {
 	var proposedDateCreates []*ent.ProposedDateCreate
 
-	for i, selectedDate := range selectedDates {
+	for _, selectedDate := range selectedDates {
 		proposedDateCreate := r.client.ProposedDate.Create()
 		if tx != nil {
 			proposedDateCreate = tx.ProposedDate.Create()
@@ -115,10 +106,6 @@ func (r *ProposedDateRepositoryImpl) CreateBulk(ctx context.Context, tx *ent.Tx,
 			SetPriority(selectedDate.Priority).
 			SetEvent(entEvent)
 
-		if googleEvents != nil {
-			proposedDateCreate = proposedDateCreate.SetGoogleEventID(googleEvents[i].Id)
-		}
-
 		proposedDateCreates = append(proposedDateCreates, proposedDateCreate)
 	}
 
@@ -129,30 +116,61 @@ func (r *ProposedDateRepositoryImpl) CreateBulk(ctx context.Context, tx *ent.Tx,
 	return r.client.ProposedDate.CreateBulk(proposedDateCreates...).Save(ctx)
 }
 
-func (r *ProposedDateRepositoryImpl) UpdateByGoogleEventID(ctx context.Context, tx *ent.Tx, oldGoogleEvent *string, opt ProposedDateQueryOptions) error {
+
+func (r *ProposedDateRepositoryImpl) DecrementPriorityExceptID(ctx context.Context, tx *ent.Tx, excludeID uuid.UUID) error {
 	update := r.client.ProposedDate.Update()
 	if tx != nil {
 		update = tx.ProposedDate.Update()
 	}
 
-	update = update.Where(proposeddate.GoogleEventIDEQ(*oldGoogleEvent))
+	_, err := update.Where(proposeddate.IDNEQ(excludeID)).
+		AddPriority(1).
+		Save(ctx)
 
-	if opt.GoogleEventID != nil {
-		update = update.SetGoogleEventID(*opt.GoogleEventID)
-	}
-
-	if opt.StartTime!= nil {
-		update = update.SetStartTime(*opt.StartTime)
-	}
-
-	if opt.EndTime != nil {
-		update = update.SetEndTime(*opt.EndTime)
-	}
-
-	if opt.Priority != nil {
-		update = update.SetPriority(*opt.Priority)
-	}
-
-	_, err := update.Save(ctx)
 	return err
+}
+
+func (r *ProposedDateRepositoryImpl) ReorderPriority(ctx context.Context, tx *ent.Tx, eventID uuid.UUID) error {
+	query := r.client.ProposedDate.Query()
+	if tx != nil {
+		query = tx.ProposedDate.Query()
+	}
+
+	// eventIDに紐づくProposedDateをpriority順に取得
+	proposedDates, err := query.
+		Where(proposeddate.HasEventWith(event.IDEQ(eventID))).
+		Order(ent.Asc(proposeddate.FieldPriority)).
+		All(ctx)
+	if err != nil {
+		return err
+	}
+
+	// priorityが連番でない時に振り直す
+	if !r.isSequential(proposedDates) {
+		return r.updateToSequentialPriority(ctx, tx, proposedDates)
+	}
+
+	return nil
+}
+
+func (r *ProposedDateRepositoryImpl) isSequential(proposedDates []*ent.ProposedDate) bool {
+	for i, proposedDate := range proposedDates {
+		if proposedDate.Priority != i + 1 {
+			return false
+		}
+	}
+	return true
+}
+
+func (r *ProposedDateRepositoryImpl) updateToSequentialPriority (ctx context.Context, tx *ent.Tx, proposedDates []*ent.ProposedDate) error {
+	for i, proposedDate := range proposedDates {
+		priority := i + 1
+		_, err := r.Update(ctx, tx, proposedDate.ID, ProposedDateQueryOptions{
+			Priority: &priority,
+		})
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }

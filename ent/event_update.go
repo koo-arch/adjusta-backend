@@ -124,6 +124,26 @@ func (eu *EventUpdate) ClearConfirmedDateID() *EventUpdate {
 	return eu
 }
 
+// SetGoogleEventID sets the "google_event_id" field.
+func (eu *EventUpdate) SetGoogleEventID(s string) *EventUpdate {
+	eu.mutation.SetGoogleEventID(s)
+	return eu
+}
+
+// SetNillableGoogleEventID sets the "google_event_id" field if the given value is not nil.
+func (eu *EventUpdate) SetNillableGoogleEventID(s *string) *EventUpdate {
+	if s != nil {
+		eu.SetGoogleEventID(*s)
+	}
+	return eu
+}
+
+// ClearGoogleEventID clears the value of the "google_event_id" field.
+func (eu *EventUpdate) ClearGoogleEventID() *EventUpdate {
+	eu.mutation.ClearGoogleEventID()
+	return eu
+}
+
 // SetCalendarID sets the "calendar" edge to the Calendar entity by ID.
 func (eu *EventUpdate) SetCalendarID(id uuid.UUID) *EventUpdate {
 	eu.mutation.SetCalendarID(id)
@@ -265,6 +285,12 @@ func (eu *EventUpdate) sqlSave(ctx context.Context) (n int, err error) {
 	}
 	if eu.mutation.ConfirmedDateIDCleared() {
 		_spec.ClearField(event.FieldConfirmedDateID, field.TypeUUID)
+	}
+	if value, ok := eu.mutation.GoogleEventID(); ok {
+		_spec.SetField(event.FieldGoogleEventID, field.TypeString, value)
+	}
+	if eu.mutation.GoogleEventIDCleared() {
+		_spec.ClearField(event.FieldGoogleEventID, field.TypeString)
 	}
 	if eu.mutation.CalendarCleared() {
 		edge := &sqlgraph.EdgeSpec{
@@ -454,6 +480,26 @@ func (euo *EventUpdateOne) ClearConfirmedDateID() *EventUpdateOne {
 	return euo
 }
 
+// SetGoogleEventID sets the "google_event_id" field.
+func (euo *EventUpdateOne) SetGoogleEventID(s string) *EventUpdateOne {
+	euo.mutation.SetGoogleEventID(s)
+	return euo
+}
+
+// SetNillableGoogleEventID sets the "google_event_id" field if the given value is not nil.
+func (euo *EventUpdateOne) SetNillableGoogleEventID(s *string) *EventUpdateOne {
+	if s != nil {
+		euo.SetGoogleEventID(*s)
+	}
+	return euo
+}
+
+// ClearGoogleEventID clears the value of the "google_event_id" field.
+func (euo *EventUpdateOne) ClearGoogleEventID() *EventUpdateOne {
+	euo.mutation.ClearGoogleEventID()
+	return euo
+}
+
 // SetCalendarID sets the "calendar" edge to the Calendar entity by ID.
 func (euo *EventUpdateOne) SetCalendarID(id uuid.UUID) *EventUpdateOne {
 	euo.mutation.SetCalendarID(id)
@@ -625,6 +671,12 @@ func (euo *EventUpdateOne) sqlSave(ctx context.Context) (_node *Event, err error
 	}
 	if euo.mutation.ConfirmedDateIDCleared() {
 		_spec.ClearField(event.FieldConfirmedDateID, field.TypeUUID)
+	}
+	if value, ok := euo.mutation.GoogleEventID(); ok {
+		_spec.SetField(event.FieldGoogleEventID, field.TypeString, value)
+	}
+	if euo.mutation.GoogleEventIDCleared() {
+		_spec.ClearField(event.FieldGoogleEventID, field.TypeString)
 	}
 	if euo.mutation.CalendarCleared() {
 		edge := &sqlgraph.EdgeSpec{
