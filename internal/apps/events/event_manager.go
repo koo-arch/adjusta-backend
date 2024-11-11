@@ -3,7 +3,6 @@ package events
 import (
 	"context"
 	"fmt"
-	"log"
 
 	"github.com/koo-arch/adjusta-backend/ent"
 	"github.com/google/uuid"
@@ -16,7 +15,6 @@ import (
 	customCalendar "github.com/koo-arch/adjusta-backend/internal/google/calendar"
 	"github.com/koo-arch/adjusta-backend/internal/transaction"
 	"github.com/koo-arch/adjusta-backend/internal/models"
-	"google.golang.org/api/googleapi"
 )
 
 type EventManager struct {
@@ -94,7 +92,7 @@ func (em *EventManager) FinalizeProposedDate(ctx context.Context, userID, eventI
 func (em *EventManager) HandleGoogleEvent(calendarService *customCalendar.Calendar, entEvent *ent.Event, eventReq *models.ConfirmEvent) (*string, error) {
 	// Googleカレンダーイベントの新規登録または既存イベントのIDチェック
 	var googleEventID *string
-	if eventReq.ConfirmDate.ID == nil || eventReq.ConfirmDate.GoogleEventID == "" {
+	if eventReq.ConfirmDate.ID == nil || entEvent.GoogleEventID == "" {
 		// 登録するイベントの情報を作成
 		eventDraftCreate := models.EventDraftCreation{
 			Title:       entEvent.Summary,
@@ -116,7 +114,15 @@ func (em *EventManager) HandleGoogleEvent(calendarService *customCalendar.Calend
 
 	} else {
 		// 既存のGoogleカレンダーイベントIDを使用
-		googleEventID = &eventReq.ConfirmDate.GoogleEventID
+		println("日時の変更")
+		// Googleカレンダーイベントの更新
+		convertGoogleEvent := em.CalendarApp.ConvertToCalendarEvent(&entEvent.GoogleEventID, entEvent.Summary, entEvent.Location, entEvent.Description, *eventReq.ConfirmDate.Start, *eventReq.ConfirmDate.End)
+		googleEvent, err := em.CalendarApp.UpdateOrCreateGoogleEvent(calendarService, convertGoogleEvent)
+		if err != nil {
+			return nil, fmt.Errorf("failed to update events, error: %w", err)
+		}
+		
+		googleEventID = &googleEvent.Id
 	}
 
 	return googleEventID, nil
@@ -150,21 +156,11 @@ func (em *EventManager) ConfirmEventDate(ctx context.Context, tx *ent.Tx, calend
 
 	// 確定日程がDBに存在する場合は更新
 	if eventReq.ConfirmDate.ID != nil {
-		// 既存のGoogleカレンダーイベントを削除
-		err := calendarService.DeleteEvent(entEvent.GoogleEventID)
-		if err != nil {
-			// イベントが存在しないまたは削除済みの場合はエラーを無視
-			if gerr, ok := err.(*googleapi.Error); ok && gerr.Code != 410 && gerr.Code != 404 {
-				return fmt.Errorf("failed to delete event from Google Calendar: %w", err)
-			}
-			log.Printf("Event not found or already deleted in Google Calendar: %s", entEvent.GoogleEventID)
-		}
-
 		// オプションの優先順位を一度0に設定してから更新
 		zero := 0
 		dateOptions.Priority = &zero
 
-		_, err = em.DateRepo.Update(ctx, tx, *eventReq.ConfirmDate.ID, dateOptions)
+		_, err := em.DateRepo.Update(ctx, tx, *eventReq.ConfirmDate.ID, dateOptions)
 		if err != nil {
 			return fmt.Errorf("failed to update proposed date error: %w", err)
 		}

@@ -169,6 +169,24 @@ func (gcm *GoogleCalendarManager) UpdateGoogleCalendarEvents(calendarService *cu
 	return nil
 }
 
+func (gcm *GoogleCalendarManager) UpdateOrCreateGoogleEvent(calendarService *customCalendar.Calendar, googleEvent *calendar.Event) (*calendar.Event, error) {
+	updateEvent, err := calendarService.UpdateEvent(googleEvent.Id, googleEvent)
+	if err != nil {
+		if gErr, ok := err.(*googleapi.Error); ok && gErr.Code == 404 {
+			// 404エラーはイベントが見つからない場合のため、新規登録
+			insertEvent, err := calendarService.InsertEvent(googleEvent)
+			if err != nil {
+				return nil, fmt.Errorf("failed to insert event to Google Calendar: %w", err)
+			}
+			return insertEvent, nil
+		}
+		return nil, fmt.Errorf("failed to update event to Google Calendar: %w", err)
+	}
+
+	return updateEvent, nil
+	
+}
+
 func (gcm *GoogleCalendarManager) DeleteGoogleCalendarEvents(calendarService *customCalendar.Calendar, eventReq *models.EventDraftDetail) ([]*calendar.Event, error) {
 	var backupGoogleEvents []*calendar.Event // 削除前のイベントをバックアップするためのスライス
 
