@@ -155,8 +155,8 @@ func (efm *EventFetchingManager) SearchDraftedEvents(ctx context.Context, userID
 		Location : query.Location,
 		Description : query.Description,
 		Status : query.Status,
-		ProposedDateStartTime: query.ProposedDateStartTime,
-		ProposedDateEndTime: query.ProposedDateEndTime,
+		ProposedDateStartGTE: query.ProposedDateStartGTE,
+		ProposedDateEndLTE: query.ProposedDateEndLTE,
 	}
 	entEvent, err := efm.event.EventRepo.SearchEvents(ctx, nil, userID, entCalendar.ID, eventOptions)
 	if err != nil {
@@ -244,4 +244,63 @@ func (efm *EventFetchingManager) FetchDraftedEventDetail(ctx context.Context, us
 		GoogleEventID:   entEvent.GoogleEventID,
 		ProposedDates:   proposedDates,
 	}, nil
+}
+
+func (efm *EventFetchingManager) FetchUpcomingEvents(ctx context.Context, userID uuid.UUID, email string, daysBefore int) ([]models.UpcomingEvent, error) {
+	isPrimary := true
+	calendarOptions := repoCalendar.CalendarQueryOptions{
+		IsPrimary: &isPrimary,
+	}
+
+	entCalendar, err := efm.event.CalendarRepo.FindByFields(ctx, nil, userID, calendarOptions)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get primary calendar for account: %s, error: %w", email, err)
+	}
+
+	currentTime := time.Now()
+	startTime := currentTime.AddDate(0, 0, daysBefore)
+	confirmed := models.StatusConfirmed
+	eventOptions := event.EventQueryOptions{
+		WithProposedDates: true,
+		Status: &confirmed,
+		ProposedDateStartGTE: &currentTime,
+		ProposedDateStartLTE: &startTime,
+	}
+
+	entEvents, err := efm.event.EventRepo.SearchEvents(ctx, nil, userID, entCalendar.ID, eventOptions)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get events for account: %s, error: %w", email, err)
+	}
+
+	var upcomingEvents []models.UpcomingEvent
+	upcomingEvents = []models.UpcomingEvent{}
+	for _, entEvent := range entEvents {
+		if entEvent.Edges.ProposedDates == nil {
+			return nil, fmt.Errorf("failed to get proposed dates for account: %s", email)
+		}
+
+		for _, entDate := range entEvent.Edges.ProposedDates {
+			if entEvent.ConfirmedDateID == entDate.ID {
+				upcomingEvents = append(upcomingEvents, models.UpcomingEvent{
+					ID:              entEvent.ID,
+					Title:           entEvent.Summary,
+					Location:        entEvent.Location,
+					Description:     entEvent.Description,
+					Status:          models.EventStatus(entEvent.Status),
+					ConfirmedDateID: entEvent.ConfirmedDateID,
+					GoogleEventID:   entEvent.GoogleEventID,
+					Start:           entDate.StartTime,
+					End:             entDate.EndTime,
+				})
+				break
+			}
+		}
+	}
+
+	// 開始日時で昇順にソート
+	sort.Slice(upcomingEvents, func(i, j int) bool {
+		return upcomingEvents[i].Start.Before(upcomingEvents[j].Start)
+	})
+
+	return upcomingEvents, nil
 }

@@ -22,8 +22,10 @@ type EventQueryOptions struct {
 	EventLimit        int
 	ProposedDateOffset int
 	ProposedDateLimit  int
-	ProposedDateStartTime *time.Time
-	ProposedDateEndTime   *time.Time
+	ProposedDateStartGTE *time.Time
+	ProposedDateStartLTE  *time.Time
+	ProposedDateEndGTE  *time.Time
+	ProposedDateEndLTE  *time.Time
 }
 
 type EventRepository interface {

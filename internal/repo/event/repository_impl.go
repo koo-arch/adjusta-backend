@@ -176,12 +176,20 @@ func (r *EventRepositoryImpl) SearchEvents (ctx context.Context, tx *ent.Tx, id,
 				query = query.Limit(opt.ProposedDateLimit)
 			}
 
-			if opt.ProposedDateStartTime != nil {
-				query = query.Where(proposeddate.StartTimeGTE(*opt.ProposedDateStartTime))
+			if opt.ProposedDateStartGTE != nil {
+				query = query.Where(proposeddate.StartTimeGTE(*opt.ProposedDateStartGTE))
 			}
 
-			if opt.ProposedDateEndTime != nil {
-				query = query.Where(proposeddate.EndTimeLTE(*opt.ProposedDateEndTime))
+			if opt.ProposedDateStartLTE != nil {
+				query = query.Where(proposeddate.StartTimeLTE(*opt.ProposedDateStartLTE))
+			}
+
+			if opt.ProposedDateEndGTE != nil {
+				query = query.Where(proposeddate.EndTimeGTE(*opt.ProposedDateEndGTE))
+			}
+
+			if opt.ProposedDateEndLTE != nil {
+				query = query.Where(proposeddate.EndTimeLTE(*opt.ProposedDateEndLTE))
 			}
 		})
 	}

@@ -127,6 +127,7 @@ func main() {
 		}
 
 		auth.GET("/event/draft/search", calendarHandler.SearchEventDraftHandler())
+		auth.GET("/event/confirmed/upcoming", calendarHandler.FetchUpcomingEventsHandler())
 	}
 
 	// サーバー起動

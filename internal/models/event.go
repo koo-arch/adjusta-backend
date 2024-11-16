@@ -76,3 +76,15 @@ type EventDraftQueryOptions struct {
 	EndDate   time.Time
 	GoogleEventID string
 }
+
+type UpcomingEvent struct {
+	ID            uuid.UUID      `json:"id" binding:"required"`
+	Title         string         `json:"title"`
+	Location      string         `json:"location"`
+	Description   string         `json:"description"`
+	Status        EventStatus    `json:"status"`
+	ConfirmedDateID uuid.UUID    `json:"confirmed_date_id"`
+	GoogleEventID string     `json:"google_event_id"`
+	Start 	   time.Time      `json:"start"`
+	End 	   time.Time      `json:"end"`
+}

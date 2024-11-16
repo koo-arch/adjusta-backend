@@ -34,12 +34,22 @@ func(qp *QueryParser) ParseSearchEventQuery() (*event.EventQueryOptions, error) 
 		return nil, fmt.Errorf("failed to validate status: %w", err)
 	}
 
-	startTime, err := qp.ParseTime("start_time")
+	startTimeGTE, err := qp.ParseTime("start_time_gte")
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse start_time: %w", err)
 	}
 
-	endTime, err := qp.ParseTime("end_time")
+	startTimeLTE, err := qp.ParseTime("start_time_lte")
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse start_time: %w", err)
+	}
+
+	endTimeGTE, err := qp.ParseTime("end_time_gte")
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse end_time: %w", err)
+	}
+
+	endTimeLTE, err := qp.ParseTime("end_time_lte")
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse end_time: %w", err)
 	}
@@ -49,8 +59,10 @@ func(qp *QueryParser) ParseSearchEventQuery() (*event.EventQueryOptions, error) 
 		Location: location,
 		Description: description,
 		Status: eventStatus,
-		ProposedDateStartTime: startTime,
-		ProposedDateEndTime: endTime,
+		ProposedDateStartGTE: startTimeGTE,
+		ProposedDateStartLTE: startTimeLTE,
+		ProposedDateEndGTE: endTimeGTE,
+		ProposedDateEndLTE: endTimeLTE,
 	}
 
 	return &options, nil
