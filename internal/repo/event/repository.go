@@ -26,6 +26,8 @@ type EventQueryOptions struct {
 	ProposedDateStartLTE  *time.Time
 	ProposedDateEndGTE  *time.Time
 	ProposedDateEndLTE  *time.Time
+	SortBy 		     	string
+	SortOrder 	    	string
 }
 
 type EventRepository interface {

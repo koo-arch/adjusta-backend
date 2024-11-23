@@ -126,7 +126,7 @@ func (r *EventRepositoryImpl) Delete(ctx context.Context, tx *ent.Tx, id uuid.UU
 	return r.client.Event.DeleteOneID(id).Exec(ctx)
 }
 
-func (r *EventRepositoryImpl) SearchEvents (ctx context.Context, tx *ent.Tx, id, calendarID uuid.UUID, opt EventQueryOptions) ([]*ent.Event, error) {
+func (r *EventRepositoryImpl) SearchEvents(ctx context.Context, tx *ent.Tx, id, calendarID uuid.UUID, opt EventQueryOptions) ([]*ent.Event, error) {
 	query := r.client.Event.Query()
 	if tx != nil {
 		query = tx.Event.Query()
@@ -169,6 +169,32 @@ func (r *EventRepositoryImpl) SearchEvents (ctx context.Context, tx *ent.Tx, id,
 	// イベントの提案日に対するオフセットとリミットを適用
 	if opt.WithProposedDates {
 		query = query.WithProposedDates(func(query *ent.ProposedDateQuery) {
+			if opt.SortBy != "" {
+				switch opt.SortBy {
+				case "ProposedDateStart":
+					if opt.SortOrder == "desc" {
+						query = query.Order(ent.Desc(proposeddate.FieldStartTime))
+					} else {
+						query = query.Order(ent.Asc(proposeddate.FieldStartTime))
+					}
+				case "ProposedDateEnd":
+					if opt.SortOrder == "desc" {
+						query = query.Order(ent.Desc(proposeddate.FieldEndTime))
+					} else {
+						query = query.Order(ent.Asc(proposeddate.FieldEndTime))
+					}
+				case "ProposedDatePriority":
+					if opt.SortOrder == "desc" {
+						query = query.Order(ent.Desc(proposeddate.FieldPriority))
+					} else {
+						query = query.Order(ent.Asc(proposeddate.FieldPriority))
+					}
+				default:
+				// デフォルトは StartTime 昇順
+				query = query.Order(ent.Asc(proposeddate.FieldStartTime))
+				}
+			}
+
 			if opt.ProposedDateOffset > 0 {
 				query = query.Offset(opt.ProposedDateOffset)
 			}

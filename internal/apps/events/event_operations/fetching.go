@@ -100,10 +100,10 @@ func (efm *EventFetchingManager) FetchAllDraftedEvents(ctx context.Context, user
 			}
 			for _, entDate := range entEvent.Edges.ProposedDates {
 				proposedDates = append(proposedDates, models.ProposedDate{
-					ID:            &entDate.ID,
-					Start:         &entDate.StartTime,
-					End:           &entDate.EndTime,
-					Priority:      entDate.Priority,
+					ID:       &entDate.ID,
+					Start:    &entDate.StartTime,
+					End:      &entDate.EndTime,
+					Priority: entDate.Priority,
 				})
 			}
 
@@ -150,13 +150,13 @@ func (efm *EventFetchingManager) SearchDraftedEvents(ctx context.Context, userID
 	}
 
 	eventOptions := event.EventQueryOptions{
-		WithProposedDates: true,
-		Summary : query.Summary,
-		Location : query.Location,
-		Description : query.Description,
-		Status : query.Status,
+		WithProposedDates:    true,
+		Summary:              query.Summary,
+		Location:             query.Location,
+		Description:          query.Description,
+		Status:               query.Status,
 		ProposedDateStartGTE: query.ProposedDateStartGTE,
-		ProposedDateEndLTE: query.ProposedDateEndLTE,
+		ProposedDateEndLTE:   query.ProposedDateEndLTE,
 	}
 	entEvent, err := efm.event.EventRepo.SearchEvents(ctx, nil, userID, entCalendar.ID, eventOptions)
 	if err != nil {
@@ -172,10 +172,10 @@ func (efm *EventFetchingManager) SearchDraftedEvents(ctx context.Context, userID
 		var proposedDates []models.ProposedDate
 		for _, entDate := range event.Edges.ProposedDates {
 			proposedDates = append(proposedDates, models.ProposedDate{
-				ID:            &entDate.ID,
-				Start:         &entDate.StartTime,
-				End:           &entDate.EndTime,
-				Priority:      entDate.Priority,
+				ID:       &entDate.ID,
+				Start:    &entDate.StartTime,
+				End:      &entDate.EndTime,
+				Priority: entDate.Priority,
 			})
 		}
 
@@ -195,7 +195,7 @@ func (efm *EventFetchingManager) SearchDraftedEvents(ctx context.Context, userID
 			ProposedDates:   proposedDates,
 		})
 	}
-	
+
 	return serchResult, nil
 }
 
@@ -222,10 +222,10 @@ func (efm *EventFetchingManager) FetchDraftedEventDetail(ctx context.Context, us
 	var proposedDates []models.ProposedDate
 	for _, entDate := range entEvent.Edges.ProposedDates {
 		proposedDates = append(proposedDates, models.ProposedDate{
-			ID:            &entDate.ID,
-			Start:         &entDate.StartTime,
-			End:           &entDate.EndTime,
-			Priority:      entDate.Priority,
+			ID:       &entDate.ID,
+			Start:    &entDate.StartTime,
+			End:      &entDate.EndTime,
+			Priority: entDate.Priority,
 		})
 	}
 
@@ -261,8 +261,8 @@ func (efm *EventFetchingManager) FetchUpcomingEvents(ctx context.Context, userID
 	startTime := currentTime.AddDate(0, 0, daysBefore)
 	confirmed := models.StatusConfirmed
 	eventOptions := event.EventQueryOptions{
-		WithProposedDates: true,
-		Status: &confirmed,
+		WithProposedDates:    true,
+		Status:               &confirmed,
 		ProposedDateStartGTE: &currentTime,
 		ProposedDateStartLTE: &startTime,
 	}
@@ -272,8 +272,7 @@ func (efm *EventFetchingManager) FetchUpcomingEvents(ctx context.Context, userID
 		return nil, fmt.Errorf("failed to get events for account: %s, error: %w", email, err)
 	}
 
-	var upcomingEvents []models.UpcomingEvent
-	upcomingEvents = []models.UpcomingEvent{}
+	upcomingEvents := make([]models.UpcomingEvent, 0)
 	for _, entEvent := range entEvents {
 		if entEvent.Edges.ProposedDates == nil {
 			return nil, fmt.Errorf("failed to get proposed dates for account: %s", email)
@@ -303,4 +302,62 @@ func (efm *EventFetchingManager) FetchUpcomingEvents(ctx context.Context, userID
 	})
 
 	return upcomingEvents, nil
+}
+
+func (efm *EventFetchingManager) FetchNeedsActionDrafts(ctx context.Context, userID uuid.UUID, email string, daysBefore int) ([]models.NeedsActionDraft, error) {
+	isPrimary := true
+	calendarOptions := repoCalendar.CalendarQueryOptions{
+		IsPrimary: &isPrimary,
+	}
+
+	entCalendar, err := efm.event.CalendarRepo.FindByFields(ctx, nil, userID, calendarOptions)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get primary calendar for account: %s, error: %w", email, err)
+	}
+
+	currentTime := time.Now()
+	startTime := currentTime.AddDate(0, 0, daysBefore)
+	draft := models.StatusPending
+	eventOptions := event.EventQueryOptions{
+		WithProposedDates:    true,
+		Status:               &draft,
+		ProposedDateStartLTE: &startTime,
+		SortBy:               "ProposedDatePriority",
+		SortOrder:            "asc",
+	}
+
+	entEvents, err := efm.event.EventRepo.SearchEvents(ctx, nil, userID, entCalendar.ID, eventOptions)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get events for account: %s, error: %w", email, err)
+	}
+
+	NeedsActionDrafts:= make([]models.NeedsActionDraft, 0)
+	for _, entEvent := range entEvents {
+		if entEvent.Edges.ProposedDates == nil {
+			return nil, fmt.Errorf("failed to get proposed dates for account: %s", email)
+		}
+
+		for _, entDate := range entEvent.Edges.ProposedDates {
+			// 開始日時が現在時刻よりも前の場合はisPastをtrueにする
+			isPast := currentTime.After(entDate.StartTime)
+			NeedsActionDrafts = append(NeedsActionDrafts, models.NeedsActionDraft{
+				ID:             entEvent.ID,
+				Title:          entEvent.Summary,
+				Location:       entEvent.Location,
+				Description:    entEvent.Description,
+				Status:         models.EventStatus(entEvent.Status),
+				Start:          entDate.StartTime,
+				End:            entDate.EndTime,
+				NeedsAttention: isPast,
+			})
+			break
+		}
+	}
+
+	// 開始時刻で昇順にソート
+	sort.Slice(NeedsActionDrafts, func(i, j int) bool {
+		return NeedsActionDrafts[i].Start.Before(NeedsActionDrafts[j].Start)
+	})
+
+	return NeedsActionDrafts, nil
 }

@@ -113,7 +113,6 @@ func (ch *CalendarHandler) SearchEventDraftHandler() gin.HandlerFunc {
 			c.Abort()
 			return
 		}
-		
 
 		ctx := c.Request.Context()
 
@@ -185,6 +184,46 @@ func (ch *CalendarHandler) FetchUpcomingEventsHandler() gin.HandlerFunc {
 
 		daysBefore := 3
 		upcomingEvents, err := eventFetchingManager.FetchUpcomingEvents(ctx, userid, email.(string), daysBefore)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch events"})
+			c.Abort()
+			return
+		}
+
+		c.JSON(http.StatusOK, upcomingEvents)
+	}
+}
+
+func (ch *CalendarHandler) FetchNeedsActionDraftsHandler() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		ctx := c.Request.Context()
+
+		session := sessions.Default(c)
+		useridStr, ok := session.Get("userid").(string)
+		if !ok {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "failed to get userid from session"})
+			c.Abort()
+			return
+		}
+
+		userid, err := uuid.Parse(useridStr)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid userid format"})
+			c.Abort()
+			return
+		}
+
+		email, ok := c.Get("email")
+		if !ok {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "failed to get email from context"})
+			c.Abort()
+			return
+		}
+
+		eventFetchingManager := ch.handler.Server.EventFetchingManager
+
+		daysBefore := 3
+		upcomingEvents, err := eventFetchingManager.FetchNeedsActionDrafts(ctx, userid, email.(string), daysBefore)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch events"})
 			c.Abort()

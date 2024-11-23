@@ -2,7 +2,7 @@ package models
 
 import (
 	"time"
-	
+
 	"github.com/google/uuid"
 )
 
@@ -35,25 +35,23 @@ type SelectedDate struct {
 	Priority int       `json:"priority"`
 }
 
-
 type EventDraftDetail struct {
-	ID            uuid.UUID      `json:"id" binding:"required"`
-	Title         string         `json:"title"`
-	Location      string         `json:"location"`
-	Description   string         `json:"description"`
-	Status        EventStatus    `json:"status"`
-	ConfirmedDateID *uuid.UUID    `json:"confirmed_date_id"`
-	GoogleEventID string     `json:"google_event_id"`
-	ProposedDates []ProposedDate `json:"proposed_dates"`
+	ID              uuid.UUID      `json:"id" binding:"required"`
+	Title           string         `json:"title"`
+	Location        string         `json:"location"`
+	Description     string         `json:"description"`
+	Status          EventStatus    `json:"status"`
+	ConfirmedDateID *uuid.UUID     `json:"confirmed_date_id"`
+	GoogleEventID   string         `json:"google_event_id"`
+	ProposedDates   []ProposedDate `json:"proposed_dates"`
 }
 
 type ProposedDate struct {
-	ID            *uuid.UUID  `json:"id"`
-	Start         *time.Time `json:"start"`
-	End           *time.Time `json:"end"`
-	Priority      int        `json:"priority"`
+	ID       *uuid.UUID `json:"id"`
+	Start    *time.Time `json:"start"`
+	End      *time.Time `json:"end"`
+	Priority int        `json:"priority"`
 }
-
 
 type ConfirmEvent struct {
 	ConfirmDate ConfirmDate `json:"confirm_date" binding:"required"`
@@ -68,23 +66,34 @@ type ConfirmDate struct {
 }
 
 type EventDraftQueryOptions struct {
-	Title 	 string
-	Location string
-	Description string
-	Status   EventStatus
-	StartDate time.Time
-	EndDate   time.Time
+	Title         string
+	Location      string
+	Description   string
+	Status        EventStatus
+	StartDate     time.Time
+	EndDate       time.Time
 	GoogleEventID string
 }
 
 type UpcomingEvent struct {
-	ID            uuid.UUID      `json:"id" binding:"required"`
-	Title         string         `json:"title"`
-	Location      string         `json:"location"`
-	Description   string         `json:"description"`
-	Status        EventStatus    `json:"status"`
-	ConfirmedDateID uuid.UUID    `json:"confirmed_date_id"`
-	GoogleEventID string     `json:"google_event_id"`
-	Start 	   time.Time      `json:"start"`
-	End 	   time.Time      `json:"end"`
+	ID              uuid.UUID   `json:"id" binding:"required"`
+	Title           string      `json:"title"`
+	Location        string      `json:"location"`
+	Description     string      `json:"description"`
+	Status          EventStatus `json:"status"`
+	ConfirmedDateID uuid.UUID   `json:"confirmed_date_id"`
+	GoogleEventID   string      `json:"google_event_id"`
+	Start           time.Time   `json:"start"`
+	End             time.Time   `json:"end"`
+}
+
+type NeedsActionDraft struct {
+	ID             uuid.UUID   `json:"id" binding:"required"`
+	Title          string      `json:"title"`
+	Location       string      `json:"location"`
+	Description    string      `json:"description"`
+	Status         EventStatus `json:"status"`
+	Start          time.Time   `json:"start"`
+	End            time.Time   `json:"end"`
+	NeedsAttention bool        `json:"needs_attention"`
 }

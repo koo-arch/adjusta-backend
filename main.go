@@ -92,7 +92,6 @@ func main() {
 	})
 	router.Use(sessions.Sessions("session", store))
 
-
 	handler := handlers.NewHandler(server)
 	accountHandler := handlers.NewAccountHandler(handler)
 	userHandler := handlers.NewUserHandler(handler)
@@ -128,6 +127,7 @@ func main() {
 
 		auth.GET("/event/draft/search", calendarHandler.SearchEventDraftHandler())
 		auth.GET("/event/confirmed/upcoming", calendarHandler.FetchUpcomingEventsHandler())
+		auth.GET("/event/draft/needs-action", calendarHandler.FetchNeedsActionDraftsHandler())
 	}
 
 	// サーバー起動
