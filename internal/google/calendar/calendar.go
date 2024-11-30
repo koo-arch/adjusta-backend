@@ -49,16 +49,17 @@ func (c *Calendar) FetchCalendarList() ([]*CalendarList, error) {
 	return calendars, nil
 }
 
-func (c *Calendar) FetchEvents(calendarID string, startTime, endTime time.Time) ([]*models.Event, error) {
+func (c *Calendar) FetchEvents(calendarID string, startTime, endTime time.Time) ([]*models.GoogleEvent, error) {
 	events, err := c.Service.Events.List(calendarID).
 		TimeMin(startTime.Format(time.RFC3339)).
 		TimeMax(endTime.Format(time.RFC3339)).
+		SingleEvents(true).
 		Do()
 	if err != nil {
 		return nil, err
 	}
 
-	var eventsList []*models.Event
+	var eventsList []*models.GoogleEvent
 
 	for _, item := range events.Items {
 		// nilチェックを追加
@@ -75,9 +76,11 @@ func (c *Calendar) FetchEvents(calendarID string, startTime, endTime time.Time) 
 				end = item.End.Date
 			}
 		}
-		event := &models.Event{
+		event := &models.GoogleEvent{
 			ID:      item.Id,
 			Summary: item.Summary,
+			Description: item.Description,
+			Location: item.Location,
 			ColorID: item.ColorId,
 			Start:   start,
 			End:     end,

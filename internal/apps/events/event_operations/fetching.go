@@ -28,7 +28,7 @@ func NewEventFetchingManager(event *events.EventManager) *EventFetchingManager {
 	}
 }
 
-func (efm *EventFetchingManager) FetchAllGoogleEvents(ctx context.Context, userID uuid.UUID, email string) ([]*models.Event, error) {
+func (efm *EventFetchingManager) FetchAllGoogleEvents(ctx context.Context, userID uuid.UUID, email string) ([]*models.GoogleEvent, error) {
 
 	token, err := efm.event.AuthManager.VerifyOAuthToken(ctx, userID)
 	if err != nil {

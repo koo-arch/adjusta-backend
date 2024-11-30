@@ -23,8 +23,8 @@ func NewGoogleCalendarManager(client *ent.Client) *GoogleCalendarManager {
 	}
 }
 
-func (gcm *GoogleCalendarManager) FetchEventsFromCalendars(calendarService *customCalendar.Calendar, calendars []*ent.GoogleCalendarInfo, startTime, endTime time.Time) ([]*models.Event, error) {
-	var events []*models.Event
+func (gcm *GoogleCalendarManager) FetchEventsFromCalendars(calendarService *customCalendar.Calendar, calendars []*ent.GoogleCalendarInfo, startTime, endTime time.Time) ([]*models.GoogleEvent, error) {
+	var events []*models.GoogleEvent
 	var wg sync.WaitGroup
 	var mu sync.Mutex
 	errCh := make(chan error, len(calendars))
