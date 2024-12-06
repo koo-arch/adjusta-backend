@@ -52,7 +52,7 @@ func (efm *EventFetchingManager) FetchAllGoogleEvents(ctx context.Context, userI
 		return nil, fmt.Errorf("failed to get calendars from db for account: %s, error: %w", email, err)
 	}
 
-	var entGoogleCalendars []*ent.GoogleCalendarInfo
+	entGoogleCalendars := make([]*ent.GoogleCalendarInfo, 0)
 	for _, cal := range calendars {
 		if cal.Edges.GoogleCalendarInfos != nil {
 			entGoogleCalendars = append(entGoogleCalendars, cal.Edges.GoogleCalendarInfos...)
@@ -83,7 +83,7 @@ func (efm *EventFetchingManager) FetchAllDraftedEvents(ctx context.Context, user
 		return nil, fmt.Errorf("failed to get events for account: %s", email)
 	}
 
-	var draftedEvents []*models.EventDraftDetail
+	draftedEvents := make([]*models.EventDraftDetail, 0)
 	var wg sync.WaitGroup
 	var mu sync.Mutex
 	errCh := make(chan error, 1)
@@ -163,13 +163,13 @@ func (efm *EventFetchingManager) SearchDraftedEvents(ctx context.Context, userID
 		return nil, fmt.Errorf("failed to get events for account: %s, error: %w", email, err)
 	}
 
-	var serchResult []*models.EventDraftDetail
+	searchResult := make([]*models.EventDraftDetail, 0)
 	for _, event := range entEvent {
 		if event.Edges.ProposedDates == nil {
 			return nil, fmt.Errorf("failed to get proposed dates for account: %s", email)
 		}
 
-		var proposedDates []models.ProposedDate
+		proposedDates := make([]models.ProposedDate, 0)
 		for _, entDate := range event.Edges.ProposedDates {
 			proposedDates = append(proposedDates, models.ProposedDate{
 				ID:       &entDate.ID,
@@ -184,7 +184,7 @@ func (efm *EventFetchingManager) SearchDraftedEvents(ctx context.Context, userID
 			return proposedDates[i].Priority < proposedDates[j].Priority
 		})
 
-		serchResult = append(serchResult, &models.EventDraftDetail{
+		searchResult = append(searchResult, &models.EventDraftDetail{
 			ID:              event.ID,
 			Title:           event.Summary,
 			Location:        event.Location,
@@ -196,7 +196,7 @@ func (efm *EventFetchingManager) SearchDraftedEvents(ctx context.Context, userID
 		})
 	}
 
-	return serchResult, nil
+	return searchResult, nil
 }
 
 func (efm *EventFetchingManager) FetchDraftedEventDetail(ctx context.Context, userID uuid.UUID, email string, eventID uuid.UUID) (*models.EventDraftDetail, error) {
@@ -219,7 +219,7 @@ func (efm *EventFetchingManager) FetchDraftedEventDetail(ctx context.Context, us
 		return nil, fmt.Errorf("failed to get proposed dates for account: %s", email)
 	}
 
-	var proposedDates []models.ProposedDate
+	proposedDates := make([]models.ProposedDate, 0)
 	for _, entDate := range entEvent.Edges.ProposedDates {
 		proposedDates = append(proposedDates, models.ProposedDate{
 			ID:       &entDate.ID,
