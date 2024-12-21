@@ -21,11 +21,11 @@ func NewEventCreationManager(event *events.EventManager) *EventCreationManager {
 	}
 }
 
-func (ecm *EventCreationManager) CreateDraftedEvents(ctx context.Context, userID uuid.UUID, email string, eventReq *models.EventDraftCreation) error {
+func (ecm *EventCreationManager) CreateDraftedEvents(ctx context.Context, userID uuid.UUID, email string, eventReq *models.EventDraftCreation) (*models.EventDraftDetail, error) {
 
 	tx, err := ecm.event.Client.Tx(ctx)
 	if err != nil {
-		return fmt.Errorf("failed starting transaction: %w", err)
+		return nil, fmt.Errorf("failed starting transaction: %w", err)
 	}
 
 	defer transaction.HandleTransaction(tx, &err)
@@ -36,21 +36,39 @@ func (ecm *EventCreationManager) CreateDraftedEvents(ctx context.Context, userID
 	}
 	entCalendar, err := ecm.event.CalendarRepo.FindByFields(ctx, tx, userID, findOptions)
 	if err != nil {
-		return fmt.Errorf("failed to get primary calendar for account: %s, error: %w", email, err)
+		return nil, fmt.Errorf("failed to get primary calendar for account: %s, error: %w", email, err)
 	}
 
 	convEvent := ecm.event.CalendarApp.ConvertToCalendarEvent(nil, eventReq.Title, eventReq.Location, eventReq.Description, eventReq.SelectedDates[0].Start, eventReq.SelectedDates[0].End)
 
 	entEvent, err := ecm.event.EventRepo.Create(ctx, tx, convEvent, entCalendar)
 	if err != nil {
-		return fmt.Errorf("failed to get event for account: %s, error: %w", email, err)
+		return nil, fmt.Errorf("failed to get event for account: %s, error: %w", email, err)
 	}
 
-	_, err = ecm.event.DateRepo.CreateBulk(ctx, tx, eventReq.SelectedDates, entEvent)
+	entDate, err := ecm.event.DateRepo.CreateBulk(ctx, tx, eventReq.SelectedDates, entEvent)
 	if err != nil {
-		return fmt.Errorf("failed to create proposed dates for account: %s, error: %w", email, err)
+		return nil, fmt.Errorf("failed to create proposed dates for account: %s, error: %w", email, err)
+	}
+
+	eventDates := make([]models.ProposedDate, 0)
+	for _, date := range entDate {
+		eventDates = append(eventDates, models.ProposedDate{
+			ID:        &date.ID,
+			Start:     &date.StartTime,
+			End:       &date.EndTime,
+			Priority: date.Priority,
+		})
+	}
+	response := &models.EventDraftDetail{
+		ID:            entEvent.ID,
+		Title:         entEvent.Summary,
+		Location:      entEvent.Location,
+		Description:   entEvent.Description,
+		Status:	  	   models.EventStatus(entEvent.Status),
+		ProposedDates: eventDates,
 	}
 
 	// トランザクションをコミット
-	return nil
+	return response, nil
 }
