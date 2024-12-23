@@ -4,12 +4,13 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/koo-arch/adjusta-backend/internal/models"
 	"github.com/koo-arch/adjusta-backend/queryparser"
+	"github.com/koo-arch/adjusta-backend/utils"
 )
+
 
 type CalendarHandler struct {
 	handler *Handler
@@ -19,35 +20,21 @@ func NewCalendarHandler(handler *Handler) *CalendarHandler {
 	return &CalendarHandler{handler: handler}
 }
 
+var extractErrorMessage = "ユーザー情報確認時にエラーが発生しました。"
+
 func (ch *CalendarHandler) FetchEventListHandler() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		ctx := c.Request.Context()
 
-		session := sessions.Default(c)
-		useridStr, ok := session.Get("userid").(string)
-		if !ok {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "failed to get userid from session"})
-			c.Abort()
-			return
-		}
-
-		userid, err := uuid.Parse(useridStr)
+		userid, email, err := utils.ExtractUserIDAndEmail(c)
 		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid userid format"})
-			c.Abort()
-			return
-		}
-
-		email, ok := c.Get("email")
-		if !ok {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "failed to get email from context"})
-			c.Abort()
+			utils.HandleAPIError(c, err, extractErrorMessage)
 			return
 		}
 
 		eventFetchingManager := ch.handler.Server.EventFetchingManager
 
-		accountsEvents, err := eventFetchingManager.FetchAllGoogleEvents(ctx, userid, email.(string))
+		accountsEvents, err := eventFetchingManager.FetchAllGoogleEvents(ctx, userid, email)
 		if err != nil {
 			fmt.Printf("failed to fetch events: %v", err)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch events"})
@@ -63,33 +50,15 @@ func (ch *CalendarHandler) FetchAllEventDraftListHandler() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		ctx := c.Request.Context()
 
-		session := sessions.Default(c)
-		useridStr, ok := session.Get("userid").(string)
-		if !ok {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "failed to get userid from session"})
-			c.Abort()
-			return
-		}
-
-		userid, err := uuid.Parse(useridStr)
+		userid, email,  err := utils.ExtractUserIDAndEmail(c)
 		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid userid format"})
-			c.Abort()
+			utils.HandleAPIError(c, err, extractErrorMessage)
 			return
 		}
-
-		email, ok := c.Get("email")
-		if !ok {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "failed to get email from context"})
-			c.Abort()
-			return
-		}
-
-		emailStr, ok := email.(string)
 
 		eventFetchingManager := ch.handler.Server.EventFetchingManager
 
-		draftedEvents, err := eventFetchingManager.FetchAllDraftedEvents(ctx, userid, emailStr)
+		draftedEvents, err := eventFetchingManager.FetchAllDraftedEvents(ctx, userid, email)
 		if err != nil {
 			fmt.Printf("failed to fetch events: %v", err)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch events"})
@@ -116,33 +85,15 @@ func (ch *CalendarHandler) SearchEventDraftHandler() gin.HandlerFunc {
 
 		ctx := c.Request.Context()
 
-		session := sessions.Default(c)
-		useridStr, ok := session.Get("userid").(string)
-		if !ok {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "failed to get userid from session"})
-			c.Abort()
-			return
-		}
-
-		userid, err := uuid.Parse(useridStr)
+		userid, email, err := utils.ExtractUserIDAndEmail(c)
 		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid userid format"})
-			c.Abort()
+			utils.HandleAPIError(c, err, extractErrorMessage)
 			return
 		}
-
-		email, ok := c.Get("email")
-		if !ok {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "failed to get email from context"})
-			c.Abort()
-			return
-		}
-
-		emailStr, ok := email.(string)
 
 		eventFetchingManager := ch.handler.Server.EventFetchingManager
 
-		draftedEvents, err := eventFetchingManager.SearchDraftedEvents(ctx, userid, emailStr, *query)
+		draftedEvents, err := eventFetchingManager.SearchDraftedEvents(ctx, userid, email, *query)
 		if err != nil {
 			fmt.Printf("failed to fetch events: %v", err)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch events"})
@@ -158,32 +109,16 @@ func (ch *CalendarHandler) FetchUpcomingEventsHandler() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		ctx := c.Request.Context()
 
-		session := sessions.Default(c)
-		useridStr, ok := session.Get("userid").(string)
-		if !ok {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "failed to get userid from session"})
-			c.Abort()
-			return
-		}
-
-		userid, err := uuid.Parse(useridStr)
+		userid, email, err := utils.ExtractUserIDAndEmail(c)
 		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid userid format"})
-			c.Abort()
-			return
-		}
-
-		email, ok := c.Get("email")
-		if !ok {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "failed to get email from context"})
-			c.Abort()
+			utils.HandleAPIError(c, err, extractErrorMessage)
 			return
 		}
 
 		eventFetchingManager := ch.handler.Server.EventFetchingManager
 
 		daysBefore := 3
-		upcomingEvents, err := eventFetchingManager.FetchUpcomingEvents(ctx, userid, email.(string), daysBefore)
+		upcomingEvents, err := eventFetchingManager.FetchUpcomingEvents(ctx, userid, email, daysBefore)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch events"})
 			c.Abort()
@@ -198,32 +133,16 @@ func (ch *CalendarHandler) FetchNeedsActionDraftsHandler() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		ctx := c.Request.Context()
 
-		session := sessions.Default(c)
-		useridStr, ok := session.Get("userid").(string)
-		if !ok {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "failed to get userid from session"})
-			c.Abort()
-			return
-		}
-
-		userid, err := uuid.Parse(useridStr)
+		userid, email, err := utils.ExtractUserIDAndEmail(c)
 		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid userid format"})
-			c.Abort()
-			return
-		}
-
-		email, ok := c.Get("email")
-		if !ok {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "failed to get email from context"})
-			c.Abort()
+			utils.HandleAPIError(c, err, extractErrorMessage)
 			return
 		}
 
 		eventFetchingManager := ch.handler.Server.EventFetchingManager
 
 		daysBefore := 3
-		upcomingEvents, err := eventFetchingManager.FetchNeedsActionDrafts(ctx, userid, email.(string), daysBefore)
+		upcomingEvents, err := eventFetchingManager.FetchNeedsActionDrafts(ctx, userid, email, daysBefore)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch events"})
 			c.Abort()
@@ -238,29 +157,11 @@ func (ch *CalendarHandler) FetchEventDraftDetailHandler() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		ctx := c.Request.Context()
 
-		session := sessions.Default(c)
-		useridStr, ok := session.Get("userid").(string)
-		if !ok {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "failed to get userid from session"})
-			c.Abort()
-			return
-		}
-
-		userid, err := uuid.Parse(useridStr)
+		userid, email, err := utils.ExtractUserIDAndEmail(c)
 		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid userid format"})
-			c.Abort()
+			utils.HandleAPIError(c, err, extractErrorMessage)
 			return
 		}
-
-		email, ok := c.Get("email")
-		if !ok {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "failed to get email from context"})
-			c.Abort()
-			return
-		}
-
-		emailStr, ok := email.(string)
 
 		eventIDParam := c.Param("eventID")
 		if eventIDParam == "" {
@@ -278,7 +179,7 @@ func (ch *CalendarHandler) FetchEventDraftDetailHandler() gin.HandlerFunc {
 
 		eventFetchingManager := ch.handler.Server.EventFetchingManager
 
-		draftedEvent, err := eventFetchingManager.FetchDraftedEventDetail(ctx, userid, emailStr, eventID)
+		draftedEvent, err := eventFetchingManager.FetchDraftedEventDetail(ctx, userid, email, eventID)
 		if err != nil {
 			fmt.Printf("failed to fetch events: %v", err)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch events"})
@@ -294,28 +195,11 @@ func (ch *CalendarHandler) CreateEventDraftHandler() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		ctx := c.Request.Context()
 
-		session := sessions.Default(c)
-		useridStr, ok := session.Get("userid").(string)
-		if !ok {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "failed to get userid from session"})
-			c.Abort()
-			return
-		}
-
-		userid, err := uuid.Parse(useridStr)
+		userid, email, err := utils.ExtractUserIDAndEmail(c)
 		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid userid format"})
-			c.Abort()
+			utils.HandleAPIError(c, err, extractErrorMessage)
 			return
 		}
-
-		email, ok := c.Get("email")
-		if !ok {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "failed to get email from context"})
-			c.Abort()
-			return
-		}
-		emailStr, ok := email.(string)
 
 		var eventDraft *models.EventDraftCreation
 		if err := c.ShouldBindJSON(&eventDraft); err != nil {
@@ -326,7 +210,7 @@ func (ch *CalendarHandler) CreateEventDraftHandler() gin.HandlerFunc {
 
 		eventCreationManager := ch.handler.Server.EventCreationManager
 
-		err = eventCreationManager.CreateDraftedEvents(ctx, userid, emailStr, eventDraft)
+		response, err := eventCreationManager.CreateDraftedEvents(ctx, userid, email, eventDraft)
 		if err != nil {
 			fmt.Printf("failed to fetch events: %v", err)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch events"})
@@ -334,7 +218,7 @@ func (ch *CalendarHandler) CreateEventDraftHandler() gin.HandlerFunc {
 			return
 		}
 
-		c.JSON(http.StatusOK, gin.H{"message": "success"})
+		c.JSON(http.StatusOK, response)
 	}
 }
 
@@ -342,28 +226,11 @@ func (ch *CalendarHandler) EventFinalizeHandler() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		ctx := c.Request.Context()
 
-		session := sessions.Default(c)
-		useridStr, ok := session.Get("userid").(string)
-		if !ok {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "failed to get userid from session"})
-			c.Abort()
-			return
-		}
-
-		userid, err := uuid.Parse(useridStr)
+		userid, email, err := utils.ExtractUserIDAndEmail(c)
 		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid userid format"})
-			c.Abort()
+			utils.HandleAPIError(c, err, extractErrorMessage)
 			return
 		}
-
-		email, ok := c.Get("email")
-		if !ok {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "failed to get email from context"})
-			c.Abort()
-			return
-		}
-		emailStr, ok := email.(string)
 
 		eventIDParam := c.Param("eventID")
 		if eventIDParam == "" {
@@ -389,7 +256,7 @@ func (ch *CalendarHandler) EventFinalizeHandler() gin.HandlerFunc {
 
 		eventManager := ch.handler.Server.EventManager
 
-		err = eventManager.FinalizeProposedDate(ctx, userid, eventID, emailStr, confirmEvent)
+		err = eventManager.FinalizeProposedDate(ctx, userid, eventID, email, confirmEvent)
 		if err != nil {
 			fmt.Printf("failed to finalize event: %v", err)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to finalize event"})
@@ -405,28 +272,11 @@ func (ch *CalendarHandler) UpdateEventDraftHandler() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		ctx := c.Request.Context()
 
-		session := sessions.Default(c)
-		useridStr, ok := session.Get("userid").(string)
-		if !ok {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "failed to get userid from session"})
-			c.Abort()
-			return
-		}
-
-		userid, err := uuid.Parse(useridStr)
+		userid, email, err := utils.ExtractUserIDAndEmail(c)
 		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid userid format"})
-			c.Abort()
+			utils.HandleAPIError(c, err, extractErrorMessage)
 			return
 		}
-
-		email, ok := c.Get("email")
-		if !ok {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "failed to get email from context"})
-			c.Abort()
-			return
-		}
-		emailStr, ok := email.(string)
 
 		eventIDParam := c.Param("eventID")
 		if eventIDParam == "" {
@@ -451,7 +301,7 @@ func (ch *CalendarHandler) UpdateEventDraftHandler() gin.HandlerFunc {
 
 		eventUpdateManager := ch.handler.Server.EventUpdateManager
 
-		err = eventUpdateManager.UpdateDraftedEvents(ctx, userid, eventID, emailStr, eventDraft)
+		err = eventUpdateManager.UpdateDraftedEvents(ctx, userid, eventID, email, eventDraft)
 		if err != nil {
 			fmt.Printf("failed to fetch events: %v", err)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch events"})
@@ -467,28 +317,11 @@ func (ch *CalendarHandler) DeleteEventDraftHandler() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		ctx := c.Request.Context()
 
-		session := sessions.Default(c)
-		useridStr, ok := session.Get("userid").(string)
-		if !ok {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "failed to get userid from session"})
-			c.Abort()
-			return
-		}
-
-		userid, err := uuid.Parse(useridStr)
+		userid, email, err := utils.ExtractUserIDAndEmail(c)
 		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid userid format"})
-			c.Abort()
+			utils.HandleAPIError(c, err, extractErrorMessage)
 			return
 		}
-
-		email, ok := c.Get("email")
-		if !ok {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "failed to get email from context"})
-			c.Abort()
-			return
-		}
-		emailStr, ok := email.(string)
 
 		var eventDraft *models.EventDraftDetail
 		if err := c.ShouldBindJSON(&eventDraft); err != nil {
@@ -499,7 +332,7 @@ func (ch *CalendarHandler) DeleteEventDraftHandler() gin.HandlerFunc {
 
 		eventDeleteManager := ch.handler.Server.EventDeleteManager
 
-		err = eventDeleteManager.DeleteDraftedEvents(ctx, userid, emailStr, eventDraft)
+		err = eventDeleteManager.DeleteDraftedEvents(ctx, userid, email, eventDraft)
 		if err != nil {
 			fmt.Printf("failed to fetch events: %v", err)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch events"})
