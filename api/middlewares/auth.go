@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"log"
 	"time"
 
 	"github.com/gin-contrib/sessions"
@@ -27,17 +28,13 @@ func (am *AuthMiddleware) AuthUser() gin.HandlerFunc {
 		client := am.middleware.Server.Client
 		accessToken, err := c.Cookie("access_token")
 		if err != nil {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "failed to get access token"})
+			log.Printf("failed to get access token: %v", err)
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "認証情報がありません"})
 			c.Abort()
 			return
 		}
 
-		session := sessions.Default(c)
-		googleid := session.Get("googleid").(string)
-		println(googleid)
-
 		ctx := c.Request.Context()
-
 		jwtManager := am.middleware.Server.JWTManager
 
 		// トークンの有効性を確認
@@ -47,7 +44,8 @@ func (am *AuthMiddleware) AuthUser() gin.HandlerFunc {
 			if strings.Contains(err.Error(), "token is expired") {
 				token, err := am.tokenRefresh(c)
 				if err != nil {
-					c.JSON(http.StatusUnauthorized, gin.H{"error": "failed to refresh token"})
+					log.Printf("failed to refresh token: %v", err)
+					c.JSON(http.StatusUnauthorized, gin.H{"error": "トークンの再発行に失敗しました"})
 					c.Abort()
 					return
 				}
@@ -55,15 +53,14 @@ func (am *AuthMiddleware) AuthUser() gin.HandlerFunc {
 				accessToken = token.AccessToken
 				email, err = jwtManager.VerifyToken(ctx, client, accessToken, "access")
 				if err != nil {
-					println("アクセストークンの再発行に失敗")
-					c.JSON(http.StatusUnauthorized, gin.H{"error": "failed to verify token"})
+					log.Printf("failed to verify token: %v", err)
+					c.JSON(http.StatusUnauthorized, gin.H{"error": "トークン認証に失敗しました"})
 					c.Abort()
 					return
 				}
 			} else {
-				println(err.Error())
-				println("アクセストークンの有効性確認に失敗")
-				c.JSON(http.StatusUnauthorized, gin.H{"error": "failed to verify token"})
+				log.Printf("failed to verify token: %v", err)
+				c.JSON(http.StatusUnauthorized, gin.H{"error": "トークン認証に失敗しました"})
 				c.Abort()
 				return
 			}

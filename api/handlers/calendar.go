@@ -3,6 +3,7 @@ package handlers
 import (
 	"fmt"
 	"net/http"
+	"log"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -36,9 +37,8 @@ func (ch *CalendarHandler) FetchEventListHandler() gin.HandlerFunc {
 
 		accountsEvents, err := eventFetchingManager.FetchAllGoogleEvents(ctx, userid, email)
 		if err != nil {
-			fmt.Printf("failed to fetch events: %v", err)
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch events"})
-			c.Abort()
+			log.Printf("failed to fetch events: %v", err)
+			utils.HandleAPIError(c, err, "Googleカレンダーのイベント取得に失敗しました")
 			return
 		}
 
@@ -60,9 +60,8 @@ func (ch *CalendarHandler) FetchAllEventDraftListHandler() gin.HandlerFunc {
 
 		draftedEvents, err := eventFetchingManager.FetchAllDraftedEvents(ctx, userid, email)
 		if err != nil {
-			fmt.Printf("failed to fetch events: %v", err)
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch events"})
-			c.Abort()
+			log.Printf("failed to fetch events: %v", err)
+			utils.HandleAPIError(c, err, "イベントの取得に失敗しました")
 			return
 		}
 
@@ -78,7 +77,7 @@ func (ch *CalendarHandler) SearchEventDraftHandler() gin.HandlerFunc {
 		// クエリパラメータの解析
 		query, err := queryparser.ParseSearchEventQuery()
 		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "failed to parse query"})
+			c.JSON(http.StatusBadRequest, gin.H{"error": "クエリが不正です"})
 			c.Abort()
 			return
 		}
@@ -95,9 +94,8 @@ func (ch *CalendarHandler) SearchEventDraftHandler() gin.HandlerFunc {
 
 		draftedEvents, err := eventFetchingManager.SearchDraftedEvents(ctx, userid, email, *query)
 		if err != nil {
-			fmt.Printf("failed to fetch events: %v", err)
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch events"})
-			c.Abort()
+			log.Printf("failed to fetch events: %v", err)
+			utils.HandleAPIError(c, err, "イベントの取得に失敗しました")
 			return
 		}
 
@@ -120,8 +118,8 @@ func (ch *CalendarHandler) FetchUpcomingEventsHandler() gin.HandlerFunc {
 		daysBefore := 3
 		upcomingEvents, err := eventFetchingManager.FetchUpcomingEvents(ctx, userid, email, daysBefore)
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch events"})
-			c.Abort()
+			log.Printf("failed to fetch upcoming events: %v", err)
+			utils.HandleAPIError(c, err, "イベントの取得に失敗しました")
 			return
 		}
 
@@ -144,8 +142,8 @@ func (ch *CalendarHandler) FetchNeedsActionDraftsHandler() gin.HandlerFunc {
 		daysBefore := 3
 		upcomingEvents, err := eventFetchingManager.FetchNeedsActionDrafts(ctx, userid, email, daysBefore)
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch events"})
-			c.Abort()
+			log.Printf("failed to fetch needs action events: %v", err)
+			utils.HandleAPIError(c, err, "イベントの取得に失敗しました")
 			return
 		}
 
@@ -165,14 +163,14 @@ func (ch *CalendarHandler) FetchEventDraftDetailHandler() gin.HandlerFunc {
 
 		eventIDParam := c.Param("eventID")
 		if eventIDParam == "" {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "missing eventID"})
+			c.JSON(http.StatusBadRequest, gin.H{"error": "イベントIDがありません"})
 			c.Abort()
 			return
 		}
 
 		eventID, err := uuid.Parse(eventIDParam)
 		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid eventID format"})
+			c.JSON(http.StatusBadRequest, gin.H{"error": "イベントIDの形式が不正です"})
 			c.Abort()
 			return
 		}
@@ -181,9 +179,8 @@ func (ch *CalendarHandler) FetchEventDraftDetailHandler() gin.HandlerFunc {
 
 		draftedEvent, err := eventFetchingManager.FetchDraftedEventDetail(ctx, userid, email, eventID)
 		if err != nil {
-			fmt.Printf("failed to fetch events: %v", err)
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch events"})
-			c.Abort()
+			log.Printf("failed to fetch events: %v", err)
+			utils.HandleAPIError(c, err, "イベント詳細の取得に失敗しました")
 			return
 		}
 
@@ -203,7 +200,7 @@ func (ch *CalendarHandler) CreateEventDraftHandler() gin.HandlerFunc {
 
 		var eventDraft *models.EventDraftCreation
 		if err := c.ShouldBindJSON(&eventDraft); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "failed to bind json"})
+			c.JSON(http.StatusBadRequest, gin.H{"error": "JSONのバインドに失敗しました"})
 			c.Abort()
 			return
 		}
@@ -212,9 +209,8 @@ func (ch *CalendarHandler) CreateEventDraftHandler() gin.HandlerFunc {
 
 		response, err := eventCreationManager.CreateDraftedEvents(ctx, userid, email, eventDraft)
 		if err != nil {
-			fmt.Printf("failed to fetch events: %v", err)
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch events"})
-			c.Abort()
+			log.Printf("failed to create events: %v", err)
+			utils.HandleAPIError(c, err, "イベントの作成に失敗しました")
 			return
 		}
 
@@ -234,14 +230,14 @@ func (ch *CalendarHandler) EventFinalizeHandler() gin.HandlerFunc {
 
 		eventIDParam := c.Param("eventID")
 		if eventIDParam == "" {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "missing eventID"})
+			c.JSON(http.StatusBadRequest, gin.H{"error": "イベントIDがありません"})
 			c.Abort()
 			return
 		}
 
 		eventID, err := uuid.Parse(eventIDParam)
 		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid eventID format"})
+			c.JSON(http.StatusBadRequest, gin.H{"error": "イベントIDの形式が不正です"})
 			c.Abort()
 			return
 		}
@@ -249,7 +245,7 @@ func (ch *CalendarHandler) EventFinalizeHandler() gin.HandlerFunc {
 		var confirmEvent *models.ConfirmEvent
 		if err := c.ShouldBindJSON(&confirmEvent); err != nil {
 			fmt.Printf("failed to bind json: %v", err)
-			c.JSON(http.StatusBadRequest, gin.H{"error": "failed to bind json"})
+			c.JSON(http.StatusBadRequest, gin.H{"error": "JSONのバインドに失敗しました"})
 			c.Abort()
 			return
 		}
@@ -258,9 +254,8 @@ func (ch *CalendarHandler) EventFinalizeHandler() gin.HandlerFunc {
 
 		err = eventManager.FinalizeProposedDate(ctx, userid, eventID, email, confirmEvent)
 		if err != nil {
-			fmt.Printf("failed to finalize event: %v", err)
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to finalize event"})
-			c.Abort()
+			log.Printf("failed to finalize event: %v", err)
+			utils.HandleAPIError(c, err, "イベントの確定に失敗しました")
 			return
 		}
 
@@ -280,21 +275,21 @@ func (ch *CalendarHandler) UpdateEventDraftHandler() gin.HandlerFunc {
 
 		eventIDParam := c.Param("eventID")
 		if eventIDParam == "" {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "missing eventID"})
+			c.JSON(http.StatusBadRequest, gin.H{"error": "イベントIDがありません"})
 			c.Abort()
 			return
 		}
 
 		eventID, err := uuid.Parse(eventIDParam)
 		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid eventID format"})
+			c.JSON(http.StatusBadRequest, gin.H{"error": "イベントIDの形式が不正です"})
 			c.Abort()
 			return
 		}
 
 		var eventDraft *models.EventDraftDetail
 		if err := c.ShouldBindJSON(&eventDraft); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "failed to bind json"})
+			c.JSON(http.StatusBadRequest, gin.H{"error": "JSONのバインドに失敗しました"})
 			c.Abort()
 			return
 		}
@@ -303,9 +298,8 @@ func (ch *CalendarHandler) UpdateEventDraftHandler() gin.HandlerFunc {
 
 		err = eventUpdateManager.UpdateDraftedEvents(ctx, userid, eventID, email, eventDraft)
 		if err != nil {
-			fmt.Printf("failed to fetch events: %v", err)
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch events"})
-			c.Abort()
+			log.Printf("failed to update events: %v", err)
+			utils.HandleAPIError(c, err, "イベントの更新に失敗しました")
 			return
 		}
 
@@ -325,7 +319,7 @@ func (ch *CalendarHandler) DeleteEventDraftHandler() gin.HandlerFunc {
 
 		var eventDraft *models.EventDraftDetail
 		if err := c.ShouldBindJSON(&eventDraft); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "failed to bind json"})
+			c.JSON(http.StatusBadRequest, gin.H{"error": "JSONのバインドに失敗しました"})
 			c.Abort()
 			return
 		}
@@ -334,9 +328,8 @@ func (ch *CalendarHandler) DeleteEventDraftHandler() gin.HandlerFunc {
 
 		err = eventDeleteManager.DeleteDraftedEvents(ctx, userid, email, eventDraft)
 		if err != nil {
-			fmt.Printf("failed to fetch events: %v", err)
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch events"})
-			c.Abort()
+			log.Printf("failed to delete events: %v", err)
+			utils.HandleAPIError(c, err, "イベントの削除に失敗しました")
 			return
 		}
 

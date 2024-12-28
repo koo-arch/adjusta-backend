@@ -2,19 +2,23 @@ package events
 
 import (
 	"context"
+	"net/http"
 	"fmt"
+	"log"
 
-	"github.com/koo-arch/adjusta-backend/ent"
 	"github.com/google/uuid"
+	"github.com/koo-arch/adjusta-backend/ent"
 	appCalendar "github.com/koo-arch/adjusta-backend/internal/apps/calendar"
 	"github.com/koo-arch/adjusta-backend/internal/auth"
-	repoCalendar "github.com/koo-arch/adjusta-backend/internal/repo/calendar"
-	"github.com/koo-arch/adjusta-backend/internal/repo/googlecalendarinfo"
-	"github.com/koo-arch/adjusta-backend/internal/repo/event"
-	"github.com/koo-arch/adjusta-backend/internal/repo/proposeddate"
+	internalErrors "github.com/koo-arch/adjusta-backend/internal/errors"
 	customCalendar "github.com/koo-arch/adjusta-backend/internal/google/calendar"
-	"github.com/koo-arch/adjusta-backend/internal/transaction"
 	"github.com/koo-arch/adjusta-backend/internal/models"
+	repoCalendar "github.com/koo-arch/adjusta-backend/internal/repo/calendar"
+	"github.com/koo-arch/adjusta-backend/internal/repo/event"
+	"github.com/koo-arch/adjusta-backend/internal/repo/googlecalendarinfo"
+	"github.com/koo-arch/adjusta-backend/internal/repo/proposeddate"
+	"github.com/koo-arch/adjusta-backend/internal/transaction"
+	"github.com/koo-arch/adjusta-backend/utils"
 )
 
 type EventManager struct {
@@ -50,19 +54,22 @@ func NewEventManager(
 func (em *EventManager) FinalizeProposedDate(ctx context.Context, userID, eventID uuid.UUID, email string, eventReq *models.ConfirmEvent) error {
 	tx, err := em.Client.Tx(ctx)
 	if err != nil {
-		return fmt.Errorf("failed starting transaction: %w", err)
+		return internalErrors.NewAPIError(http.StatusInternalServerError, internalErrors.InternalErrorMessage)
 	}
 
 	// OAuthトークンを検証
 	token, err := em.AuthManager.VerifyOAuthToken(ctx, userID)
 	if err != nil {
-		return fmt.Errorf("failed to verify token for account: %s, error: %w", email, err)
+		log.Printf("failed to verify oauth token for account: %s, error: %v", email, err)
+		apiErr := utils.GetAPIError(err, "サーバーでエラーが発生しました")
+		return apiErr
 	}
 
 	// Google Calendarサービスを作成
 	calendarService, err := customCalendar.NewCalendar(ctx, token)
 	if err != nil {
-		return fmt.Errorf("failed to create calendar service for account: %s, error: %w", email, err)
+		log.Printf("failed to create calendar service for account: %s, error: %v", email, err)
+		return internalErrors.NewAPIError(http.StatusInternalServerError, "Googleカレンダー接続に失敗しました")
 	}
 
 	// トランザクションをデファーで処理
@@ -70,19 +77,26 @@ func (em *EventManager) FinalizeProposedDate(ctx context.Context, userID, eventI
 
 	entEvent, err := em.EventRepo.Read(ctx, tx, eventID, event.EventQueryOptions{})
 	if err != nil {
-		return fmt.Errorf("failed to get event for account: %s, error: %w", email, err)
+		log.Printf("failed to get event for account: %s, error: %v", email, err)
+		if ent.IsNotFound(err) {
+			return internalErrors.NewAPIError(http.StatusNotFound, "イベントが見つかりませんでした")
+		}	
+		return internalErrors.NewAPIError(http.StatusInternalServerError, internalErrors.InternalErrorMessage)
 	}
 
 	// Googleカレンダーイベントの新規登録または既存イベントのIDチェック
 	googleEventID, err := em.HandleGoogleEvent(calendarService, entEvent, eventReq)
 	if err != nil {
-		return fmt.Errorf("failed to handle google event for account: %s, error: %w", email, err)
+		log.Printf("failed to handle google event for account: %s, error: %v", email, err)
+		apiErr := utils.HandleGoogleAPIError(err)
+		return apiErr
 	}
 
 	// いずれかの日程候補を確定
 	err = em.ConfirmEventDate(ctx, tx, calendarService, googleEventID, eventReq, entEvent)
 	if err != nil {
-		return fmt.Errorf("failed to confirm event date for account: %s, error: %w", email, err)
+		log.Printf("failed to confirm event date for account: %s, error: %v", email, err)
+		return internalErrors.NewAPIError(http.StatusInternalServerError, internalErrors.InternalErrorMessage)
 	}
 
 	// トランザクションをコミット

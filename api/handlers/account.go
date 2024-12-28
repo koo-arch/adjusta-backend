@@ -2,11 +2,11 @@ package handlers
 
 import (
 	"net/http"
+	"log"
 	
-	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
 	"github.com/koo-arch/adjusta-backend/internal/google/userinfo"
+	"github.com/koo-arch/adjusta-backend/utils"
 )
 
 type AccountHandler struct {
@@ -21,18 +21,9 @@ func (ah *AccountHandler) FetchAccountsHandler() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		ctx := c.Request.Context()
 
-		session := sessions.Default(c)
-		useridStr, ok := session.Get("userid").(string)
-		if !ok {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "failed to get userid from session"})
-			c.Abort()
-			return
-		}
-
-		userid, err := uuid.Parse(useridStr)
+		userid, email, err := utils.ExtractUserIDAndEmail(c)
 		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid userid format"})
-			c.Abort()
+			utils.HandleAPIError(c, err, "ユーザー情報確認時にエラーが発生しました")
 			return
 		}
 
@@ -40,15 +31,15 @@ func (ah *AccountHandler) FetchAccountsHandler() gin.HandlerFunc {
 
 		token, err := authManager.VerifyOAuthToken(ctx, userid)
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to verify token"})
-			c.Abort()
+			log.Printf("failed to verify token for account: %s, %v", email, err)
+			utils.HandleAPIError(c, err, "OAuthトークン認証に失敗しました")
 			return
 		}
 
 		userInfo, err := userinfo.FetchGoogleUserInfo(ctx, token)
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch user info"})
-			c.Abort()
+			log.Printf("failed to fetch user info for account: %s, %v", email, err)
+			utils.HandleAPIError(c, err, "ユーザー情報取得に失敗しました")
 			return
 		}
 

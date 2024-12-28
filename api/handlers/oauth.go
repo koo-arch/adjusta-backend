@@ -1,16 +1,18 @@
 package handlers
 
 import (
-	"fmt"
 	"net/http"
 	"time"
+	"log"
 
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
 	"github.com/koo-arch/adjusta-backend/cookie"
+	"github.com/koo-arch/adjusta-backend/configs"
 	"github.com/koo-arch/adjusta-backend/internal/google/oauth"
 	"github.com/koo-arch/adjusta-backend/internal/google/userinfo"
 	"golang.org/x/oauth2"
+	"github.com/koo-arch/adjusta-backend/utils"
 )
 
 type OauthHandler struct {
@@ -32,7 +34,8 @@ func (oh *OauthHandler) LogoutHandler(c *gin.Context) {
 	session.Clear()
 	session.Options(sessions.Options{MaxAge: -1, Path: "/"})
 	if err := session.Save(); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to save session"})
+		log.Printf("failed to save session for account: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "セッションの保存に失敗しました"})
 		return
 	}
 
@@ -50,8 +53,8 @@ func (oh *OauthHandler) GoogleCallbackHandler() gin.HandlerFunc {
 		// クエリパラメータからcodeを取得
 		code := c.Query("code")
 		if code == "" {
-			fmt.Println("missing code")
-			c.JSON(http.StatusBadRequest, gin.H{"error": "missing code"})
+			log.Printf("missing code")
+			c.JSON(http.StatusBadRequest, gin.H{"error": "codeがありません"})
 			return
 		}
 
@@ -60,16 +63,16 @@ func (oh *OauthHandler) GoogleCallbackHandler() gin.HandlerFunc {
 		// Googleからトークンを取得
 		oauthToken, err := oauth.GetGoogleAuthConfig().Exchange(ctx, code)
 		if err != nil {
-			fmt.Println("failed to exchange oauthToken")
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to exchange oauthToken"})
+			log.Printf("failed to exchange oauthToken: %v", err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "OAuthトークンの取得に失敗しました"})
 			return
 		}
 
 		// Googleからユーザー情報を取得
 		userInfo, err := userinfo.FetchGoogleUserInfo(ctx, oauthToken)
 		if err != nil {
-			fmt.Println("failed to fetch user info")
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch user info"})
+			log.Printf("failed to fetch user info: %v", err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "ユーザー情報の取得に失敗しました"})
 			return
 		}
 
@@ -77,12 +80,17 @@ func (oh *OauthHandler) GoogleCallbackHandler() gin.HandlerFunc {
 		authManager := oh.handler.Server.AuthManager
 		// アプリ独自のJWTトークンを生成
 		jwtToken, err := jwtManager.GenerateTokens(ctx, client, userInfo.Email)
+		if err != nil {
+			log.Printf("failed to generate jwtToken: %v", err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "JWTトークンの生成に失敗しました"})
+			return
+		}
 
 		// ユーザー情報をデータベースに保存
 		u, err := authManager.ProcessUserSignIn(ctx, userInfo, jwtToken, oauthToken)
 		if err != nil {
-			fmt.Printf("failed to create or update user: %s", err.Error())
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create or update user"})
+			log.Printf("failed to create or update user: %v", err)
+			utils.HandleAPIError(c, err, "ユーザーの作成または更新に失敗しました")
 			return
 		}
 
@@ -90,8 +98,8 @@ func (oh *OauthHandler) GoogleCallbackHandler() gin.HandlerFunc {
 		// アカウントのoauthトークンを検証
 		_, err = authManager.VerifyOAuthToken(ctx, u.ID)
 		if err != nil {
-			fmt.Printf("failed to reuse token source for account: %s, error: %s", u.Email, err.Error())
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to reuse token source"})
+			log.Printf("failed to reuse token source for account: %s, error: %v", u.Email, err)
+			utils.HandleAPIError(c, err, "OAuthトークンの再利用に失敗しました")
 			return
 		}
 
@@ -103,12 +111,12 @@ func (oh *OauthHandler) GoogleCallbackHandler() gin.HandlerFunc {
 		session.Set("googleid", userInfo.GoogleID)
 		session.Set("userid", u.ID.String())
 		if err := session.Save(); err != nil {
-			fmt.Printf("failed to save session:%v", err)
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to save session"})
+			log.Printf("failed to save session for account: %s, error: %v", u.Email, err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "セッションの保存に失敗しました"})
 			return
 		}
 
 		// リダイレクト
-		c.Redirect(http.StatusTemporaryRedirect, "http://localhost:3000")
+		c.Redirect(http.StatusTemporaryRedirect, configs.GetEnv("REDIRECT_URL_AFTER_LOGIN"))
 	}
 }

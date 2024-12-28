@@ -3,18 +3,19 @@ package middlewares
 import (
 	"context"
 	"fmt"
+	"log"
 	"net/http"
 	"time"
 
-	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
 	"github.com/koo-arch/adjusta-backend/ent"
 	customCalendar "github.com/koo-arch/adjusta-backend/internal/google/calendar"
 	repoCalendar "github.com/koo-arch/adjusta-backend/internal/repo/calendar"
 	"github.com/koo-arch/adjusta-backend/internal/repo/googlecalendarinfo"
 	"github.com/koo-arch/adjusta-backend/internal/repo/user"
 	"github.com/koo-arch/adjusta-backend/internal/transaction"
+	"github.com/koo-arch/adjusta-backend/utils"
+	internalErrors "github.com/koo-arch/adjusta-backend/internal/errors"
 )
 
 type CalendarMiddleware struct {
@@ -31,32 +32,27 @@ func (cm *CalendarMiddleware) SyncGoogleCalendars() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		ctx := c.Request.Context()
 
-		session := sessions.Default(c)
-		useridStr, ok := session.Get("userid").(string)
-		if !ok {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "failed to get userid from session"})
-			c.Abort()
-			return
-		}
-
-		userid, err := uuid.Parse(useridStr)
+		userid, email, err := utils.ExtractUserIDAndEmail(c)
 		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid userid format"})
-			c.Abort()
+			log.Printf("failed to extract user info for account: %s, %v", email, err)
+			utils.HandleAPIError(c, err, "ユーザー情報確認時にエラーが発生しました。")
 			return
 		}
 
 		userRepo := cm.middleware.Server.UserRepo
 		entUser, err := userRepo.Read(ctx, nil, userid, user.UserQueryOptions{})
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to get user from db"})
-			c.Abort()
+			log.Printf("failed to get user info for account: %s, %v", email, err)
+			if ent.IsNotFound(err) {
+				utils.HandleAPIError(c, err, "ユーザー情報が見つかりませんでした")
+			}
+			utils.HandleAPIError(c, err, "ユーザー情報取得時にエラーが発生しました")
 			return
 		}
 
 		// キャッシュにある場合はそれを使う
 		cache := cm.middleware.Server.Cache
-		cacheKey := fmt.Sprintf("calendars:%s", useridStr)
+		cacheKey := fmt.Sprintf("calendars:%s", userid)
 		if cacheCalendar, found := cache.CalendarCache.Get(cacheKey); found {
 			println("use cache")
 			c.Set("calendarList", cacheCalendar)
@@ -67,9 +63,8 @@ func (cm *CalendarMiddleware) SyncGoogleCalendars() gin.HandlerFunc {
 
 		calendarList, err := cm.fetchAndCacheCalendars(ctx, entUser)
 		if err != nil {
-			fmt.Printf("failed to register calendar list: %v\n", err)
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to register calendar list"})
-			c.Abort()
+			log.Printf("failed to register calendar list for account: %s, error: %v",email,  err)
+			utils.HandleAPIError(c, err, "Googleカレンダーの同期に失敗しました")
 			return
 		}
 
@@ -83,21 +78,27 @@ func(cm *CalendarMiddleware) fetchAndCacheCalendars(ctx context.Context, entUser
 	authManager := cm.middleware.Server.AuthManager
 	token, err := authManager.VerifyOAuthToken(ctx, entUser.ID)
 	if err != nil {
-		return nil, fmt.Errorf("failed to verify token for account: %s, error: %w", entUser.Email, err)
+		log.Printf("failed to verify token for account: %s, error: %v", entUser.Email, err)
+		apiErr := utils.GetAPIError(err, "OAuthトークンの認証に失敗しました")
+		return nil, apiErr
 	}
 
 	calendarService, err := customCalendar.NewCalendar(ctx, token)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create calendar service for account: %s, error: %w", entUser.Email, err)
+		log.Printf("failed to create calendar service for account: %s, error: %v", entUser.Email, err)
+		return nil, internalErrors.NewAPIError(http.StatusInternalServerError, "Googleカレンダー接続に失敗しました")
 	}
 
 	calendars, err := calendarService.FetchCalendarList()
 	if err != nil {
-		return nil, fmt.Errorf("failed to fetch calendars for account: %s, error: %w", entUser.Email, err)
+		log.Printf("failed to fetch calendars for account: %s, error: %v", entUser.Email, err)
+		apiErr := utils.HandleGoogleAPIError(err)
+		return nil, apiErr
 	}
 
 	if err := cm.syncCalendar(ctx, calendars, entUser); err != nil {
-		return nil, fmt.Errorf("failed to sync calendars for account: %s, error: %w", entUser.Email, err)
+		log.Printf("failed to sync calendars for account: %s, error: %v", entUser.Email, err)
+		return nil, internalErrors.NewAPIError(http.StatusInternalServerError, internalErrors.InternalErrorMessage)
 	}
 
 	// キャッシュに保存

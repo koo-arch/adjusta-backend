@@ -2,10 +2,13 @@ package event_operations
 
 import (
 	"context"
-	"fmt"
+	"log"
+	"net/http"
 
 	"github.com/google/uuid"
+	"github.com/koo-arch/adjusta-backend/ent"
 	"github.com/koo-arch/adjusta-backend/internal/apps/events"
+	internalErrors "github.com/koo-arch/adjusta-backend/internal/errors"
 	"github.com/koo-arch/adjusta-backend/internal/models"
 	repoCalendar "github.com/koo-arch/adjusta-backend/internal/repo/calendar"
 	"github.com/koo-arch/adjusta-backend/internal/transaction"
@@ -25,7 +28,8 @@ func (ecm *EventCreationManager) CreateDraftedEvents(ctx context.Context, userID
 
 	tx, err := ecm.event.Client.Tx(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("failed starting transaction: %w", err)
+		log.Printf("failed starting transaction: %v", err)
+		return nil, internalErrors.NewAPIError(http.StatusInternalServerError, internalErrors.InternalErrorMessage)
 	}
 
 	defer transaction.HandleTransaction(tx, &err)
@@ -36,19 +40,24 @@ func (ecm *EventCreationManager) CreateDraftedEvents(ctx context.Context, userID
 	}
 	entCalendar, err := ecm.event.CalendarRepo.FindByFields(ctx, tx, userID, findOptions)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get primary calendar for account: %s, error: %w", email, err)
+		if ent.IsNotFound(err) {
+			return nil, internalErrors.NewAPIError(http.StatusNotFound, "カレンダーが見つかりませんでした")
+		}
+		return nil, internalErrors.NewAPIError(http.StatusInternalServerError, internalErrors.InternalErrorMessage)
 	}
 
 	convEvent := ecm.event.CalendarApp.ConvertToCalendarEvent(nil, eventReq.Title, eventReq.Location, eventReq.Description, eventReq.SelectedDates[0].Start, eventReq.SelectedDates[0].End)
 
 	entEvent, err := ecm.event.EventRepo.Create(ctx, tx, convEvent, entCalendar)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get event for account: %s, error: %w", email, err)
+		log.Printf("failed to create event for account: %s, error: %v", email, err)
+		return nil, internalErrors.NewAPIError(http.StatusInternalServerError, internalErrors.InternalErrorMessage)
 	}
 
 	entDate, err := ecm.event.DateRepo.CreateBulk(ctx, tx, eventReq.SelectedDates, entEvent)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create proposed dates for account: %s, error: %w", email, err)
+		log.Printf("failed to create proposed dates for account: %s, error: %v", email, err)
+		return nil, internalErrors.NewAPIError(http.StatusInternalServerError, internalErrors.InternalErrorMessage)
 	}
 
 	eventDates := make([]models.ProposedDate, 0)

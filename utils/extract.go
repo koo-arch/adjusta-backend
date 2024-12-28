@@ -13,22 +13,22 @@ func ExtractUserIDAndEmail(c *gin.Context) (uuid.UUID, string, error) {
 	session := sessions.Default(c)
 	useridStr, ok := session.Get("userid").(string)
 	if !ok {
-		return uuid.Nil, "", internalErrors.NewAPIError(http.StatusUnauthorized, "failed to get userid from session")
+		return uuid.Nil, "", internalErrors.NewAPIError(http.StatusUnauthorized, "ユーザー情報が取得できませんでした")
 	}
 
 	userid, err := uuid.Parse(useridStr)
 	if err != nil {
-		return uuid.Nil, "", internalErrors.NewAPIError(http.StatusBadRequest, "invalid userid format")
+		return uuid.Nil, "", internalErrors.NewAPIError(http.StatusBadRequest, "ユーザーIDの形式が正しくありません")
 	}
 
 	email, ok := c.Get("email")
 	if !ok {
-		return uuid.Nil, "", internalErrors.NewAPIError(http.StatusUnauthorized, "failed to get email from context")
+		return uuid.Nil, "", internalErrors.NewAPIError(http.StatusUnauthorized, "ユーザー情報が取得できませんでした")
 	}
 
 	emailStr, ok := email.(string)
 	if !ok {
-		return uuid.Nil, "", internalErrors.NewAPIError(http.StatusBadRequest, "invalid email format")
+		return uuid.Nil, "", internalErrors.NewAPIError(http.StatusBadRequest, "ユーザー情報の形式が正しくありません")
 	}
 
 	return userid, emailStr, nil

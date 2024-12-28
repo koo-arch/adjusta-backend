@@ -1,8 +1,9 @@
 package event_operations
 
 import (
+	"net/http"
 	"context"
-	"fmt"
+	"log"
 	"sort"
 	"sync"
 	"time"
@@ -16,6 +17,8 @@ import (
 	repoCalendar "github.com/koo-arch/adjusta-backend/internal/repo/calendar"
 	"github.com/koo-arch/adjusta-backend/internal/repo/event"
 	"github.com/koo-arch/adjusta-backend/internal/transaction"
+	internalErrors "github.com/koo-arch/adjusta-backend/internal/errors"
+	"github.com/koo-arch/adjusta-backend/utils"
 )
 
 type EventFetchingManager struct {
@@ -32,12 +35,15 @@ func (efm *EventFetchingManager) FetchAllGoogleEvents(ctx context.Context, userI
 
 	token, err := efm.event.AuthManager.VerifyOAuthToken(ctx, userID)
 	if err != nil {
-		return nil, fmt.Errorf("failed to verify token for account: %s, error: %w", email, err)
+		log.Printf("failed to verify token for account: %s, error: %v", email, err)
+		apiErr := utils.GetAPIError(err, "認証エラーが発生しました")
+		return nil, apiErr
 	}
 
 	calendarService, err := customCalendar.NewCalendar(ctx, token)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create calendar service for account: %s, error: %w", email, err)
+		log.Printf("failed to connect to Google Calendar: %v", err)
+		return nil, internalErrors.NewAPIError(http.StatusInternalServerError, "Googleカレンダーの接続に失敗しました")
 	}
 
 	now := time.Now()
@@ -49,7 +55,11 @@ func (efm *EventFetchingManager) FetchAllGoogleEvents(ctx context.Context, userI
 	}
 	calendars, err := efm.event.CalendarRepo.FilterByFields(ctx, nil, userID, calendarOptions)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get calendars from db for account: %s, error: %w", email, err)
+		log.Printf("failed to get primary calendar for account: %s, error: %v", email, err)
+		if ent.IsNotFound(err) {
+			return nil, internalErrors.NewAPIError(http.StatusNotFound, "カレンダーが見つかりませんでした")
+		}
+		return nil, internalErrors.NewAPIError(http.StatusInternalServerError, internalErrors.InternalErrorMessage)
 	}
 
 	entGoogleCalendars := make([]*ent.GoogleCalendarInfo, 0)
@@ -61,7 +71,9 @@ func (efm *EventFetchingManager) FetchAllGoogleEvents(ctx context.Context, userI
 
 	events, err := efm.event.CalendarApp.FetchEventsFromCalendars(calendarService, entGoogleCalendars, startTime, endTime)
 	if err != nil {
-		return nil, fmt.Errorf("failed to fetch events for account: %s, error: %w", email, err)
+		log.Printf("failed to fetch events from Google Calendar: %v", err)
+		apiErr := utils.HandleGoogleAPIError(err)
+		return nil, apiErr
 	}
 
 	return events, nil
@@ -76,11 +88,16 @@ func (efm *EventFetchingManager) FetchAllDraftedEvents(ctx context.Context, user
 	}
 	entCalendar, err := efm.event.CalendarRepo.FindByFields(ctx, nil, userID, findOptions)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get primary calendar for account: %s, error: %w", email, err)
+		log.Printf("failed to get primary calendar for account: %s, error: %v", email, err)
+		if ent.IsNotFound(err) {
+			return nil, internalErrors.NewAPIError(http.StatusNotFound, "カレンダーが見つかりませんでした")
+		}
+		return nil, internalErrors.NewAPIError(http.StatusInternalServerError, "カレンダー取得時にエラーが発生しました")
 	}
 
 	if entCalendar.Edges.Events == nil {
-		return nil, fmt.Errorf("failed to get events for account: %s", email)
+		log.Printf("No association found between calendar and event")
+		return nil, internalErrors.NewAPIError(http.StatusInternalServerError, internalErrors.InternalErrorMessage)
 	}
 
 	draftedEvents := make([]*models.EventDraftDetail, 0)
@@ -146,7 +163,11 @@ func (efm *EventFetchingManager) SearchDraftedEvents(ctx context.Context, userID
 
 	entCalendar, err := efm.event.CalendarRepo.FindByFields(ctx, nil, userID, calendarOptions)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get primary calendar for account: %s, error: %w", email, err)
+		log.Printf("failed to get primary calendar for account: %s, error: %v", email, err)
+		if ent.IsNotFound(err) {
+			return nil, internalErrors.NewAPIError(http.StatusNotFound, "カレンダーが見つかりませんでした")
+		}
+		return nil, internalErrors.NewAPIError(http.StatusInternalServerError, internalErrors.InternalErrorMessage)
 	}
 
 	eventOptions := event.EventQueryOptions{
@@ -160,13 +181,17 @@ func (efm *EventFetchingManager) SearchDraftedEvents(ctx context.Context, userID
 	}
 	entEvent, err := efm.event.EventRepo.SearchEvents(ctx, nil, userID, entCalendar.ID, eventOptions)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get events for account: %s, error: %w", email, err)
+		log.Printf("failed to get event for account: %s, error: %v", email, err)
+		if ent.IsNotFound(err) {
+			return nil, internalErrors.NewAPIError(http.StatusNotFound, "イベントが見つかりませんでした")
+		}
+		return nil, internalErrors.NewAPIError(http.StatusInternalServerError, internalErrors.InternalErrorMessage)
 	}
 
 	searchResult := make([]*models.EventDraftDetail, 0)
 	for _, event := range entEvent {
 		if event.Edges.ProposedDates == nil {
-			return nil, fmt.Errorf("failed to get proposed dates for account: %s", email)
+			return nil, internalErrors.NewAPIError(http.StatusInternalServerError, internalErrors.InternalErrorMessage)
 		}
 
 		proposedDates := make([]models.ProposedDate, 0)
@@ -202,7 +227,8 @@ func (efm *EventFetchingManager) SearchDraftedEvents(ctx context.Context, userID
 func (efm *EventFetchingManager) FetchDraftedEventDetail(ctx context.Context, userID uuid.UUID, email string, eventID uuid.UUID) (*models.EventDraftDetail, error) {
 	tx, err := efm.event.Client.Tx(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("failed starting transaction: %w", err)
+		log.Printf("failed starting transaction: %v", err)
+		return nil, internalErrors.NewAPIError(http.StatusInternalServerError, internalErrors.InternalErrorMessage)
 	}
 
 	defer transaction.HandleTransaction(tx, &err)
@@ -212,11 +238,16 @@ func (efm *EventFetchingManager) FetchDraftedEventDetail(ctx context.Context, us
 	}
 	entEvent, err := efm.event.EventRepo.Read(ctx, tx, eventID, queryOpt)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get event for account: %s, error: %w", email, err)
+		log.Printf("failed to get event for account: %s, error: %v", email, err)
+		if ent.IsNotFound(err) {
+			return nil, internalErrors.NewAPIError(http.StatusNotFound, "イベントが見つかりませんでした")
+		}
+		return nil, internalErrors.NewAPIError(http.StatusInternalServerError, internalErrors.InternalErrorMessage)
 	}
 
 	if entEvent.Edges.ProposedDates == nil {
-		return nil, fmt.Errorf("failed to get proposed dates for account: %s", email)
+		log.Printf("No association found between calendar and event")
+		return nil, internalErrors.NewAPIError(http.StatusInternalServerError, internalErrors.InternalErrorMessage)
 	}
 
 	proposedDates := make([]models.ProposedDate, 0)
@@ -254,7 +285,11 @@ func (efm *EventFetchingManager) FetchUpcomingEvents(ctx context.Context, userID
 
 	entCalendar, err := efm.event.CalendarRepo.FindByFields(ctx, nil, userID, calendarOptions)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get primary calendar for account: %s, error: %w", email, err)
+		log.Printf("failed to get primary calendar for account: %s, error: %v", email, err)
+		if ent.IsNotFound(err) {
+			return nil, internalErrors.NewAPIError(http.StatusNotFound, "カレンダーが見つかりませんでした")
+		}
+		return nil, internalErrors.NewAPIError(http.StatusInternalServerError, internalErrors.InternalErrorMessage)
 	}
 
 	currentTime := time.Now()
@@ -269,13 +304,15 @@ func (efm *EventFetchingManager) FetchUpcomingEvents(ctx context.Context, userID
 
 	entEvents, err := efm.event.EventRepo.SearchEvents(ctx, nil, userID, entCalendar.ID, eventOptions)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get events for account: %s, error: %w", email, err)
+		log.Printf("failed to get event for account: %s, error: %v", email, err)
+		return nil, internalErrors.NewAPIError(http.StatusInternalServerError, "イベント取得時にエラーが発生しました")
 	}
 
 	upcomingEvents := make([]models.UpcomingEvent, 0)
 	for _, entEvent := range entEvents {
 		if entEvent.Edges.ProposedDates == nil {
-			return nil, fmt.Errorf("failed to get proposed dates for account: %s", email)
+			log.Printf("No association found between calendar and event")
+			return nil, internalErrors.NewAPIError(http.StatusInternalServerError, internalErrors.InternalErrorMessage)
 		}
 
 		for _, entDate := range entEvent.Edges.ProposedDates {
@@ -312,7 +349,11 @@ func (efm *EventFetchingManager) FetchNeedsActionDrafts(ctx context.Context, use
 
 	entCalendar, err := efm.event.CalendarRepo.FindByFields(ctx, nil, userID, calendarOptions)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get primary calendar for account: %s, error: %w", email, err)
+		log.Printf("failed to get primary calendar for account: %s, error: %v", email, err)
+		if ent.IsNotFound(err) {
+			return nil, internalErrors.NewAPIError(http.StatusNotFound, "カレンダーが見つかりませんでした")
+		}
+		return nil, internalErrors.NewAPIError(http.StatusInternalServerError, internalErrors.InternalErrorMessage)
 	}
 
 	currentTime := time.Now()
@@ -328,13 +369,18 @@ func (efm *EventFetchingManager) FetchNeedsActionDrafts(ctx context.Context, use
 
 	entEvents, err := efm.event.EventRepo.SearchEvents(ctx, nil, userID, entCalendar.ID, eventOptions)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get events for account: %s, error: %w", email, err)
+		log.Printf("failed to get event for account: %s, error: %v", email, err)
+		if ent.IsNotFound(err) {
+			return nil, internalErrors.NewAPIError(http.StatusNotFound, "イベントが見つかりませんでした")
+		}
+		return nil, internalErrors.NewAPIError(http.StatusInternalServerError, internalErrors.InternalErrorMessage)
 	}
 
 	NeedsActionDrafts:= make([]models.NeedsActionDraft, 0)
 	for _, entEvent := range entEvents {
 		if entEvent.Edges.ProposedDates == nil {
-			return nil, fmt.Errorf("failed to get proposed dates for account: %s", email)
+			log.Printf("No association found between calendar and event")
+			return nil, internalErrors.NewAPIError(http.StatusInternalServerError, internalErrors.InternalErrorMessage)
 		}
 
 		for _, entDate := range entEvent.Edges.ProposedDates {
