@@ -1,60 +1,46 @@
 package handlers
 
 import (
+	"log"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/gin-contrib/sessions"
-	"github.com/google/uuid"
-	"github.com/koo-arch/adjusta-backend/ent"
-	"github.com/koo-arch/adjusta-backend/internal/apps/account"
-	"github.com/koo-arch/adjusta-backend/internal/apps/user"
-	"github.com/koo-arch/adjusta-backend/internal/auth"
 	"github.com/koo-arch/adjusta-backend/internal/google/userinfo"
+	"github.com/koo-arch/adjusta-backend/utils"
 )
 
-func GetCurrentUserHandler(client *ent.Client) gin.HandlerFunc {
+type UserHandler struct {
+	handler *Handler
+}
+
+func NewUserHandler(handler *Handler) *UserHandler {
+	return &UserHandler{handler: handler}
+}
+
+func (uh *UserHandler) GetCurrentUserHandler() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		email, ok := c.Get("email")
-		if !ok {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "failed to get email from context"})
-			c.Abort()
-			return
-		}
-
-		session := sessions.Default(c)
-		useridStr, ok := session.Get("userid").(string)
-		if !ok {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "failed to get userid from session"})
-			c.Abort()
-			return
-		}
-
-		userid, err := uuid.Parse(useridStr)
+		userid, email, err := utils.ExtractUserIDAndEmail(c)
 		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid userid format"})
-			c.Abort()
+			log.Printf("failed to extract user info for account: %s, %v", email, err)
+			utils.HandleAPIError(c, err, "ユーザー情報確認時にエラーが発生しました")
 			return
 		}
 
 		ctx := c.Request.Context()
-		
-		userRepo := user.NewUserRepository(client)
-		accountRepo := account.NewAccountRepository(client)
-		authManager := auth.NewAuthManager(client, userRepo, accountRepo)
-		
-		token, err := authManager.VerifyOAuthToken(ctx, userid, email.(string))
+
+		authManager := uh.handler.Server.AuthManager
+
+		token, err := authManager.VerifyOAuthToken(ctx, userid)
 		if err != nil {
-			println("oauth期限切れ")
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "failed to verify token"})
-			c.Abort()
+			log.Printf("failed to verify token for account: %s, %v", email, err)
+			utils.HandleAPIError(c, err, "OAuthトークン認証に失敗しました")
 			return
 		}
-		
+
 		userInfo, err := userinfo.FetchGoogleUserInfo(ctx, token)
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch user info"})
-			c.Abort()
+			log.Printf("failed to fetch user info for account: %s, %v", email, err)
+			utils.HandleAPIError(c, err, "ユーザー情報取得に失敗しました")
 			return
 		}
 

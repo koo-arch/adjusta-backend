@@ -9,16 +9,40 @@ import (
 	"github.com/koo-arch/adjusta-backend/ent"
 )
 
-// The AccountFunc type is an adapter to allow the use of ordinary
-// function as Account mutator.
-type AccountFunc func(context.Context, *ent.AccountMutation) (ent.Value, error)
+// The CalendarFunc type is an adapter to allow the use of ordinary
+// function as Calendar mutator.
+type CalendarFunc func(context.Context, *ent.CalendarMutation) (ent.Value, error)
 
 // Mutate calls f(ctx, m).
-func (f AccountFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
-	if mv, ok := m.(*ent.AccountMutation); ok {
+func (f CalendarFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.CalendarMutation); ok {
 		return f(ctx, mv)
 	}
-	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.AccountMutation", m)
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.CalendarMutation", m)
+}
+
+// The EventFunc type is an adapter to allow the use of ordinary
+// function as Event mutator.
+type EventFunc func(context.Context, *ent.EventMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f EventFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.EventMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.EventMutation", m)
+}
+
+// The GoogleCalendarInfoFunc type is an adapter to allow the use of ordinary
+// function as GoogleCalendarInfo mutator.
+type GoogleCalendarInfoFunc func(context.Context, *ent.GoogleCalendarInfoMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f GoogleCalendarInfoFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.GoogleCalendarInfoMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.GoogleCalendarInfoMutation", m)
 }
 
 // The JWTKeyFunc type is an adapter to allow the use of ordinary
@@ -31,6 +55,30 @@ func (f JWTKeyFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, erro
 		return f(ctx, mv)
 	}
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.JWTKeyMutation", m)
+}
+
+// The OAuthTokenFunc type is an adapter to allow the use of ordinary
+// function as OAuthToken mutator.
+type OAuthTokenFunc func(context.Context, *ent.OAuthTokenMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f OAuthTokenFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.OAuthTokenMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.OAuthTokenMutation", m)
+}
+
+// The ProposedDateFunc type is an adapter to allow the use of ordinary
+// function as ProposedDate mutator.
+type ProposedDateFunc func(context.Context, *ent.ProposedDateMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f ProposedDateFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.ProposedDateMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.ProposedDateMutation", m)
 }
 
 // The UserFunc type is an adapter to allow the use of ordinary

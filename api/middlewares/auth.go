@@ -4,42 +4,48 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"log"
 	"time"
 
-	"github.com/gin-gonic/gin"
 	"github.com/gin-contrib/sessions"
-	"github.com/koo-arch/adjusta-backend/cookie"
-	"github.com/koo-arch/adjusta-backend/ent"
-	"github.com/koo-arch/adjusta-backend/internal/apps/user"
-	"github.com/koo-arch/adjusta-backend/internal/auth"
-	"github.com/koo-arch/adjusta-backend/internal/models"
+	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"github.com/koo-arch/adjusta-backend/cookie"
+	"github.com/koo-arch/adjusta-backend/internal/models"
+	"github.com/koo-arch/adjusta-backend/internal/repo/user"
 )
 
-func AuthMiddleware(client *ent.Client) gin.HandlerFunc {
+type AuthMiddleware struct {
+	middleware *Middleware
+}
+
+func NewAuthMiddleware(middleware *Middleware) *AuthMiddleware {
+	return &AuthMiddleware{middleware: middleware}
+}
+
+func (am *AuthMiddleware) AuthUser() gin.HandlerFunc {
 	return func(c *gin.Context) {
+		client := am.middleware.Server.Client
 		accessToken, err := c.Cookie("access_token")
 		if err != nil {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "failed to get access token"})
+			log.Printf("failed to get access token: %v", err)
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "認証情報がありません"})
 			c.Abort()
 			return
 		}
 
-		session := sessions.Default(c)
-		googleid := session.Get("googleid").(string)
-		println(googleid)
-
 		ctx := c.Request.Context()
+		jwtManager := am.middleware.Server.JWTManager
 
 		// トークンの有効性を確認
-		jwtManager := auth.NewJWTManager(client, auth.NewKeyManager(client))
 		email, err := jwtManager.VerifyToken(ctx, client, accessToken, "access")
 		if err != nil {
 			// トークンの有効期限が切れている場合はリフレッシュトークンを利用してトークンを再発行
 			if strings.Contains(err.Error(), "token is expired") {
-				token, err := tokenRefresh(c, client, jwtManager)
+				token, err := am.tokenRefresh(c)
 				if err != nil {
-					c.JSON(http.StatusUnauthorized, gin.H{"error": "failed to refresh token"})
+					log.Printf("failed to refresh token: %v", err)
+					c.JSON(http.StatusUnauthorized, gin.H{"error": "トークンの再発行に失敗しました"})
 					c.Abort()
 					return
 				}
@@ -47,15 +53,14 @@ func AuthMiddleware(client *ent.Client) gin.HandlerFunc {
 				accessToken = token.AccessToken
 				email, err = jwtManager.VerifyToken(ctx, client, accessToken, "access")
 				if err != nil {
-					println("アクセストークンの再発行に失敗")
-					c.JSON(http.StatusUnauthorized, gin.H{"error": "failed to verify token"})
+					log.Printf("failed to verify token: %v", err)
+					c.JSON(http.StatusUnauthorized, gin.H{"error": "トークン認証に失敗しました"})
 					c.Abort()
 					return
 				}
 			} else {
-				println(err.Error())
-				println("アクセストークンの有効性確認に失敗")
-				c.JSON(http.StatusUnauthorized, gin.H{"error": "failed to verify token"})
+				log.Printf("failed to verify token: %v", err)
+				c.JSON(http.StatusUnauthorized, gin.H{"error": "トークン認証に失敗しました"})
 				c.Abort()
 				return
 			}
@@ -67,8 +72,9 @@ func AuthMiddleware(client *ent.Client) gin.HandlerFunc {
 	}
 }
 
-func tokenRefresh(c *gin.Context, client *ent.Client, jwtManager *auth.JWTManager) (*models.JWTToken, error) {
+func (am *AuthMiddleware) tokenRefresh(c *gin.Context) (*models.JWTToken, error) {
 	ctx := c.Request.Context()
+	client := am.middleware.Server.Client
 	session := sessions.Default(c)
 	useridStr, ok := session.Get("userid").(string)
 	if !ok {
@@ -80,9 +86,11 @@ func tokenRefresh(c *gin.Context, client *ent.Client, jwtManager *auth.JWTManage
 		return nil, err
 	}
 
+	jwtManager := am.middleware.Server.JWTManager
+	userRepo := am.middleware.Server.UserRepo
+
 	// リフレッシュトークンの取得
-	userRepo := user.NewUserRepository(client)
-	u, err := userRepo.Read(ctx, nil, userid)
+	u, err := userRepo.Read(ctx, nil, userid, user.UserQueryOptions{})
 	if err != nil {
 		return nil, err
 	}
@@ -101,7 +109,7 @@ func tokenRefresh(c *gin.Context, client *ent.Client, jwtManager *auth.JWTManage
 
 	maxAge := int(token.RefreshExpiration.Sub(time.Now()).Seconds())
 	cookie.SetCookie(c, "access_token", token.AccessToken, maxAge)
-	
+
 	// リフレッシュトークンの更新
 	_, err = userRepo.Update(ctx, nil, userid, token)
 	if err != nil {

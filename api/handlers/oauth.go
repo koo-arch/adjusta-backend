@@ -1,40 +1,41 @@
 package handlers
 
 import (
-	"fmt"
 	"net/http"
 	"time"
+	"log"
 
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
 	"github.com/koo-arch/adjusta-backend/cookie"
-	"github.com/koo-arch/adjusta-backend/ent"
-	"github.com/koo-arch/adjusta-backend/internal/apps/account"
-	"github.com/koo-arch/adjusta-backend/internal/apps/user"
-	"github.com/koo-arch/adjusta-backend/internal/auth"
+	"github.com/koo-arch/adjusta-backend/configs"
 	"github.com/koo-arch/adjusta-backend/internal/google/oauth"
 	"github.com/koo-arch/adjusta-backend/internal/google/userinfo"
 	"golang.org/x/oauth2"
+	"github.com/koo-arch/adjusta-backend/utils"
 )
 
-func GoogleLoginHandler(c *gin.Context) {
+type OauthHandler struct {
+	handler *Handler
+}
+
+func NewOauthHandler(handler *Handler) *OauthHandler {
+	return &OauthHandler{handler: handler}
+}
+
+func (oh *OauthHandler) GoogleLoginHandler(c *gin.Context) {
 	url := oauth.GetGoogleAuthConfig().AuthCodeURL("state", oauth2.AccessTypeOffline, oauth2.ApprovalForce)
 	c.Redirect(http.StatusTemporaryRedirect, url)
 }
 
-func AddAccountHandler(c *gin.Context) {
-	url := oauth.GetAddAccountAuthConfig().AuthCodeURL("state", oauth2.AccessTypeOffline, oauth2.ApprovalForce)
-	c.Redirect(http.StatusTemporaryRedirect, url)
-}
-
-func LogoutHandler(c *gin.Context) {
+func (oh *OauthHandler) LogoutHandler(c *gin.Context) {
 	// セッションをクリア
 	session := sessions.Default(c)
 	session.Clear()
 	session.Options(sessions.Options{MaxAge: -1, Path: "/"})
 	if err := session.Save(); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to save session"})
+		log.Printf("failed to save session for account: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "セッションの保存に失敗しました"})
 		return
 	}
 
@@ -45,14 +46,15 @@ func LogoutHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "logged out"})
 }
 
-func GoogleCallbackHandler(client *ent.Client) gin.HandlerFunc {
+func (oh *OauthHandler) GoogleCallbackHandler() gin.HandlerFunc {
 	return func(c *gin.Context) {
+		client := oh.handler.Server.Client
 		session := sessions.Default(c)
 		// クエリパラメータからcodeを取得
 		code := c.Query("code")
 		if code == "" {
-			fmt.Println("missing code")
-			c.JSON(http.StatusBadRequest, gin.H{"error": "missing code"})
+			log.Printf("missing code")
+			c.JSON(http.StatusBadRequest, gin.H{"error": "codeがありません"})
 			return
 		}
 
@@ -61,50 +63,44 @@ func GoogleCallbackHandler(client *ent.Client) gin.HandlerFunc {
 		// Googleからトークンを取得
 		oauthToken, err := oauth.GetGoogleAuthConfig().Exchange(ctx, code)
 		if err != nil {
-			fmt.Println("failed to exchange oauthToken")
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to exchange oauthToken"})
+			log.Printf("failed to exchange oauthToken: %v", err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "OAuthトークンの取得に失敗しました"})
 			return
 		}
 
 		// Googleからユーザー情報を取得
 		userInfo, err := userinfo.FetchGoogleUserInfo(ctx, oauthToken)
 		if err != nil {
-			fmt.Println("failed to fetch user info")
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch user info"})
+			log.Printf("failed to fetch user info: %v", err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "ユーザー情報の取得に失敗しました"})
 			return
 		}
 
+		jwtManager := oh.handler.Server.JWTManager
+		authManager := oh.handler.Server.AuthManager
 		// アプリ独自のJWTトークンを生成
-		jwtManager := auth.NewJWTManager(client, auth.NewKeyManager(client))
 		jwtToken, err := jwtManager.GenerateTokens(ctx, client, userInfo.Email)
-
-		userRepo := user.NewUserRepository(client)
-		accountRepo := account.NewAccountRepository(client)
-		authManager := auth.NewAuthManager(client, userRepo, accountRepo)
+		if err != nil {
+			log.Printf("failed to generate jwtToken: %v", err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "JWTトークンの生成に失敗しました"})
+			return
+		}
 
 		// ユーザー情報をデータベースに保存
 		u, err := authManager.ProcessUserSignIn(ctx, userInfo, jwtToken, oauthToken)
 		if err != nil {
-			fmt.Printf("failed to create or update user: %s", err.Error())
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create or update user"})
+			log.Printf("failed to create or update user: %v", err)
+			utils.HandleAPIError(c, err, "ユーザーの作成または更新に失敗しました")
 			return
 		}
 
+		
 		// アカウントのoauthトークンを検証
-		accounts, err := accountRepo.FilterByUserID(ctx, nil, u.ID)
+		_, err = authManager.VerifyOAuthToken(ctx, u.ID)
 		if err != nil {
-			fmt.Printf("failed to get accounts: %s", err.Error())
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to get accounts"})
+			log.Printf("failed to reuse token source for account: %s, error: %v", u.Email, err)
+			utils.HandleAPIError(c, err, "OAuthトークンの再利用に失敗しました")
 			return
-		}
-
-		for _, account := range accounts {
-			_, err := authManager.VerifyOAuthToken(ctx, u.ID, account.Email)
-			if err != nil {
-				fmt.Printf("failed to reuse token source: %s", err.Error())
-				c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to reuse token source"})
-				return
-			}
 		}
 
 		// クッキーにトークンをセット
@@ -115,72 +111,12 @@ func GoogleCallbackHandler(client *ent.Client) gin.HandlerFunc {
 		session.Set("googleid", userInfo.GoogleID)
 		session.Set("userid", u.ID.String())
 		if err := session.Save(); err != nil {
-			fmt.Printf("failed to save session:%v", err)
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to save session"})
+			log.Printf("failed to save session for account: %s, error: %v", u.Email, err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "セッションの保存に失敗しました"})
 			return
 		}
 
 		// リダイレクト
-		c.Redirect(http.StatusTemporaryRedirect, "http://localhost:3000")
-	}
-}
-
-func AddAccountCallbackHandler(client *ent.Client) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		session := sessions.Default(c)
-		// クエリパラメータからcodeを取得
-		code := c.Query("code")
-		if code == "" {
-			fmt.Println("missing code")
-			c.JSON(http.StatusBadRequest, gin.H{"error": "missing code"})
-			return
-		}
-
-		ctx := c.Request.Context()
-
-		// Googleからトークンを取得
-		oauthToken, err := oauth.GetAddAccountAuthConfig().Exchange(ctx, code)
-		if err != nil {
-			fmt.Println("failed to exchange oauthToken")
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to exchange oauthToken"})
-			return
-		}
-
-		// Googleからユーザー情報を取得
-		userInfo, err := userinfo.FetchGoogleUserInfo(ctx, oauthToken)
-		if err != nil {
-			fmt.Println("failed to fetch user info")
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch user info"})
-			return
-		}
-
-		userRepo := user.NewUserRepository(client)
-		accountRepo := account.NewAccountRepository(client)
-		authManager := auth.NewAuthManager(client, userRepo, accountRepo)
-
-		// 現在のユーザーにアカウントを追加
-		useridStr, ok := session.Get("userid").(string)
-		if !ok {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "failed to get userid from session"})
-			c.Abort()
-			return
-		}
-
-		userid, err := uuid.Parse(useridStr)
-		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid userid format"})
-			c.Abort()
-			return
-		}
-
-		_, err = authManager.AddAccountToUser(ctx, userid, userInfo, oauthToken)
-		if err != nil {
-			fmt.Printf("failed to add account: %s", err.Error())
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to add account"})
-			return
-		}
-
-		// リダイレクト
-		c.Redirect(http.StatusTemporaryRedirect, "http://localhost:3000")
+		c.Redirect(http.StatusTemporaryRedirect, configs.GetEnv("REDIRECT_URL_AFTER_LOGIN"))
 	}
 }

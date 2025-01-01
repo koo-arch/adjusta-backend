@@ -16,11 +16,13 @@ var jwtKeyTTL = 6 * 30 * 24 * time.Hour
 
 type KeyManager struct {
 	client *ent.Client
+	cache *cache.Cache
 }
 
-func NewKeyManager(client *ent.Client) *KeyManager {
+func NewKeyManager(client *ent.Client, cache *cache.Cache) *KeyManager {
 	return &KeyManager{
 		client: client,
+		cache: cache,
 	}
 }
 
@@ -74,7 +76,7 @@ func (km *KeyManager) GetJWTKey(ctx context.Context, keyType string) ([]byte, er
 	}
 
 	// キャッシュに保存
-	cache.Cache.Set(keyType, jwtKey.Key, 5*time.Minute)
+	km.cache.JWTKeyCache.Set(keyType, jwtKey.Key, 5*time.Minute)
 
 	byteKey := []byte(jwtKey.Key)
 
@@ -82,7 +84,7 @@ func (km *KeyManager) GetJWTKey(ctx context.Context, keyType string) ([]byte, er
 }
 
 func (km *KeyManager) GetJWTKeyFromCache(keyType string) (string, bool) {
-	keyValue, found := cache.Cache.Get(keyType)
+	keyValue, found := km.cache.JWTKeyCache.Get(keyType)
 	if found {
 		return keyValue.(string), true
 	}

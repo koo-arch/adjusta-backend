@@ -5,9 +5,14 @@ import (
 	"time"
 )
 
-var Cache *cache.Cache
+type Cache struct {
+	JWTKeyCache *cache.Cache
+	CalendarCache *cache.Cache
+}
 
-func init() {
-	// キャッシュの初期化
-	Cache = cache.New(5*time.Minute, 10*time.Minute)
+func NewCache() *Cache {
+	return &Cache{
+		JWTKeyCache: cache.New(5*time.Minute, 10*time.Minute),
+		CalendarCache: cache.New(5*time.Minute, 10*time.Minute),
+	}
 }

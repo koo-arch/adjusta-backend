@@ -4,8 +4,12 @@ package runtime
 
 import (
 	"github.com/google/uuid"
-	"github.com/koo-arch/adjusta-backend/ent/account"
+	"github.com/koo-arch/adjusta-backend/ent/calendar"
+	"github.com/koo-arch/adjusta-backend/ent/event"
+	"github.com/koo-arch/adjusta-backend/ent/googlecalendarinfo"
 	"github.com/koo-arch/adjusta-backend/ent/jwtkey"
+	"github.com/koo-arch/adjusta-backend/ent/oauthtoken"
+	"github.com/koo-arch/adjusta-backend/ent/proposeddate"
 	"github.com/koo-arch/adjusta-backend/ent/schema"
 	"github.com/koo-arch/adjusta-backend/ent/user"
 )
@@ -14,23 +18,32 @@ import (
 // (default values, validators, hooks and policies) and stitches it
 // to their package variables.
 func init() {
-	accountHooks := schema.Account{}.Hooks()
-	account.Hooks[0] = accountHooks[0]
-	account.Hooks[1] = accountHooks[1]
-	accountFields := schema.Account{}.Fields()
-	_ = accountFields
-	// accountDescEmail is the schema descriptor for email field.
-	accountDescEmail := accountFields[1].Descriptor()
-	// account.EmailValidator is a validator for the "email" field. It is called by the builders before save.
-	account.EmailValidator = accountDescEmail.Validators[0].(func(string) error)
-	// accountDescGoogleID is the schema descriptor for google_id field.
-	accountDescGoogleID := accountFields[2].Descriptor()
-	// account.GoogleIDValidator is a validator for the "google_id" field. It is called by the builders before save.
-	account.GoogleIDValidator = accountDescGoogleID.Validators[0].(func(string) error)
-	// accountDescID is the schema descriptor for id field.
-	accountDescID := accountFields[0].Descriptor()
-	// account.DefaultID holds the default value on creation for the id field.
-	account.DefaultID = accountDescID.Default.(func() uuid.UUID)
+	calendarFields := schema.Calendar{}.Fields()
+	_ = calendarFields
+	// calendarDescID is the schema descriptor for id field.
+	calendarDescID := calendarFields[0].Descriptor()
+	// calendar.DefaultID holds the default value on creation for the id field.
+	calendar.DefaultID = calendarDescID.Default.(func() uuid.UUID)
+	eventFields := schema.Event{}.Fields()
+	_ = eventFields
+	// eventDescID is the schema descriptor for id field.
+	eventDescID := eventFields[0].Descriptor()
+	// event.DefaultID holds the default value on creation for the id field.
+	event.DefaultID = eventDescID.Default.(func() uuid.UUID)
+	googlecalendarinfoFields := schema.GoogleCalendarInfo{}.Fields()
+	_ = googlecalendarinfoFields
+	// googlecalendarinfoDescGoogleCalendarID is the schema descriptor for google_calendar_id field.
+	googlecalendarinfoDescGoogleCalendarID := googlecalendarinfoFields[1].Descriptor()
+	// googlecalendarinfo.GoogleCalendarIDValidator is a validator for the "google_calendar_id" field. It is called by the builders before save.
+	googlecalendarinfo.GoogleCalendarIDValidator = googlecalendarinfoDescGoogleCalendarID.Validators[0].(func(string) error)
+	// googlecalendarinfoDescIsPrimary is the schema descriptor for is_primary field.
+	googlecalendarinfoDescIsPrimary := googlecalendarinfoFields[3].Descriptor()
+	// googlecalendarinfo.DefaultIsPrimary holds the default value on creation for the is_primary field.
+	googlecalendarinfo.DefaultIsPrimary = googlecalendarinfoDescIsPrimary.Default.(bool)
+	// googlecalendarinfoDescID is the schema descriptor for id field.
+	googlecalendarinfoDescID := googlecalendarinfoFields[0].Descriptor()
+	// googlecalendarinfo.DefaultID holds the default value on creation for the id field.
+	googlecalendarinfo.DefaultID = googlecalendarinfoDescID.Default.(func() uuid.UUID)
 	jwtkeyFields := schema.JWTKey{}.Fields()
 	_ = jwtkeyFields
 	// jwtkeyDescKey is the schema descriptor for key field.
@@ -43,6 +56,24 @@ func init() {
 	jwtkey.DefaultType = jwtkeyDescType.Default.(string)
 	// jwtkey.TypeValidator is a validator for the "type" field. It is called by the builders before save.
 	jwtkey.TypeValidator = jwtkeyDescType.Validators[0].(func(string) error)
+	oauthtokenFields := schema.OAuthToken{}.Fields()
+	_ = oauthtokenFields
+	// oauthtokenDescID is the schema descriptor for id field.
+	oauthtokenDescID := oauthtokenFields[0].Descriptor()
+	// oauthtoken.DefaultID holds the default value on creation for the id field.
+	oauthtoken.DefaultID = oauthtokenDescID.Default.(func() uuid.UUID)
+	proposeddateHooks := schema.ProposedDate{}.Hooks()
+	proposeddate.Hooks[0] = proposeddateHooks[0]
+	proposeddateFields := schema.ProposedDate{}.Fields()
+	_ = proposeddateFields
+	// proposeddateDescPriority is the schema descriptor for priority field.
+	proposeddateDescPriority := proposeddateFields[3].Descriptor()
+	// proposeddate.DefaultPriority holds the default value on creation for the priority field.
+	proposeddate.DefaultPriority = proposeddateDescPriority.Default.(int)
+	// proposeddateDescID is the schema descriptor for id field.
+	proposeddateDescID := proposeddateFields[0].Descriptor()
+	// proposeddate.DefaultID holds the default value on creation for the id field.
+	proposeddate.DefaultID = proposeddateDescID.Default.(func() uuid.UUID)
 	userHooks := schema.User{}.Hooks()
 	user.Hooks[0] = userHooks[0]
 	userFields := schema.User{}.Fields()

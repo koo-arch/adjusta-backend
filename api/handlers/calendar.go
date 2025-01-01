@@ -1,63 +1,352 @@
 package handlers
 
 import (
-	"fmt"
+	"log"
 	"net/http"
 
-	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	"github.com/koo-arch/adjusta-backend/ent"
-	"github.com/koo-arch/adjusta-backend/internal/apps/account"
-	"github.com/koo-arch/adjusta-backend/internal/apps/user"
-	"github.com/koo-arch/adjusta-backend/internal/auth"
-	"github.com/koo-arch/adjusta-backend/internal/google/calendar"
+	"github.com/koo-arch/adjusta-backend/internal/models"
+	"github.com/koo-arch/adjusta-backend/queryparser"
+	"github.com/koo-arch/adjusta-backend/utils"
+	"github.com/koo-arch/adjusta-backend/internal/validation"
 )
 
-type AccountsEvents struct {
-	AccountID uuid.UUID        `json:"account_id"`
-	Email     string           `json:"email"`
-	Events    []calendar.Event `json:"events"`
+type CalendarHandler struct {
+	handler *Handler
 }
 
-func FetchEventListHandler(client *ent.Client) gin.HandlerFunc {
-	return func (c *gin.Context) {
+func NewCalendarHandler(handler *Handler) *CalendarHandler {
+	return &CalendarHandler{handler: handler}
+}
+
+var extractErrorMessage = "ユーザー情報確認時にエラーが発生しました。"
+
+func (ch *CalendarHandler) FetchEventListHandler() gin.HandlerFunc {
+	return func(c *gin.Context) {
 		ctx := c.Request.Context()
 
-		session := sessions.Default(c)
-		useridStr, ok := session.Get("userid").(string)
-		if !ok {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "failed to get userid from session"})
-			c.Abort()
+		userid, email, err := utils.ExtractUserIDAndEmail(c)
+		if err != nil {
+			utils.HandleAPIError(c, err, extractErrorMessage)
 			return
 		}
 
-		userid, err := uuid.Parse(useridStr)
-		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid userid format"})
-			c.Abort()
-			return
-		}
+		eventFetchingManager := ch.handler.Server.EventFetchingManager
 
-		userRepo := user.NewUserRepository(client)
-		accountRepo := account.NewAccountRepository(client)
-		authManager := auth.NewAuthManager(client, userRepo, accountRepo)
-
-		userAccounts, err := accountRepo.FilterByUserID(ctx, nil, userid)
+		accountsEvents, err := eventFetchingManager.FetchAllGoogleEvents(ctx, userid, email)
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to get user accounts"})
-			c.Abort()
-			return
-		}
-
-		accountsEvents, err := calendar.FetchAllEvents(ctx, authManager, userid, userAccounts)
-		if err != nil {
-			fmt.Printf("failed to fetch events: %v", err)
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to fetch events"})
-			c.Abort()
+			log.Printf("failed to fetch events: %v", err)
+			utils.HandleAPIError(c, err, "Googleカレンダーのイベント取得に失敗しました")
 			return
 		}
 
 		c.JSON(http.StatusOK, accountsEvents)
+	}
+}
+
+func (ch *CalendarHandler) FetchAllEventDraftListHandler() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		ctx := c.Request.Context()
+
+		userid, email, err := utils.ExtractUserIDAndEmail(c)
+		if err != nil {
+			utils.HandleAPIError(c, err, extractErrorMessage)
+			return
+		}
+
+		eventFetchingManager := ch.handler.Server.EventFetchingManager
+
+		draftedEvents, err := eventFetchingManager.FetchAllDraftedEvents(ctx, userid, email)
+		if err != nil {
+			log.Printf("failed to fetch events: %v", err)
+			utils.HandleAPIError(c, err, "イベントの取得に失敗しました")
+			return
+		}
+
+		c.JSON(http.StatusOK, draftedEvents)
+	}
+}
+
+func (ch *CalendarHandler) SearchEventDraftHandler() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		// クエリパラメータの取得
+		queryparser := queryparser.NewQueryParser(c)
+
+		// クエリパラメータの解析
+		query, err := queryparser.ParseSearchEventQuery()
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "クエリが不正です"})
+			c.Abort()
+			return
+		}
+
+		ctx := c.Request.Context()
+
+		userid, email, err := utils.ExtractUserIDAndEmail(c)
+		if err != nil {
+			utils.HandleAPIError(c, err, extractErrorMessage)
+			return
+		}
+
+		eventFetchingManager := ch.handler.Server.EventFetchingManager
+
+		draftedEvents, err := eventFetchingManager.SearchDraftedEvents(ctx, userid, email, *query)
+		if err != nil {
+			log.Printf("failed to fetch events: %v", err)
+			utils.HandleAPIError(c, err, "イベントの取得に失敗しました")
+			return
+		}
+
+		c.JSON(http.StatusOK, draftedEvents)
+	}
+}
+
+func (ch *CalendarHandler) FetchUpcomingEventsHandler() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		ctx := c.Request.Context()
+
+		userid, email, err := utils.ExtractUserIDAndEmail(c)
+		if err != nil {
+			utils.HandleAPIError(c, err, extractErrorMessage)
+			return
+		}
+
+		eventFetchingManager := ch.handler.Server.EventFetchingManager
+
+		daysBefore := 3
+		upcomingEvents, err := eventFetchingManager.FetchUpcomingEvents(ctx, userid, email, daysBefore)
+		if err != nil {
+			log.Printf("failed to fetch upcoming events: %v", err)
+			utils.HandleAPIError(c, err, "イベントの取得に失敗しました")
+			return
+		}
+
+		c.JSON(http.StatusOK, upcomingEvents)
+	}
+}
+
+func (ch *CalendarHandler) FetchNeedsActionDraftsHandler() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		ctx := c.Request.Context()
+
+		userid, email, err := utils.ExtractUserIDAndEmail(c)
+		if err != nil {
+			utils.HandleAPIError(c, err, extractErrorMessage)
+			return
+		}
+
+		eventFetchingManager := ch.handler.Server.EventFetchingManager
+
+		daysBefore := 3
+		upcomingEvents, err := eventFetchingManager.FetchNeedsActionDrafts(ctx, userid, email, daysBefore)
+		if err != nil {
+			log.Printf("failed to fetch needs action events: %v", err)
+			utils.HandleAPIError(c, err, "イベントの取得に失敗しました")
+			return
+		}
+
+		c.JSON(http.StatusOK, upcomingEvents)
+	}
+}
+
+func (ch *CalendarHandler) FetchEventDraftDetailHandler() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		ctx := c.Request.Context()
+
+		userid, email, err := utils.ExtractUserIDAndEmail(c)
+		if err != nil {
+			utils.HandleAPIError(c, err, extractErrorMessage)
+			return
+		}
+
+		eventIDParam := c.Param("eventID")
+		if eventIDParam == "" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "イベントIDがありません"})
+			c.Abort()
+			return
+		}
+
+		eventID, err := uuid.Parse(eventIDParam)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "イベントIDの形式が不正です"})
+			c.Abort()
+			return
+		}
+
+		eventFetchingManager := ch.handler.Server.EventFetchingManager
+
+		draftedEvent, err := eventFetchingManager.FetchDraftedEventDetail(ctx, userid, email, eventID)
+		if err != nil {
+			log.Printf("failed to fetch events: %v", err)
+			utils.HandleAPIError(c, err, "イベント詳細の取得に失敗しました")
+			return
+		}
+
+		c.JSON(http.StatusOK, draftedEvent)
+	}
+}
+
+func (ch *CalendarHandler) CreateEventDraftHandler() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		ctx := c.Request.Context()
+
+		userid, email, err := utils.ExtractUserIDAndEmail(c)
+		if err != nil {
+			utils.HandleAPIError(c, err, extractErrorMessage)
+			return
+		}
+
+		var eventDraft *models.EventDraftCreation
+		if err := c.ShouldBindJSON(&eventDraft); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "リクエストのデータ形式が不正です"})
+			c.Abort()
+			return
+		}
+
+		if err := validation.CreateEventValidation(eventDraft); err != nil {
+			utils.HandleAPIError(c, err, "イベントの作成に失敗しました")
+			return
+		}
+
+		eventCreationManager := ch.handler.Server.EventCreationManager
+
+		response, err := eventCreationManager.CreateDraftedEvents(ctx, userid, email, eventDraft)
+		if err != nil {
+			log.Printf("failed to create events: %v", err)
+			utils.HandleAPIError(c, err, "イベントの作成に失敗しました")
+			return
+		}
+
+		c.JSON(http.StatusOK, response)
+	}
+}
+
+func (ch *CalendarHandler) EventFinalizeHandler() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		ctx := c.Request.Context()
+
+		userid, email, err := utils.ExtractUserIDAndEmail(c)
+		if err != nil {
+			utils.HandleAPIError(c, err, extractErrorMessage)
+			return
+		}
+
+		eventIDParam := c.Param("eventID")
+		if eventIDParam == "" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "イベントIDがありません"})
+			c.Abort()
+			return
+		}
+
+		eventID, err := uuid.Parse(eventIDParam)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "イベントIDの形式が不正です"})
+			c.Abort()
+			return
+		}
+
+		var confirmEvent *models.ConfirmEvent
+		if err := c.ShouldBindJSON(&confirmEvent); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "リクエストのデータ形式が不正です"})
+			c.Abort()
+			return
+		}
+
+		if err := validation.FinalizeValidation(confirmEvent); err != nil {
+			log.Printf("failed to validate confirm event: %v", err)
+			utils.HandleAPIError(c, err, "イベントの確定に失敗しました")
+			return
+		}
+
+		eventManager := ch.handler.Server.EventManager
+
+		err = eventManager.FinalizeProposedDate(ctx, userid, eventID, email, confirmEvent)
+		if err != nil {
+			log.Printf("failed to finalize event: %v", err)
+			utils.HandleAPIError(c, err, "イベントの確定に失敗しました")
+			return
+		}
+
+		c.JSON(http.StatusOK, gin.H{"message": "success"})
+	}
+}
+
+func (ch *CalendarHandler) UpdateEventDraftHandler() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		ctx := c.Request.Context()
+
+		userid, email, err := utils.ExtractUserIDAndEmail(c)
+		if err != nil {
+			utils.HandleAPIError(c, err, extractErrorMessage)
+			return
+		}
+
+		eventIDParam := c.Param("eventID")
+		if eventIDParam == "" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "イベントIDがありません"})
+			c.Abort()
+			return
+		}
+
+		eventID, err := uuid.Parse(eventIDParam)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "イベントIDの形式が不正です"})
+			c.Abort()
+			return
+		}
+
+		var eventDraft *models.EventDraftDetail
+		if err := c.ShouldBindJSON(&eventDraft); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "リクエストのデータ形式が不正です"})
+			c.Abort()
+			return
+		}
+
+		if err := validation.UpdateEventValidation(eventDraft); err != nil {
+			utils.HandleAPIError(c, err, "イベントの更新に失敗しました")
+			return
+		}
+
+		eventUpdateManager := ch.handler.Server.EventUpdateManager
+
+		err = eventUpdateManager.UpdateDraftedEvents(ctx, userid, eventID, email, eventDraft)
+		if err != nil {
+			log.Printf("failed to update events: %v", err)
+			utils.HandleAPIError(c, err, "イベントの更新に失敗しました")
+			return
+		}
+
+		c.JSON(http.StatusOK, gin.H{"message": "success"})
+	}
+}
+
+func (ch *CalendarHandler) DeleteEventDraftHandler() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		ctx := c.Request.Context()
+
+		userid, email, err := utils.ExtractUserIDAndEmail(c)
+		if err != nil {
+			utils.HandleAPIError(c, err, extractErrorMessage)
+			return
+		}
+
+		var eventDraft *models.EventDraftDetail
+		if err := c.ShouldBindJSON(&eventDraft); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "リクエストのデータ形式が不正です"})
+			c.Abort()
+			return
+		}
+
+		eventDeleteManager := ch.handler.Server.EventDeleteManager
+
+		err = eventDeleteManager.DeleteDraftedEvents(ctx, userid, email, eventDraft)
+		if err != nil {
+			log.Printf("failed to delete events: %v", err)
+			utils.HandleAPIError(c, err, "イベントの削除に失敗しました")
+			return
+		}
+
+		c.JSON(http.StatusOK, gin.H{"message": "success"})
 	}
 }

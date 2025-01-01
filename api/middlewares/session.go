@@ -7,7 +7,15 @@ import (
 	"github.com/gin-contrib/sessions"
 )
 
-func SessionRenewalMiddleware() gin.HandlerFunc {
+type SessionMiddleware struct {
+	Middleware *Middleware
+}
+
+func NewSessionMiddleware(middleware *Middleware) *SessionMiddleware {
+	return &SessionMiddleware{Middleware: middleware}
+}
+
+func(sm *SessionMiddleware) SessionRenewal() gin.HandlerFunc {
 	return func (c *gin.Context) {
 		session := sessions.Default(c)
 		session.Options(sessions.Options{

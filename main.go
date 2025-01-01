@@ -12,12 +12,13 @@ import (
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-contrib/sessions/cookie"
 	"github.com/gin-gonic/gin"
+	"github.com/koo-arch/adjusta-backend/api"
 	"github.com/koo-arch/adjusta-backend/api/handlers"
 	"github.com/koo-arch/adjusta-backend/api/middlewares"
 	"github.com/koo-arch/adjusta-backend/configs"
 	"github.com/koo-arch/adjusta-backend/ent"
+
 	_ "github.com/koo-arch/adjusta-backend/ent/runtime"
-	"github.com/koo-arch/adjusta-backend/internal/auth"
 	"github.com/koo-arch/adjusta-backend/scheduler"
 	_ "github.com/lib/pq"
 )
@@ -33,7 +34,7 @@ func main() {
 	DBHost := configs.GetEnv("DB_HOST")
 	DBPort := configs.GetEnv("DB_PORT")
 	databaseURL := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable", DBUser, DBPass, DBHost, DBPort, DBName)
-	
+
 	client, err := ent.Open("postgres", databaseURL)
 	if err != nil {
 		log.Fatalf("failed opening connection to postgres: %v", err)
@@ -44,25 +45,30 @@ func main() {
 			log.Fatalf("failed closing connection to postgres: %v", err)
 		}
 	}()
-	
+
 	// データベースのスキーマを更新
 	ctx := context.Background()
 	if err := client.Schema.Create(ctx); err != nil {
 		log.Fatalf("failed creating schema resources: %v", err)
 	}
 
+	server := api.NewServer(client)
+
+	// cache
+	cache := server.Cache
+
 	// JWTキーの起動時生成
-	keyManager := auth.NewKeyManager(client)
+	keyManager := server.KeyManager
 	if err := keyManager.InitializeJWTKeys(ctx); err != nil {
 		log.Fatalf("failed to initialize JWT")
 	}
 
 	// スケジューラーのセットアップ
-	s := scheduler.NewScheduler(client)
+	s := scheduler.NewScheduler(client, cache)
 	s.SetupJobs(ctx)
 	s.Start()
 	defer s.Stop()
-	
+
 	//Ginフレームワークのデフォルトの設定を使用してルータを作成
 	router := gin.Default()
 
@@ -70,38 +76,60 @@ func main() {
 	allowedOrigins := strings.Split(configs.GetEnv("CORS_ALLOW_ORIGINS"), ",")
 
 	router.Use(cors.New(cors.Config{
-		AllowOrigins: allowedOrigins,
-		AllowMethods: []string{"GET", "POST", "PUT", "DELETE"},
-		AllowHeaders: []string{"Origin", "Content-Length", "Content-Type", "Authorization"},
+		AllowOrigins:     allowedOrigins,
+		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE"},
+		AllowHeaders:     []string{"Origin", "Content-Length", "Content-Type", "Authorization"},
 		AllowCredentials: true,
-		MaxAge: 12 * time.Hour,
+		MaxAge:           12 * time.Hour,
 	}))
 
 	store := cookie.NewStore([]byte("secret"))
 	store.Options(sessions.Options{
-        Path:     "/",
-        MaxAge:   60 * 60 * 24 * 7,
-        HttpOnly: true,
-        SameSite: http.SameSiteLaxMode,
-    })
+		Path:     "/",
+		MaxAge:   60 * 60 * 24 * 7,
+		HttpOnly: true,
+		SameSite: http.SameSiteLaxMode,
+	})
 	router.Use(sessions.Sessions("session", store))
-	
-	// ルートハンドラの定義
-	router.GET("/auth/google/login", handlers.GoogleLoginHandler)
-	router.GET("/auth/google/callback", handlers.GoogleCallbackHandler(client))
-	router.GET("/auth/logout", handlers.LogoutHandler)
 
+	handler := handlers.NewHandler(server)
+	accountHandler := handlers.NewAccountHandler(handler)
+	userHandler := handlers.NewUserHandler(handler)
+	oauthHandler := handlers.NewOauthHandler(handler)
+	calendarHandler := handlers.NewCalendarHandler(handler)
+
+	middleware := middlewares.NewMiddleware(server)
+	authMiddleware := middlewares.NewAuthMiddleware(middleware)
+	calendarMiddleware := middlewares.NewCalendarMiddleware(middleware)
+	sessionMiddleware := middlewares.NewSessionMiddleware(middleware)
+
+	// ルートハンドラの定義
+	router.GET("/auth/google/login", oauthHandler.GoogleLoginHandler)
+	router.GET("/auth/google/callback", oauthHandler.GoogleCallbackHandler())
+	router.GET("/auth/logout", oauthHandler.LogoutHandler)
 
 	// 認証が必要なAPIグループ
-	auth := router.Group("/api").Use(middlewares.SessionRenewalMiddleware(), middlewares.AuthMiddleware(client))
+	auth := router.Group("/api")
+	auth.Use(sessionMiddleware.SessionRenewal(), authMiddleware.AuthUser())
 	{
-		auth.GET("/google/add-account", handlers.AddAccountHandler)
-		auth.GET("/google/add-account/callback", handlers.AddAccountCallbackHandler(client))
-		auth.GET("/users/me", handlers.GetCurrentUserHandler(client))
-		auth.GET("/account/list", handlers.FetchAccountsHandler(client))
-		auth.GET("/calendar/list", handlers.FetchEventListHandler(client))
+		auth.GET("/users/me", userHandler.GetCurrentUserHandler())
+		auth.GET("/account/list", accountHandler.FetchAccountsHandler())
+		calendar := auth.Group("/calendar").Use(calendarMiddleware.SyncGoogleCalendars())
+		{
+			calendar.GET("/list", calendarHandler.FetchEventListHandler())
+			calendar.GET("/event/draft/list", calendarHandler.FetchAllEventDraftListHandler())
+			calendar.GET("/event/draft/:eventID", calendarHandler.FetchEventDraftDetailHandler())
+			calendar.POST("/event/draft", calendarHandler.CreateEventDraftHandler())
+			calendar.PATCH("/event/confirm/:eventID", calendarHandler.EventFinalizeHandler())
+			calendar.PUT("/event/draft/:eventID", calendarHandler.UpdateEventDraftHandler())
+			calendar.DELETE("/event/draft/:eventID", calendarHandler.DeleteEventDraftHandler())
+		}
+
+		auth.GET("/event/draft/search", calendarHandler.SearchEventDraftHandler())
+		auth.GET("/event/confirmed/upcoming", calendarHandler.FetchUpcomingEventsHandler())
+		auth.GET("/event/draft/needs-action", calendarHandler.FetchNeedsActionDraftsHandler())
 	}
-	
+
 	// サーバー起動
 	if err := router.Run(":8080"); err != nil {
 		log.Fatalf("failed to run server: %v", err)

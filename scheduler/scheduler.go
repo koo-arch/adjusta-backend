@@ -3,28 +3,31 @@ package scheduler
 import (
 	"context"
 	"log"
-	
-	"github.com/robfig/cron/v3"
+
+	"github.com/koo-arch/adjusta-backend/cache"
 	"github.com/koo-arch/adjusta-backend/ent"
 	"github.com/koo-arch/adjusta-backend/internal/auth"
+	"github.com/robfig/cron/v3"
 )
 
 type Scheduler struct {
 	client *ent.Client
 	cron  *cron.Cron
+	keyManager *auth.KeyManager
 }
 
-func NewScheduler(client *ent.Client) *Scheduler {
+func NewScheduler(client *ent.Client, cache *cache.Cache) *Scheduler {
 	return &Scheduler{
 		client: client,
 		cron: cron.New(),
+		keyManager: auth.NewKeyManager(client, cache),
 	}
 }
 
 func (s *Scheduler) SetupJobs(ctx context.Context) {
 	_, err := s.cron.AddFunc("@daily", func() {
 		// キーの生成
-		keyManager := auth.NewKeyManager(s.client)
+		keyManager := s.keyManager
 		err := keyManager.GenerateJWTKey(ctx, "access")
 		if err != nil {
 			log.Printf("failed to generate JWT key: %v", err)
