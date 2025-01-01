@@ -1,17 +1,16 @@
 package handlers
 
 import (
-	"fmt"
-	"net/http"
 	"log"
+	"net/http"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/koo-arch/adjusta-backend/internal/models"
 	"github.com/koo-arch/adjusta-backend/queryparser"
 	"github.com/koo-arch/adjusta-backend/utils"
+	"github.com/koo-arch/adjusta-backend/internal/validation"
 )
-
 
 type CalendarHandler struct {
 	handler *Handler
@@ -50,7 +49,7 @@ func (ch *CalendarHandler) FetchAllEventDraftListHandler() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		ctx := c.Request.Context()
 
-		userid, email,  err := utils.ExtractUserIDAndEmail(c)
+		userid, email, err := utils.ExtractUserIDAndEmail(c)
 		if err != nil {
 			utils.HandleAPIError(c, err, extractErrorMessage)
 			return
@@ -200,8 +199,13 @@ func (ch *CalendarHandler) CreateEventDraftHandler() gin.HandlerFunc {
 
 		var eventDraft *models.EventDraftCreation
 		if err := c.ShouldBindJSON(&eventDraft); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "JSONのバインドに失敗しました"})
+			c.JSON(http.StatusBadRequest, gin.H{"error": "リクエストのデータ形式が不正です"})
 			c.Abort()
+			return
+		}
+
+		if err := validation.CreateEventValidation(eventDraft); err != nil {
+			utils.HandleAPIError(c, err, "イベントの作成に失敗しました")
 			return
 		}
 
@@ -244,9 +248,14 @@ func (ch *CalendarHandler) EventFinalizeHandler() gin.HandlerFunc {
 
 		var confirmEvent *models.ConfirmEvent
 		if err := c.ShouldBindJSON(&confirmEvent); err != nil {
-			fmt.Printf("failed to bind json: %v", err)
-			c.JSON(http.StatusBadRequest, gin.H{"error": "JSONのバインドに失敗しました"})
+			c.JSON(http.StatusBadRequest, gin.H{"error": "リクエストのデータ形式が不正です"})
 			c.Abort()
+			return
+		}
+
+		if err := validation.FinalizeValidation(confirmEvent); err != nil {
+			log.Printf("failed to validate confirm event: %v", err)
+			utils.HandleAPIError(c, err, "イベントの確定に失敗しました")
 			return
 		}
 
@@ -289,8 +298,13 @@ func (ch *CalendarHandler) UpdateEventDraftHandler() gin.HandlerFunc {
 
 		var eventDraft *models.EventDraftDetail
 		if err := c.ShouldBindJSON(&eventDraft); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "JSONのバインドに失敗しました"})
+			c.JSON(http.StatusBadRequest, gin.H{"error": "リクエストのデータ形式が不正です"})
 			c.Abort()
+			return
+		}
+
+		if err := validation.UpdateEventValidation(eventDraft); err != nil {
+			utils.HandleAPIError(c, err, "イベントの更新に失敗しました")
 			return
 		}
 
@@ -319,7 +333,7 @@ func (ch *CalendarHandler) DeleteEventDraftHandler() gin.HandlerFunc {
 
 		var eventDraft *models.EventDraftDetail
 		if err := c.ShouldBindJSON(&eventDraft); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "JSONのバインドに失敗しました"})
+			c.JSON(http.StatusBadRequest, gin.H{"error": "リクエストのデータ形式が不正です"})
 			c.Abort()
 			return
 		}

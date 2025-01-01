@@ -162,7 +162,7 @@ func (em *EventManager) ConfirmEventDate(ctx context.Context, tx *ent.Tx, calend
 		confirmDateID = &entDate.ID
 
 		// 他の日程候補の優先度を下げる
-		err = em.DateRepo.DecrementPriorityExceptID(ctx, tx, entDate.ID)
+		err = em.DateRepo.DecrementPriorityExceptID(ctx, tx, entEvent.ID, entDate.ID)
 		if err != nil {
 			return fmt.Errorf("failed to decrement priority error: %w", err)
 		}
@@ -174,13 +174,13 @@ func (em *EventManager) ConfirmEventDate(ctx context.Context, tx *ent.Tx, calend
 		zero := 0
 		dateOptions.Priority = &zero
 
-		_, err := em.DateRepo.Update(ctx, tx, *eventReq.ConfirmDate.ID, dateOptions)
+		entDate, err := em.DateRepo.Update(ctx, tx, *eventReq.ConfirmDate.ID, dateOptions)
 		if err != nil {
 			return fmt.Errorf("failed to update proposed date error: %w", err)
 		}
 
 		// Priorityを振り直す
-		err = em.DateRepo.ReorderPriority(ctx, tx, entEvent.ID)
+		err = em.DateRepo.ReorderPriority(ctx, tx, entDate.ID)
 		if err != nil {
 			return fmt.Errorf("failed to reorder priority error: %w", err)
 		}

@@ -117,13 +117,16 @@ func (r *ProposedDateRepositoryImpl) CreateBulk(ctx context.Context, tx *ent.Tx,
 }
 
 
-func (r *ProposedDateRepositoryImpl) DecrementPriorityExceptID(ctx context.Context, tx *ent.Tx, excludeID uuid.UUID) error {
+func (r *ProposedDateRepositoryImpl) DecrementPriorityExceptID(ctx context.Context, tx *ent.Tx, eventID, excludeID uuid.UUID) error {
 	update := r.client.ProposedDate.Update()
 	if tx != nil {
 		update = tx.ProposedDate.Update()
 	}
 
-	_, err := update.Where(proposeddate.IDNEQ(excludeID)).
+	_, err := update.Where(
+		proposeddate.HasEventWith(event.IDEQ(eventID)),
+		proposeddate.IDNEQ(excludeID),
+	).
 		AddPriority(1).
 		Save(ctx)
 
