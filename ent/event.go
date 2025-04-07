@@ -30,6 +30,8 @@ type Event struct {
 	ConfirmedDateID uuid.UUID `json:"confirmed_date_id,omitempty"`
 	// GoogleEventID holds the value of the "google_event_id" field.
 	GoogleEventID string `json:"google_event_id,omitempty"`
+	// Slug holds the value of the "slug" field.
+	Slug string `json:"slug,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the EventQuery when eager-loading is set.
 	Edges           EventEdges `json:"edges"`
@@ -73,7 +75,7 @@ func (*Event) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case event.FieldSummary, event.FieldDescription, event.FieldLocation, event.FieldStatus, event.FieldGoogleEventID:
+		case event.FieldSummary, event.FieldDescription, event.FieldLocation, event.FieldStatus, event.FieldGoogleEventID, event.FieldSlug:
 			values[i] = new(sql.NullString)
 		case event.FieldID, event.FieldConfirmedDateID:
 			values[i] = new(uuid.UUID)
@@ -135,6 +137,12 @@ func (e *Event) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field google_event_id", values[i])
 			} else if value.Valid {
 				e.GoogleEventID = value.String
+			}
+		case event.FieldSlug:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field slug", values[i])
+			} else if value.Valid {
+				e.Slug = value.String
 			}
 		case event.ForeignKeys[0]:
 			if value, ok := values[i].(*sql.NullScanner); !ok {
@@ -206,6 +214,9 @@ func (e *Event) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("google_event_id=")
 	builder.WriteString(e.GoogleEventID)
+	builder.WriteString(", ")
+	builder.WriteString("slug=")
+	builder.WriteString(e.Slug)
 	builder.WriteByte(')')
 	return builder.String()
 }

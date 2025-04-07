@@ -45,6 +45,18 @@ type EventDraftDetail struct {
 	Status          EventStatus    `json:"status"`
 	ConfirmedDateID *uuid.UUID     `json:"confirmed_date_id"`
 	GoogleEventID   string         `json:"google_event_id"`
+	Slug			string	       `json:"slug"`
+	ProposedDates   []ProposedDate `json:"proposed_dates"`
+}
+
+type EventDraftUpdate struct {
+	Title           string         `json:"title"`
+	Location        string         `json:"location"`
+	Description     string         `json:"description"`
+	Status          EventStatus    `json:"status"`
+	ConfirmedDateID *uuid.UUID     `json:"confirmed_date_id"`
+	GoogleEventID   string         `json:"google_event_id"`
+	Slug			string	       `json:"slug"`
 	ProposedDates   []ProposedDate `json:"proposed_dates"`
 }
 
@@ -85,6 +97,7 @@ type UpcomingEvent struct {
 	Status          EventStatus `json:"status"`
 	ConfirmedDateID uuid.UUID   `json:"confirmed_date_id"`
 	GoogleEventID   string      `json:"google_event_id"`
+	Slug			string	    `json:"slug"`
 	Start           time.Time   `json:"start"`
 	End             time.Time   `json:"end"`
 }
@@ -95,6 +108,7 @@ type NeedsActionDraft struct {
 	Location       string      `json:"location"`
 	Description    string      `json:"description"`
 	Status         EventStatus `json:"status"`
+	Slug		   string      `json:"slug"`
 	Start          time.Time   `json:"start"`
 	End            time.Time   `json:"end"`
 	NeedsAttention bool        `json:"needs_attention"`

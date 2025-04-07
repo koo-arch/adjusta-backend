@@ -29,7 +29,7 @@ func NewEventUpdateManager(event *events.EventManager) *EventUpdateManager {
 	}
 }
 
-func (eum *EventUpdateManager) UpdateDraftedEvents(ctx context.Context, userID, eventID uuid.UUID, email string, eventReq *models.EventDraftDetail) error {
+func (eum *EventUpdateManager) UpdateDraftedEvents(ctx context.Context, userID uuid.UUID, slug, email string, eventReq *models.EventDraftUpdate) error {
 	tx, err := eum.event.Client.Tx(ctx)
 	if err != nil {
 		log.Printf("failed starting transaction: %v", err)
@@ -53,6 +53,15 @@ func (eum *EventUpdateManager) UpdateDraftedEvents(ctx context.Context, userID, 
 		return internalErrors.NewAPIError(http.StatusInternalServerError, internalErrors.InternalErrorMessage)
 	}
 
+	entEvent, err := eum.event.EventRepo.FindBySlug(ctx, tx, slug, event.EventQueryOptions{})
+	if err != nil {
+		log.Printf("failed to get event for account: %s, error: %v", email, err)
+		if ent.IsNotFound(err) {
+			return internalErrors.NewAPIError(http.StatusNotFound, "イベントが見つかりませんでした")
+		}
+		return internalErrors.NewAPIError(http.StatusInternalServerError, internalErrors.InternalErrorMessage)
+	}
+
 	// イベントの詳細を更新
 	eventOptions := event.EventQueryOptions{
 		Summary:      &eventReq.Title,
@@ -60,7 +69,7 @@ func (eum *EventUpdateManager) UpdateDraftedEvents(ctx context.Context, userID, 
 		Description:  &eventReq.Description,
 		Status:       &eventReq.Status,
 	}
-	entEvent, err := eum.event.EventRepo.Update(ctx, tx, eventID, eventOptions)
+	entEvent, err = eum.event.EventRepo.Update(ctx, tx, entEvent.ID, eventOptions)
 	if err != nil {
 		log.Printf("failed to update event for account: %s, error: %v", email, err)
 		if ent.IsNotFound(err) {
@@ -70,7 +79,7 @@ func (eum *EventUpdateManager) UpdateDraftedEvents(ctx context.Context, userID, 
 	}
 
 	// DB上の日程候補を取得
-	existingDates, err := eum.event.DateRepo.FilterByEventID(ctx, tx, eventID)
+	existingDates, err := eum.event.DateRepo.FilterByEventID(ctx, tx, entEvent.ID)
 	if err != nil {
 		log.Printf("failed to get proposed dates for account: %s, error: %v", email, err)
 		return internalErrors.NewAPIError(http.StatusInternalServerError, internalErrors.InternalErrorMessage)
@@ -131,7 +140,7 @@ func (eum *EventUpdateManager) UpdateDraftedEvents(ctx context.Context, userID, 
 }
 
 
-func (eum *EventUpdateManager) updateProposedDates(ctx context.Context, tx *ent.Tx, eventReq *models.EventDraftDetail, entEvent *ent.Event, existingDates []*ent.ProposedDate) error {
+func (eum *EventUpdateManager) updateProposedDates(ctx context.Context, tx *ent.Tx, eventReq *models.EventDraftUpdate, entEvent *ent.Event, existingDates []*ent.ProposedDate) error {
 	// 提案された日程候補のハッシュテーブルを作成
 	updateDateMap := make(map[uuid.UUID]models.ProposedDate)
 	for _, date := range eventReq.ProposedDates {

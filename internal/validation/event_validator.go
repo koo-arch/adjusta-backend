@@ -33,7 +33,7 @@ func CreateEventValidation(eventDraft *models.EventDraftCreation) *internalError
 	return nil
 }
 
-func UpdateEventValidation(eventDraft *models.EventDraftDetail) error {
+func UpdateEventValidation(eventDraft *models.EventDraftUpdate) error {
 	validationErrors := NewValidationErrors()
 
 	// 基本情報のバリデーション
