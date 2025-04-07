@@ -51,7 +51,7 @@ func NewEventManager(
 	}
 }
 
-func (em *EventManager) FinalizeProposedDate(ctx context.Context, userID, eventID uuid.UUID, email string, eventReq *models.ConfirmEvent) error {
+func (em *EventManager) FinalizeProposedDate(ctx context.Context, userID uuid.UUID, slug, email string, eventReq *models.ConfirmEvent) error {
 	tx, err := em.Client.Tx(ctx)
 	if err != nil {
 		return internalErrors.NewAPIError(http.StatusInternalServerError, internalErrors.InternalErrorMessage)
@@ -75,7 +75,7 @@ func (em *EventManager) FinalizeProposedDate(ctx context.Context, userID, eventI
 	// トランザクションをデファーで処理
 	defer transaction.HandleTransaction(tx, &err)
 
-	entEvent, err := em.EventRepo.Read(ctx, tx, eventID, event.EventQueryOptions{})
+	entEvent, err := em.EventRepo.FindBySlug(ctx, tx, slug, event.EventQueryOptions{})
 	if err != nil {
 		log.Printf("failed to get event for account: %s, error: %v", email, err)
 		if ent.IsNotFound(err) {

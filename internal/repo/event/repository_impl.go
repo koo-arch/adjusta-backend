@@ -65,6 +65,18 @@ func (r *EventRepositoryImpl) FilterByCalendarID(ctx context.Context, tx *ent.Tx
 	return filterEvent.All(ctx)
 }
 
+func (r *EventRepositoryImpl) FindBySlug(ctx context.Context, tx *ent.Tx, slug string, opt EventQueryOptions) (*ent.Event, error) {
+	query := r.client.Event.Query()
+	if tx != nil {
+		query = tx.Event.Query()
+	}
+
+	if opt.WithProposedDates {
+		query = query.WithProposedDates()
+	}
+
+	return query.Where(event.SlugEQ(slug)).Only(ctx)
+}
 
 func (r *EventRepositoryImpl) Create(ctx context.Context, tx *ent.Tx, googleEvent *calendar.Event, entCalendar *ent.Calendar) (*ent.Event, error) {
 	eventCreate := r.client.Event.Create()

@@ -118,11 +118,11 @@ func main() {
 		{
 			calendar.GET("/list", calendarHandler.FetchEventListHandler())
 			calendar.GET("/event/draft/list", calendarHandler.FetchAllEventDraftListHandler())
-			calendar.GET("/event/draft/:eventID", calendarHandler.FetchEventDraftDetailHandler())
+			calendar.GET("/event/draft/:slug", calendarHandler.FetchEventDraftDetailHandler())
 			calendar.POST("/event/draft", calendarHandler.CreateEventDraftHandler())
-			calendar.PATCH("/event/confirm/:eventID", calendarHandler.EventFinalizeHandler())
-			calendar.PUT("/event/draft/:eventID", calendarHandler.UpdateEventDraftHandler())
-			calendar.DELETE("/event/draft/:eventID", calendarHandler.DeleteEventDraftHandler())
+			calendar.PATCH("/event/confirm/:slug", calendarHandler.EventFinalizeHandler())
+			calendar.PUT("/event/draft/:slug", calendarHandler.UpdateEventDraftHandler())
+			calendar.DELETE("/event/draft/:slug", calendarHandler.DeleteEventDraftHandler())
 		}
 
 		auth.GET("/event/draft/search", calendarHandler.SearchEventDraftHandler())

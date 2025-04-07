@@ -79,6 +79,11 @@ func GoogleEventID(v string) predicate.Event {
 	return predicate.Event(sql.FieldEQ(FieldGoogleEventID, v))
 }
 
+// Slug applies equality check predicate on the "slug" field. It's identical to SlugEQ.
+func Slug(v string) predicate.Event {
+	return predicate.Event(sql.FieldEQ(FieldSlug, v))
+}
+
 // SummaryEQ applies the EQ predicate on the "summary" field.
 func SummaryEQ(v string) predicate.Event {
 	return predicate.Event(sql.FieldEQ(FieldSummary, v))
@@ -447,6 +452,71 @@ func GoogleEventIDEqualFold(v string) predicate.Event {
 // GoogleEventIDContainsFold applies the ContainsFold predicate on the "google_event_id" field.
 func GoogleEventIDContainsFold(v string) predicate.Event {
 	return predicate.Event(sql.FieldContainsFold(FieldGoogleEventID, v))
+}
+
+// SlugEQ applies the EQ predicate on the "slug" field.
+func SlugEQ(v string) predicate.Event {
+	return predicate.Event(sql.FieldEQ(FieldSlug, v))
+}
+
+// SlugNEQ applies the NEQ predicate on the "slug" field.
+func SlugNEQ(v string) predicate.Event {
+	return predicate.Event(sql.FieldNEQ(FieldSlug, v))
+}
+
+// SlugIn applies the In predicate on the "slug" field.
+func SlugIn(vs ...string) predicate.Event {
+	return predicate.Event(sql.FieldIn(FieldSlug, vs...))
+}
+
+// SlugNotIn applies the NotIn predicate on the "slug" field.
+func SlugNotIn(vs ...string) predicate.Event {
+	return predicate.Event(sql.FieldNotIn(FieldSlug, vs...))
+}
+
+// SlugGT applies the GT predicate on the "slug" field.
+func SlugGT(v string) predicate.Event {
+	return predicate.Event(sql.FieldGT(FieldSlug, v))
+}
+
+// SlugGTE applies the GTE predicate on the "slug" field.
+func SlugGTE(v string) predicate.Event {
+	return predicate.Event(sql.FieldGTE(FieldSlug, v))
+}
+
+// SlugLT applies the LT predicate on the "slug" field.
+func SlugLT(v string) predicate.Event {
+	return predicate.Event(sql.FieldLT(FieldSlug, v))
+}
+
+// SlugLTE applies the LTE predicate on the "slug" field.
+func SlugLTE(v string) predicate.Event {
+	return predicate.Event(sql.FieldLTE(FieldSlug, v))
+}
+
+// SlugContains applies the Contains predicate on the "slug" field.
+func SlugContains(v string) predicate.Event {
+	return predicate.Event(sql.FieldContains(FieldSlug, v))
+}
+
+// SlugHasPrefix applies the HasPrefix predicate on the "slug" field.
+func SlugHasPrefix(v string) predicate.Event {
+	return predicate.Event(sql.FieldHasPrefix(FieldSlug, v))
+}
+
+// SlugHasSuffix applies the HasSuffix predicate on the "slug" field.
+func SlugHasSuffix(v string) predicate.Event {
+	return predicate.Event(sql.FieldHasSuffix(FieldSlug, v))
+}
+
+// SlugEqualFold applies the EqualFold predicate on the "slug" field.
+func SlugEqualFold(v string) predicate.Event {
+	return predicate.Event(sql.FieldEqualFold(FieldSlug, v))
+}
+
+// SlugContainsFold applies the ContainsFold predicate on the "slug" field.
+func SlugContainsFold(v string) predicate.Event {
+	return predicate.Event(sql.FieldContainsFold(FieldSlug, v))
 }
 
 // HasCalendar applies the HasEdge predicate on the "calendar" edge.

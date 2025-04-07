@@ -106,6 +106,12 @@ func (ec *EventCreate) SetNillableGoogleEventID(s *string) *EventCreate {
 	return ec
 }
 
+// SetSlug sets the "slug" field.
+func (ec *EventCreate) SetSlug(s string) *EventCreate {
+	ec.mutation.SetSlug(s)
+	return ec
+}
+
 // SetID sets the "id" field.
 func (ec *EventCreate) SetID(u uuid.UUID) *EventCreate {
 	ec.mutation.SetID(u)
@@ -161,7 +167,9 @@ func (ec *EventCreate) Mutation() *EventMutation {
 
 // Save creates the Event in the database.
 func (ec *EventCreate) Save(ctx context.Context) (*Event, error) {
-	ec.defaults()
+	if err := ec.defaults(); err != nil {
+		return nil, err
+	}
 	return withHooks(ctx, ec.sqlSave, ec.mutation, ec.hooks)
 }
 
@@ -188,15 +196,19 @@ func (ec *EventCreate) ExecX(ctx context.Context) {
 }
 
 // defaults sets the default values of the builder before save.
-func (ec *EventCreate) defaults() {
+func (ec *EventCreate) defaults() error {
 	if _, ok := ec.mutation.Status(); !ok {
 		v := event.DefaultStatus
 		ec.mutation.SetStatus(v)
 	}
 	if _, ok := ec.mutation.ID(); !ok {
+		if event.DefaultID == nil {
+			return fmt.Errorf("ent: uninitialized event.DefaultID (forgotten import ent/runtime?)")
+		}
 		v := event.DefaultID()
 		ec.mutation.SetID(v)
 	}
+	return nil
 }
 
 // check runs all checks and user-defined validators on the builder.
@@ -208,6 +220,9 @@ func (ec *EventCreate) check() error {
 		if err := event.StatusValidator(v); err != nil {
 			return &ValidationError{Name: "status", err: fmt.Errorf(`ent: validator failed for field "Event.status": %w`, err)}
 		}
+	}
+	if _, ok := ec.mutation.Slug(); !ok {
+		return &ValidationError{Name: "slug", err: errors.New(`ent: missing required field "Event.slug"`)}
 	}
 	return nil
 }
@@ -267,6 +282,10 @@ func (ec *EventCreate) createSpec() (*Event, *sqlgraph.CreateSpec) {
 	if value, ok := ec.mutation.GoogleEventID(); ok {
 		_spec.SetField(event.FieldGoogleEventID, field.TypeString, value)
 		_node.GoogleEventID = value
+	}
+	if value, ok := ec.mutation.Slug(); ok {
+		_spec.SetField(event.FieldSlug, field.TypeString, value)
+		_node.Slug = value
 	}
 	if nodes := ec.mutation.CalendarIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{

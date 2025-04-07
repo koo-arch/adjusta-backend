@@ -579,7 +579,8 @@ func (c *EventClient) QueryProposedDates(e *Event) *ProposedDateQuery {
 
 // Hooks returns the client hooks.
 func (c *EventClient) Hooks() []Hook {
-	return c.hooks.Event
+	hooks := c.hooks.Event
+	return append(hooks[:len(hooks):len(hooks)], event.Hooks[:]...)
 }
 
 // Interceptors returns the client interceptors.

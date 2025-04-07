@@ -37,6 +37,7 @@ var (
 		{Name: "status", Type: field.TypeEnum, Enums: []string{"pending", "confirmed", "cancelled"}, Default: "pending"},
 		{Name: "confirmed_date_id", Type: field.TypeUUID, Nullable: true},
 		{Name: "google_event_id", Type: field.TypeString, Nullable: true},
+		{Name: "slug", Type: field.TypeString, Unique: true},
 		{Name: "calendar_events", Type: field.TypeUUID, Nullable: true},
 	}
 	// EventsTable holds the schema information for the "events" table.
@@ -47,7 +48,7 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "events_calendars_events",
-				Columns:    []*schema.Column{EventsColumns[7]},
+				Columns:    []*schema.Column{EventsColumns[8]},
 				RefColumns: []*schema.Column{CalendarsColumns[0]},
 				OnDelete:   schema.Cascade,
 			},

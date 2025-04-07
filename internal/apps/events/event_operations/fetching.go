@@ -138,6 +138,7 @@ func (efm *EventFetchingManager) FetchAllDraftedEvents(ctx context.Context, user
 				Description:     entEvent.Description,
 				Status:          models.EventStatus(entEvent.Status),
 				ConfirmedDateID: &entEvent.ConfirmedDateID,
+				Slug: 		  	 entEvent.Slug,
 				GoogleEventID:   entEvent.GoogleEventID,
 				ProposedDates:   proposedDates,
 			})
@@ -217,6 +218,7 @@ func (efm *EventFetchingManager) SearchDraftedEvents(ctx context.Context, userID
 			Status:          models.EventStatus(event.Status),
 			ConfirmedDateID: &event.ConfirmedDateID,
 			GoogleEventID:   event.GoogleEventID,
+			Slug :           event.Slug,
 			ProposedDates:   proposedDates,
 		})
 	}
@@ -224,7 +226,7 @@ func (efm *EventFetchingManager) SearchDraftedEvents(ctx context.Context, userID
 	return searchResult, nil
 }
 
-func (efm *EventFetchingManager) FetchDraftedEventDetail(ctx context.Context, userID uuid.UUID, email string, eventID uuid.UUID) (*models.EventDraftDetail, error) {
+func (efm *EventFetchingManager) FetchDraftedEventDetail(ctx context.Context, userID uuid.UUID, email string, slug string) (*models.EventDraftDetail, error) {
 	tx, err := efm.event.Client.Tx(ctx)
 	if err != nil {
 		log.Printf("failed starting transaction: %v", err)
@@ -236,7 +238,7 @@ func (efm *EventFetchingManager) FetchDraftedEventDetail(ctx context.Context, us
 	queryOpt := event.EventQueryOptions{
 		WithProposedDates: true,
 	}
-	entEvent, err := efm.event.EventRepo.Read(ctx, tx, eventID, queryOpt)
+	entEvent, err := efm.event.EventRepo.FindBySlug(ctx, tx, slug, queryOpt)
 	if err != nil {
 		log.Printf("failed to get event for account: %s, error: %v", email, err)
 		if ent.IsNotFound(err) {
@@ -273,6 +275,7 @@ func (efm *EventFetchingManager) FetchDraftedEventDetail(ctx context.Context, us
 		Status:          models.EventStatus(entEvent.Status),
 		ConfirmedDateID: &entEvent.ConfirmedDateID,
 		GoogleEventID:   entEvent.GoogleEventID,
+		Slug:            entEvent.Slug,
 		ProposedDates:   proposedDates,
 	}, nil
 }
@@ -325,6 +328,7 @@ func (efm *EventFetchingManager) FetchUpcomingEvents(ctx context.Context, userID
 					Status:          models.EventStatus(entEvent.Status),
 					ConfirmedDateID: entEvent.ConfirmedDateID,
 					GoogleEventID:   entEvent.GoogleEventID,
+					Slug:            entEvent.Slug,
 					Start:           entDate.StartTime,
 					End:             entDate.EndTime,
 				})
@@ -392,6 +396,7 @@ func (efm *EventFetchingManager) FetchNeedsActionDrafts(ctx context.Context, use
 				Location:       entEvent.Location,
 				Description:    entEvent.Description,
 				Status:         models.EventStatus(entEvent.Status),
+				Slug:           entEvent.Slug,
 				Start:          entDate.StartTime,
 				End:            entDate.EndTime,
 				NeedsAttention: isPast,

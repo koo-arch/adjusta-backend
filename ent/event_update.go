@@ -144,6 +144,20 @@ func (eu *EventUpdate) ClearGoogleEventID() *EventUpdate {
 	return eu
 }
 
+// SetSlug sets the "slug" field.
+func (eu *EventUpdate) SetSlug(s string) *EventUpdate {
+	eu.mutation.SetSlug(s)
+	return eu
+}
+
+// SetNillableSlug sets the "slug" field if the given value is not nil.
+func (eu *EventUpdate) SetNillableSlug(s *string) *EventUpdate {
+	if s != nil {
+		eu.SetSlug(*s)
+	}
+	return eu
+}
+
 // SetCalendarID sets the "calendar" edge to the Calendar entity by ID.
 func (eu *EventUpdate) SetCalendarID(id uuid.UUID) *EventUpdate {
 	eu.mutation.SetCalendarID(id)
@@ -291,6 +305,9 @@ func (eu *EventUpdate) sqlSave(ctx context.Context) (n int, err error) {
 	}
 	if eu.mutation.GoogleEventIDCleared() {
 		_spec.ClearField(event.FieldGoogleEventID, field.TypeString)
+	}
+	if value, ok := eu.mutation.Slug(); ok {
+		_spec.SetField(event.FieldSlug, field.TypeString, value)
 	}
 	if eu.mutation.CalendarCleared() {
 		edge := &sqlgraph.EdgeSpec{
@@ -500,6 +517,20 @@ func (euo *EventUpdateOne) ClearGoogleEventID() *EventUpdateOne {
 	return euo
 }
 
+// SetSlug sets the "slug" field.
+func (euo *EventUpdateOne) SetSlug(s string) *EventUpdateOne {
+	euo.mutation.SetSlug(s)
+	return euo
+}
+
+// SetNillableSlug sets the "slug" field if the given value is not nil.
+func (euo *EventUpdateOne) SetNillableSlug(s *string) *EventUpdateOne {
+	if s != nil {
+		euo.SetSlug(*s)
+	}
+	return euo
+}
+
 // SetCalendarID sets the "calendar" edge to the Calendar entity by ID.
 func (euo *EventUpdateOne) SetCalendarID(id uuid.UUID) *EventUpdateOne {
 	euo.mutation.SetCalendarID(id)
@@ -677,6 +708,9 @@ func (euo *EventUpdateOne) sqlSave(ctx context.Context) (_node *Event, err error
 	}
 	if euo.mutation.GoogleEventIDCleared() {
 		_spec.ClearField(event.FieldGoogleEventID, field.TypeString)
+	}
+	if value, ok := euo.mutation.Slug(); ok {
+		_spec.SetField(event.FieldSlug, field.TypeString, value)
 	}
 	if euo.mutation.CalendarCleared() {
 		edge := &sqlgraph.EdgeSpec{

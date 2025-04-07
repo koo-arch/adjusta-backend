@@ -24,6 +24,8 @@ func init() {
 	calendarDescID := calendarFields[0].Descriptor()
 	// calendar.DefaultID holds the default value on creation for the id field.
 	calendar.DefaultID = calendarDescID.Default.(func() uuid.UUID)
+	eventHooks := schema.Event{}.Hooks()
+	event.Hooks[0] = eventHooks[0]
 	eventFields := schema.Event{}.Fields()
 	_ = eventFields
 	// eventDescID is the schema descriptor for id field.

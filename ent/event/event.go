@@ -5,6 +5,7 @@ package event
 import (
 	"fmt"
 
+	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/google/uuid"
@@ -27,6 +28,8 @@ const (
 	FieldConfirmedDateID = "confirmed_date_id"
 	// FieldGoogleEventID holds the string denoting the google_event_id field in the database.
 	FieldGoogleEventID = "google_event_id"
+	// FieldSlug holds the string denoting the slug field in the database.
+	FieldSlug = "slug"
 	// EdgeCalendar holds the string denoting the calendar edge name in mutations.
 	EdgeCalendar = "calendar"
 	// EdgeProposedDates holds the string denoting the proposed_dates edge name in mutations.
@@ -58,6 +61,7 @@ var Columns = []string{
 	FieldStatus,
 	FieldConfirmedDateID,
 	FieldGoogleEventID,
+	FieldSlug,
 }
 
 // ForeignKeys holds the SQL foreign-keys that are owned by the "events"
@@ -81,7 +85,13 @@ func ValidColumn(column string) bool {
 	return false
 }
 
+// Note that the variables below are initialized by the runtime
+// package on the initialization of the application. Therefore,
+// it should be imported in the main as follows:
+//
+//	import _ "github.com/koo-arch/adjusta-backend/ent/runtime"
 var (
+	Hooks [1]ent.Hook
 	// DefaultID holds the default value on creation for the "id" field.
 	DefaultID func() uuid.UUID
 )
@@ -149,6 +159,11 @@ func ByConfirmedDateID(opts ...sql.OrderTermOption) OrderOption {
 // ByGoogleEventID orders the results by the google_event_id field.
 func ByGoogleEventID(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldGoogleEventID, opts...).ToFunc()
+}
+
+// BySlug orders the results by the slug field.
+func BySlug(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldSlug, opts...).ToFunc()
 }
 
 // ByCalendarField orders the results by calendar field.
