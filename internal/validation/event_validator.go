@@ -5,7 +5,7 @@ import (
 	internalErrors "github.com/koo-arch/adjusta-backend/internal/errors"
 )
 
-func CreateEventValidation(eventDraft *models.EventDraftCreation) *internalErrors.APIError {
+func CreateEventValidation(eventDraft *models.EventDraftCreation) *internalErrors.ValidationError {
 	validationErrors := NewValidationErrors()
 
 	// 基本情報のバリデーション

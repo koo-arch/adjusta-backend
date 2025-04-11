@@ -5,7 +5,7 @@ import (
 	internalErrors "github.com/koo-arch/adjusta-backend/internal/errors"
 )
 
-func FinalizeValidation(confirmEvent *models.ConfirmEvent) *internalErrors.APIError {
+func FinalizeValidation(confirmEvent *models.ConfirmEvent) *internalErrors.ValidationError {
 	validationErrors := NewValidationErrors()
 
 	// confirm_dateのバリデーション

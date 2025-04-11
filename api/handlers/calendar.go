@@ -9,6 +9,7 @@ import (
 	"github.com/koo-arch/adjusta-backend/queryparser"
 	"github.com/koo-arch/adjusta-backend/utils"
 	"github.com/koo-arch/adjusta-backend/internal/validation"
+	"github.com/koo-arch/adjusta-backend/internal/errors"
 )
 
 type CalendarHandler struct {
@@ -34,13 +35,22 @@ func (ch *CalendarHandler) FetchEventListHandler() gin.HandlerFunc {
 		eventFetchingManager := ch.handler.Server.EventFetchingManager
 
 		accountsEvents, err := eventFetchingManager.FetchAllGoogleEvents(ctx, userid, email)
+		if err, ok := err.(*errors.APIError); ok && err.StatusCode == http.StatusPartialContent {
+			c.JSON(http.StatusPartialContent, gin.H{
+				"events": accountsEvents,
+				"warning": err.Details,
+			})
+			return
+		}
 		if err != nil {
 			log.Printf("failed to fetch events: %v", err)
 			utils.HandleAPIError(c, err, "Googleカレンダーのイベント取得に失敗しました")
 			return
 		}
 
-		c.JSON(http.StatusOK, accountsEvents)
+		c.JSON(http.StatusOK, gin.H{
+			"events": accountsEvents,
+		})
 	}
 }
 
