@@ -3,6 +3,7 @@ package calendar
 import (
 	"context"
 	"fmt"
+	"errors"
 	"sync"
 	"time"
 
@@ -17,14 +18,20 @@ type GoogleCalendarManager struct {
 	client *ent.Client
 }
 
+type FetchResult struct {
+	Events []*models.GoogleEvent
+	FailedCalendars []string
+}
+
 func NewGoogleCalendarManager(client *ent.Client) *GoogleCalendarManager {
 	return &GoogleCalendarManager{
 		client: client,
 	}
 }
 
-func (gcm *GoogleCalendarManager) FetchEventsFromCalendars(calendarService *customCalendar.Calendar, calendars []*ent.GoogleCalendarInfo, startTime, endTime time.Time) ([]*models.GoogleEvent, error) {
+func (gcm *GoogleCalendarManager) FetchEventsFromCalendars(calendarService *customCalendar.Calendar, calendars []*ent.GoogleCalendarInfo, startTime, endTime time.Time) (*FetchResult, error) {
 	var events []*models.GoogleEvent
+	var failedCalendars []string
 	var wg sync.WaitGroup
 	var mu sync.Mutex
 	errCh := make(chan error, len(calendars))
@@ -36,6 +43,12 @@ func (gcm *GoogleCalendarManager) FetchEventsFromCalendars(calendarService *cust
 
 			calEvents, err := calendarService.FetchEvents(cal.GoogleCalendarID, startTime, endTime)
 			if err != nil {
+				// エラーが発生したカレンダー名を記録
+				mu.Lock()
+				failedCalendars = append(failedCalendars, cal.Summary)
+				mu.Unlock()
+
+				// エラーメッセージをチャネルに送信
 				errCh <- fmt.Errorf("failed to fetch events from calendar: %s, error: %w", cal.Summary, err)
 				return
 			}
@@ -49,15 +62,21 @@ func (gcm *GoogleCalendarManager) FetchEventsFromCalendars(calendarService *cust
 	wg.Wait()
 	close(errCh)
 
-	if len(errCh) > 0 {
-		var errList []error
-		for err := range errCh {
-			errList = append(errList, err)
+	var joinedErr error
+	for err := range errCh {
+		if err != nil {
+			if joinedErr == nil {
+				joinedErr = err
+			} else {
+				joinedErr = errors.Join(joinedErr, err)
+			}
 		}
-		return nil, fmt.Errorf("multiple errors occurred: %v", errList)
 	}
 
-	return events, nil
+	return &FetchResult{
+		Events: events,
+		FailedCalendars: failedCalendars,
+	}, joinedErr
 }
 
 func (gcm *GoogleCalendarManager) CreateGoogleEvents(calendarService *customCalendar.Calendar, eventReq *models.EventDraftCreation) ([]*calendar.Event, error) {

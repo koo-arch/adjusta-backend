@@ -1,24 +1,22 @@
 package errors
 
-import "net/http"
-
 type APIError struct {
 	StatusCode int 			  `json:"-"`	// "-" means that this field will not be marshaled
 	Message string 			  `json:"message"`
-	Details map[string]string `json:"details,omitempty"`
+	Details map[string][]string `json:"details,omitempty"`
 }
 
-func NewAPIError(statusCode int, Message string) *APIError {
+func NewAPIError(statusCode int, message string) *APIError {
 	return &APIError{
 		StatusCode: statusCode,
-		Message: Message,
+		Message: message,
 	}
 }
 
-func NewValidationError(details map[string]string) *APIError {
+func NewAPIErrorWithDetails(statusCode int, message string, details map[string][]string) *APIError {
 	return &APIError{
-		StatusCode: http.StatusBadRequest,
-		Message: "送信に失敗しました",
+		StatusCode: statusCode,
+		Message: message,
 		Details: details,
 	}
 }

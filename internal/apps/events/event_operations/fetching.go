@@ -69,14 +69,28 @@ func (efm *EventFetchingManager) FetchAllGoogleEvents(ctx context.Context, userI
 		}
 	}
 
-	events, err := efm.event.CalendarApp.FetchEventsFromCalendars(calendarService, entGoogleCalendars, startTime, endTime)
-	if err != nil {
+	result, err := efm.event.CalendarApp.FetchEventsFromCalendars(calendarService, entGoogleCalendars, startTime, endTime)
+	if len(result.FailedCalendars) > 0 {
+		log.Printf("failed to fetch events from calendars: %v", result.FailedCalendars)
+
+		// 失敗したカレンダーの情報を
+		failedCalendarsMap := map[string][]string{
+			"failed_calendars": result.FailedCalendars,
+		}
+
+		return result.Events, internalErrors.NewAPIErrorWithDetails(
+			http.StatusPartialContent,
+			"一部のカレンダーからイベントを取得できませんでした",
+			failedCalendarsMap,
+		)
+	}
+	if err != nil && len(result.Events) == 0 {
 		log.Printf("failed to fetch events from Google Calendar: %v", err)
 		apiErr := utils.HandleGoogleAPIError(err)
 		return nil, apiErr
 	}
 
-	return events, nil
+	return result.Events, nil
 }
 
 func (efm *EventFetchingManager) FetchAllDraftedEvents(ctx context.Context, userID uuid.UUID, email string) ([]*models.EventDraftDetail, error) {
