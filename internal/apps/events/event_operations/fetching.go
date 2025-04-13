@@ -73,7 +73,16 @@ func (efm *EventFetchingManager) FetchAllGoogleEvents(ctx context.Context, userI
 	if len(result.FailedCalendars) > 0 {
 		log.Printf("failed to fetch events from calendars: %v", result.FailedCalendars)
 
-		// ToDo: 失敗したカレンダーをユーザーに通知する処理を追加する
+		// 失敗したカレンダーの情報を
+		failedCalendarsMap := map[string][]string{
+			"failed_calendars": result.FailedCalendars,
+		}
+
+		return result.Events, internalErrors.NewAPIErrorWithDetails(
+			http.StatusPartialContent,
+			"一部のカレンダーからイベントを取得できませんでした",
+			failedCalendarsMap,
+		)
 	}
 	if err != nil && len(result.Events) == 0 {
 		log.Printf("failed to fetch events from Google Calendar: %v", err)
