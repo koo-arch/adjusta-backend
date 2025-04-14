@@ -6,6 +6,7 @@ import (
 	"entgo.io/ent/schema/edge"
 
 	"github.com/google/uuid"
+	"github.com/koo-arch/adjusta-backend/ent/mixins"
 )
 
 // OAuthToken holds the schema definition for the OAuthToken entity.
@@ -27,5 +28,12 @@ func (OAuthToken) Fields() []ent.Field {
 func (OAuthToken) Edges() []ent.Edge {
 	return []ent.Edge{
 		edge.From("user", User.Type).Ref("oauth_token").Unique(),
+	}
+}
+
+func (OAuthToken) Mixin() []ent.Mixin {
+	return []ent.Mixin{
+		mixins.TimeMixin{},
+		mixins.SoftDeleteMixin{},
 	}
 }

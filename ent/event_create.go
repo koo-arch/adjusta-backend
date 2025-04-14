@@ -6,6 +6,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
@@ -20,6 +21,48 @@ type EventCreate struct {
 	config
 	mutation *EventMutation
 	hooks    []Hook
+}
+
+// SetCreatedAt sets the "created_at" field.
+func (ec *EventCreate) SetCreatedAt(t time.Time) *EventCreate {
+	ec.mutation.SetCreatedAt(t)
+	return ec
+}
+
+// SetNillableCreatedAt sets the "created_at" field if the given value is not nil.
+func (ec *EventCreate) SetNillableCreatedAt(t *time.Time) *EventCreate {
+	if t != nil {
+		ec.SetCreatedAt(*t)
+	}
+	return ec
+}
+
+// SetUpdatedAt sets the "updated_at" field.
+func (ec *EventCreate) SetUpdatedAt(t time.Time) *EventCreate {
+	ec.mutation.SetUpdatedAt(t)
+	return ec
+}
+
+// SetNillableUpdatedAt sets the "updated_at" field if the given value is not nil.
+func (ec *EventCreate) SetNillableUpdatedAt(t *time.Time) *EventCreate {
+	if t != nil {
+		ec.SetUpdatedAt(*t)
+	}
+	return ec
+}
+
+// SetDeletedAt sets the "deleted_at" field.
+func (ec *EventCreate) SetDeletedAt(t time.Time) *EventCreate {
+	ec.mutation.SetDeletedAt(t)
+	return ec
+}
+
+// SetNillableDeletedAt sets the "deleted_at" field if the given value is not nil.
+func (ec *EventCreate) SetNillableDeletedAt(t *time.Time) *EventCreate {
+	if t != nil {
+		ec.SetDeletedAt(*t)
+	}
+	return ec
 }
 
 // SetSummary sets the "summary" field.
@@ -197,6 +240,20 @@ func (ec *EventCreate) ExecX(ctx context.Context) {
 
 // defaults sets the default values of the builder before save.
 func (ec *EventCreate) defaults() error {
+	if _, ok := ec.mutation.CreatedAt(); !ok {
+		if event.DefaultCreatedAt == nil {
+			return fmt.Errorf("ent: uninitialized event.DefaultCreatedAt (forgotten import ent/runtime?)")
+		}
+		v := event.DefaultCreatedAt()
+		ec.mutation.SetCreatedAt(v)
+	}
+	if _, ok := ec.mutation.UpdatedAt(); !ok {
+		if event.DefaultUpdatedAt == nil {
+			return fmt.Errorf("ent: uninitialized event.DefaultUpdatedAt (forgotten import ent/runtime?)")
+		}
+		v := event.DefaultUpdatedAt()
+		ec.mutation.SetUpdatedAt(v)
+	}
 	if _, ok := ec.mutation.Status(); !ok {
 		v := event.DefaultStatus
 		ec.mutation.SetStatus(v)
@@ -213,6 +270,12 @@ func (ec *EventCreate) defaults() error {
 
 // check runs all checks and user-defined validators on the builder.
 func (ec *EventCreate) check() error {
+	if _, ok := ec.mutation.CreatedAt(); !ok {
+		return &ValidationError{Name: "created_at", err: errors.New(`ent: missing required field "Event.created_at"`)}
+	}
+	if _, ok := ec.mutation.UpdatedAt(); !ok {
+		return &ValidationError{Name: "updated_at", err: errors.New(`ent: missing required field "Event.updated_at"`)}
+	}
 	if _, ok := ec.mutation.Status(); !ok {
 		return &ValidationError{Name: "status", err: errors.New(`ent: missing required field "Event.status"`)}
 	}
@@ -258,6 +321,18 @@ func (ec *EventCreate) createSpec() (*Event, *sqlgraph.CreateSpec) {
 	if id, ok := ec.mutation.ID(); ok {
 		_node.ID = id
 		_spec.ID.Value = &id
+	}
+	if value, ok := ec.mutation.CreatedAt(); ok {
+		_spec.SetField(event.FieldCreatedAt, field.TypeTime, value)
+		_node.CreatedAt = value
+	}
+	if value, ok := ec.mutation.UpdatedAt(); ok {
+		_spec.SetField(event.FieldUpdatedAt, field.TypeTime, value)
+		_node.UpdatedAt = value
+	}
+	if value, ok := ec.mutation.DeletedAt(); ok {
+		_spec.SetField(event.FieldDeletedAt, field.TypeTime, value)
+		_node.DeletedAt = &value
 	}
 	if value, ok := ec.mutation.Summary(); ok {
 		_spec.SetField(event.FieldSummary, field.TypeString, value)

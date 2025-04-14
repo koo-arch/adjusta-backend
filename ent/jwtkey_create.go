@@ -20,6 +20,48 @@ type JWTKeyCreate struct {
 	hooks    []Hook
 }
 
+// SetCreatedAt sets the "created_at" field.
+func (jkc *JWTKeyCreate) SetCreatedAt(t time.Time) *JWTKeyCreate {
+	jkc.mutation.SetCreatedAt(t)
+	return jkc
+}
+
+// SetNillableCreatedAt sets the "created_at" field if the given value is not nil.
+func (jkc *JWTKeyCreate) SetNillableCreatedAt(t *time.Time) *JWTKeyCreate {
+	if t != nil {
+		jkc.SetCreatedAt(*t)
+	}
+	return jkc
+}
+
+// SetUpdatedAt sets the "updated_at" field.
+func (jkc *JWTKeyCreate) SetUpdatedAt(t time.Time) *JWTKeyCreate {
+	jkc.mutation.SetUpdatedAt(t)
+	return jkc
+}
+
+// SetNillableUpdatedAt sets the "updated_at" field if the given value is not nil.
+func (jkc *JWTKeyCreate) SetNillableUpdatedAt(t *time.Time) *JWTKeyCreate {
+	if t != nil {
+		jkc.SetUpdatedAt(*t)
+	}
+	return jkc
+}
+
+// SetDeletedAt sets the "deleted_at" field.
+func (jkc *JWTKeyCreate) SetDeletedAt(t time.Time) *JWTKeyCreate {
+	jkc.mutation.SetDeletedAt(t)
+	return jkc
+}
+
+// SetNillableDeletedAt sets the "deleted_at" field if the given value is not nil.
+func (jkc *JWTKeyCreate) SetNillableDeletedAt(t *time.Time) *JWTKeyCreate {
+	if t != nil {
+		jkc.SetDeletedAt(*t)
+	}
+	return jkc
+}
+
 // SetKey sets the "key" field.
 func (jkc *JWTKeyCreate) SetKey(s string) *JWTKeyCreate {
 	jkc.mutation.SetKey(s)
@@ -37,12 +79,6 @@ func (jkc *JWTKeyCreate) SetNillableType(s *string) *JWTKeyCreate {
 	if s != nil {
 		jkc.SetType(*s)
 	}
-	return jkc
-}
-
-// SetCreatedAt sets the "created_at" field.
-func (jkc *JWTKeyCreate) SetCreatedAt(t time.Time) *JWTKeyCreate {
-	jkc.mutation.SetCreatedAt(t)
 	return jkc
 }
 
@@ -87,6 +123,14 @@ func (jkc *JWTKeyCreate) ExecX(ctx context.Context) {
 
 // defaults sets the default values of the builder before save.
 func (jkc *JWTKeyCreate) defaults() {
+	if _, ok := jkc.mutation.CreatedAt(); !ok {
+		v := jwtkey.DefaultCreatedAt()
+		jkc.mutation.SetCreatedAt(v)
+	}
+	if _, ok := jkc.mutation.UpdatedAt(); !ok {
+		v := jwtkey.DefaultUpdatedAt()
+		jkc.mutation.SetUpdatedAt(v)
+	}
 	if _, ok := jkc.mutation.GetType(); !ok {
 		v := jwtkey.DefaultType
 		jkc.mutation.SetType(v)
@@ -95,6 +139,12 @@ func (jkc *JWTKeyCreate) defaults() {
 
 // check runs all checks and user-defined validators on the builder.
 func (jkc *JWTKeyCreate) check() error {
+	if _, ok := jkc.mutation.CreatedAt(); !ok {
+		return &ValidationError{Name: "created_at", err: errors.New(`ent: missing required field "JWTKey.created_at"`)}
+	}
+	if _, ok := jkc.mutation.UpdatedAt(); !ok {
+		return &ValidationError{Name: "updated_at", err: errors.New(`ent: missing required field "JWTKey.updated_at"`)}
+	}
 	if _, ok := jkc.mutation.Key(); !ok {
 		return &ValidationError{Name: "key", err: errors.New(`ent: missing required field "JWTKey.key"`)}
 	}
@@ -110,9 +160,6 @@ func (jkc *JWTKeyCreate) check() error {
 		if err := jwtkey.TypeValidator(v); err != nil {
 			return &ValidationError{Name: "type", err: fmt.Errorf(`ent: validator failed for field "JWTKey.type": %w`, err)}
 		}
-	}
-	if _, ok := jkc.mutation.CreatedAt(); !ok {
-		return &ValidationError{Name: "created_at", err: errors.New(`ent: missing required field "JWTKey.created_at"`)}
 	}
 	if _, ok := jkc.mutation.ExpiresAt(); !ok {
 		return &ValidationError{Name: "expires_at", err: errors.New(`ent: missing required field "JWTKey.expires_at"`)}
@@ -143,6 +190,18 @@ func (jkc *JWTKeyCreate) createSpec() (*JWTKey, *sqlgraph.CreateSpec) {
 		_node = &JWTKey{config: jkc.config}
 		_spec = sqlgraph.NewCreateSpec(jwtkey.Table, sqlgraph.NewFieldSpec(jwtkey.FieldID, field.TypeInt))
 	)
+	if value, ok := jkc.mutation.CreatedAt(); ok {
+		_spec.SetField(jwtkey.FieldCreatedAt, field.TypeTime, value)
+		_node.CreatedAt = value
+	}
+	if value, ok := jkc.mutation.UpdatedAt(); ok {
+		_spec.SetField(jwtkey.FieldUpdatedAt, field.TypeTime, value)
+		_node.UpdatedAt = value
+	}
+	if value, ok := jkc.mutation.DeletedAt(); ok {
+		_spec.SetField(jwtkey.FieldDeletedAt, field.TypeTime, value)
+		_node.DeletedAt = &value
+	}
 	if value, ok := jkc.mutation.Key(); ok {
 		_spec.SetField(jwtkey.FieldKey, field.TypeString, value)
 		_node.Key = value
@@ -150,10 +209,6 @@ func (jkc *JWTKeyCreate) createSpec() (*JWTKey, *sqlgraph.CreateSpec) {
 	if value, ok := jkc.mutation.GetType(); ok {
 		_spec.SetField(jwtkey.FieldType, field.TypeString, value)
 		_node.Type = value
-	}
-	if value, ok := jkc.mutation.CreatedAt(); ok {
-		_spec.SetField(jwtkey.FieldCreatedAt, field.TypeTime, value)
-		_node.CreatedAt = value
 	}
 	if value, ok := jkc.mutation.ExpiresAt(); ok {
 		_spec.SetField(jwtkey.FieldExpiresAt, field.TypeTime, value)

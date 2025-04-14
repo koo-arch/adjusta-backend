@@ -19,6 +19,12 @@ type ProposedDate struct {
 	config `json:"-"`
 	// ID of the ent.
 	ID uuid.UUID `json:"id,omitempty"`
+	// CreatedAt holds the value of the "created_at" field.
+	CreatedAt time.Time `json:"created_at,omitempty"`
+	// UpdatedAt holds the value of the "updated_at" field.
+	UpdatedAt time.Time `json:"updated_at,omitempty"`
+	// DeletedAt holds the value of the "deleted_at" field.
+	DeletedAt *time.Time `json:"deleted_at,omitempty"`
 	// StartTime holds the value of the "start_time" field.
 	StartTime time.Time `json:"start_time,omitempty"`
 	// EndTime holds the value of the "end_time" field.
@@ -59,7 +65,7 @@ func (*ProposedDate) scanValues(columns []string) ([]any, error) {
 		switch columns[i] {
 		case proposeddate.FieldPriority:
 			values[i] = new(sql.NullInt64)
-		case proposeddate.FieldStartTime, proposeddate.FieldEndTime:
+		case proposeddate.FieldCreatedAt, proposeddate.FieldUpdatedAt, proposeddate.FieldDeletedAt, proposeddate.FieldStartTime, proposeddate.FieldEndTime:
 			values[i] = new(sql.NullTime)
 		case proposeddate.FieldID:
 			values[i] = new(uuid.UUID)
@@ -85,6 +91,25 @@ func (pd *ProposedDate) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field id", values[i])
 			} else if value != nil {
 				pd.ID = *value
+			}
+		case proposeddate.FieldCreatedAt:
+			if value, ok := values[i].(*sql.NullTime); !ok {
+				return fmt.Errorf("unexpected type %T for field created_at", values[i])
+			} else if value.Valid {
+				pd.CreatedAt = value.Time
+			}
+		case proposeddate.FieldUpdatedAt:
+			if value, ok := values[i].(*sql.NullTime); !ok {
+				return fmt.Errorf("unexpected type %T for field updated_at", values[i])
+			} else if value.Valid {
+				pd.UpdatedAt = value.Time
+			}
+		case proposeddate.FieldDeletedAt:
+			if value, ok := values[i].(*sql.NullTime); !ok {
+				return fmt.Errorf("unexpected type %T for field deleted_at", values[i])
+			} else if value.Valid {
+				pd.DeletedAt = new(time.Time)
+				*pd.DeletedAt = value.Time
 			}
 		case proposeddate.FieldStartTime:
 			if value, ok := values[i].(*sql.NullTime); !ok {
@@ -152,6 +177,17 @@ func (pd *ProposedDate) String() string {
 	var builder strings.Builder
 	builder.WriteString("ProposedDate(")
 	builder.WriteString(fmt.Sprintf("id=%v, ", pd.ID))
+	builder.WriteString("created_at=")
+	builder.WriteString(pd.CreatedAt.Format(time.ANSIC))
+	builder.WriteString(", ")
+	builder.WriteString("updated_at=")
+	builder.WriteString(pd.UpdatedAt.Format(time.ANSIC))
+	builder.WriteString(", ")
+	if v := pd.DeletedAt; v != nil {
+		builder.WriteString("deleted_at=")
+		builder.WriteString(v.Format(time.ANSIC))
+	}
+	builder.WriteString(", ")
 	builder.WriteString("start_time=")
 	builder.WriteString(pd.StartTime.Format(time.ANSIC))
 	builder.WriteString(", ")

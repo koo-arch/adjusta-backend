@@ -30,6 +30,32 @@ func (pdu *ProposedDateUpdate) Where(ps ...predicate.ProposedDate) *ProposedDate
 	return pdu
 }
 
+// SetUpdatedAt sets the "updated_at" field.
+func (pdu *ProposedDateUpdate) SetUpdatedAt(t time.Time) *ProposedDateUpdate {
+	pdu.mutation.SetUpdatedAt(t)
+	return pdu
+}
+
+// SetDeletedAt sets the "deleted_at" field.
+func (pdu *ProposedDateUpdate) SetDeletedAt(t time.Time) *ProposedDateUpdate {
+	pdu.mutation.SetDeletedAt(t)
+	return pdu
+}
+
+// SetNillableDeletedAt sets the "deleted_at" field if the given value is not nil.
+func (pdu *ProposedDateUpdate) SetNillableDeletedAt(t *time.Time) *ProposedDateUpdate {
+	if t != nil {
+		pdu.SetDeletedAt(*t)
+	}
+	return pdu
+}
+
+// ClearDeletedAt clears the value of the "deleted_at" field.
+func (pdu *ProposedDateUpdate) ClearDeletedAt() *ProposedDateUpdate {
+	pdu.mutation.ClearDeletedAt()
+	return pdu
+}
+
 // SetStartTime sets the "start_time" field.
 func (pdu *ProposedDateUpdate) SetStartTime(t time.Time) *ProposedDateUpdate {
 	pdu.mutation.SetStartTime(t)
@@ -111,6 +137,9 @@ func (pdu *ProposedDateUpdate) ClearEvent() *ProposedDateUpdate {
 
 // Save executes the query and returns the number of nodes affected by the update operation.
 func (pdu *ProposedDateUpdate) Save(ctx context.Context) (int, error) {
+	if err := pdu.defaults(); err != nil {
+		return 0, err
+	}
 	return withHooks(ctx, pdu.sqlSave, pdu.mutation, pdu.hooks)
 }
 
@@ -136,6 +165,18 @@ func (pdu *ProposedDateUpdate) ExecX(ctx context.Context) {
 	}
 }
 
+// defaults sets the default values of the builder before save.
+func (pdu *ProposedDateUpdate) defaults() error {
+	if _, ok := pdu.mutation.UpdatedAt(); !ok {
+		if proposeddate.UpdateDefaultUpdatedAt == nil {
+			return fmt.Errorf("ent: uninitialized proposeddate.UpdateDefaultUpdatedAt (forgotten import ent/runtime?)")
+		}
+		v := proposeddate.UpdateDefaultUpdatedAt()
+		pdu.mutation.SetUpdatedAt(v)
+	}
+	return nil
+}
+
 func (pdu *ProposedDateUpdate) sqlSave(ctx context.Context) (n int, err error) {
 	_spec := sqlgraph.NewUpdateSpec(proposeddate.Table, proposeddate.Columns, sqlgraph.NewFieldSpec(proposeddate.FieldID, field.TypeUUID))
 	if ps := pdu.mutation.predicates; len(ps) > 0 {
@@ -144,6 +185,15 @@ func (pdu *ProposedDateUpdate) sqlSave(ctx context.Context) (n int, err error) {
 				ps[i](selector)
 			}
 		}
+	}
+	if value, ok := pdu.mutation.UpdatedAt(); ok {
+		_spec.SetField(proposeddate.FieldUpdatedAt, field.TypeTime, value)
+	}
+	if value, ok := pdu.mutation.DeletedAt(); ok {
+		_spec.SetField(proposeddate.FieldDeletedAt, field.TypeTime, value)
+	}
+	if pdu.mutation.DeletedAtCleared() {
+		_spec.ClearField(proposeddate.FieldDeletedAt, field.TypeTime)
 	}
 	if value, ok := pdu.mutation.StartTime(); ok {
 		_spec.SetField(proposeddate.FieldStartTime, field.TypeTime, value)
@@ -204,6 +254,32 @@ type ProposedDateUpdateOne struct {
 	fields   []string
 	hooks    []Hook
 	mutation *ProposedDateMutation
+}
+
+// SetUpdatedAt sets the "updated_at" field.
+func (pduo *ProposedDateUpdateOne) SetUpdatedAt(t time.Time) *ProposedDateUpdateOne {
+	pduo.mutation.SetUpdatedAt(t)
+	return pduo
+}
+
+// SetDeletedAt sets the "deleted_at" field.
+func (pduo *ProposedDateUpdateOne) SetDeletedAt(t time.Time) *ProposedDateUpdateOne {
+	pduo.mutation.SetDeletedAt(t)
+	return pduo
+}
+
+// SetNillableDeletedAt sets the "deleted_at" field if the given value is not nil.
+func (pduo *ProposedDateUpdateOne) SetNillableDeletedAt(t *time.Time) *ProposedDateUpdateOne {
+	if t != nil {
+		pduo.SetDeletedAt(*t)
+	}
+	return pduo
+}
+
+// ClearDeletedAt clears the value of the "deleted_at" field.
+func (pduo *ProposedDateUpdateOne) ClearDeletedAt() *ProposedDateUpdateOne {
+	pduo.mutation.ClearDeletedAt()
+	return pduo
 }
 
 // SetStartTime sets the "start_time" field.
@@ -300,6 +376,9 @@ func (pduo *ProposedDateUpdateOne) Select(field string, fields ...string) *Propo
 
 // Save executes the query and returns the updated ProposedDate entity.
 func (pduo *ProposedDateUpdateOne) Save(ctx context.Context) (*ProposedDate, error) {
+	if err := pduo.defaults(); err != nil {
+		return nil, err
+	}
 	return withHooks(ctx, pduo.sqlSave, pduo.mutation, pduo.hooks)
 }
 
@@ -323,6 +402,18 @@ func (pduo *ProposedDateUpdateOne) ExecX(ctx context.Context) {
 	if err := pduo.Exec(ctx); err != nil {
 		panic(err)
 	}
+}
+
+// defaults sets the default values of the builder before save.
+func (pduo *ProposedDateUpdateOne) defaults() error {
+	if _, ok := pduo.mutation.UpdatedAt(); !ok {
+		if proposeddate.UpdateDefaultUpdatedAt == nil {
+			return fmt.Errorf("ent: uninitialized proposeddate.UpdateDefaultUpdatedAt (forgotten import ent/runtime?)")
+		}
+		v := proposeddate.UpdateDefaultUpdatedAt()
+		pduo.mutation.SetUpdatedAt(v)
+	}
+	return nil
 }
 
 func (pduo *ProposedDateUpdateOne) sqlSave(ctx context.Context) (_node *ProposedDate, err error) {
@@ -350,6 +441,15 @@ func (pduo *ProposedDateUpdateOne) sqlSave(ctx context.Context) (_node *Proposed
 				ps[i](selector)
 			}
 		}
+	}
+	if value, ok := pduo.mutation.UpdatedAt(); ok {
+		_spec.SetField(proposeddate.FieldUpdatedAt, field.TypeTime, value)
+	}
+	if value, ok := pduo.mutation.DeletedAt(); ok {
+		_spec.SetField(proposeddate.FieldDeletedAt, field.TypeTime, value)
+	}
+	if pduo.mutation.DeletedAtCleared() {
+		_spec.ClearField(proposeddate.FieldDeletedAt, field.TypeTime)
 	}
 	if value, ok := pduo.mutation.StartTime(); ok {
 		_spec.SetField(proposeddate.FieldStartTime, field.TypeTime, value)

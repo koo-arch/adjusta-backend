@@ -22,6 +22,48 @@ type ProposedDateCreate struct {
 	hooks    []Hook
 }
 
+// SetCreatedAt sets the "created_at" field.
+func (pdc *ProposedDateCreate) SetCreatedAt(t time.Time) *ProposedDateCreate {
+	pdc.mutation.SetCreatedAt(t)
+	return pdc
+}
+
+// SetNillableCreatedAt sets the "created_at" field if the given value is not nil.
+func (pdc *ProposedDateCreate) SetNillableCreatedAt(t *time.Time) *ProposedDateCreate {
+	if t != nil {
+		pdc.SetCreatedAt(*t)
+	}
+	return pdc
+}
+
+// SetUpdatedAt sets the "updated_at" field.
+func (pdc *ProposedDateCreate) SetUpdatedAt(t time.Time) *ProposedDateCreate {
+	pdc.mutation.SetUpdatedAt(t)
+	return pdc
+}
+
+// SetNillableUpdatedAt sets the "updated_at" field if the given value is not nil.
+func (pdc *ProposedDateCreate) SetNillableUpdatedAt(t *time.Time) *ProposedDateCreate {
+	if t != nil {
+		pdc.SetUpdatedAt(*t)
+	}
+	return pdc
+}
+
+// SetDeletedAt sets the "deleted_at" field.
+func (pdc *ProposedDateCreate) SetDeletedAt(t time.Time) *ProposedDateCreate {
+	pdc.mutation.SetDeletedAt(t)
+	return pdc
+}
+
+// SetNillableDeletedAt sets the "deleted_at" field if the given value is not nil.
+func (pdc *ProposedDateCreate) SetNillableDeletedAt(t *time.Time) *ProposedDateCreate {
+	if t != nil {
+		pdc.SetDeletedAt(*t)
+	}
+	return pdc
+}
+
 // SetStartTime sets the "start_time" field.
 func (pdc *ProposedDateCreate) SetStartTime(t time.Time) *ProposedDateCreate {
 	pdc.mutation.SetStartTime(t)
@@ -118,6 +160,20 @@ func (pdc *ProposedDateCreate) ExecX(ctx context.Context) {
 
 // defaults sets the default values of the builder before save.
 func (pdc *ProposedDateCreate) defaults() error {
+	if _, ok := pdc.mutation.CreatedAt(); !ok {
+		if proposeddate.DefaultCreatedAt == nil {
+			return fmt.Errorf("ent: uninitialized proposeddate.DefaultCreatedAt (forgotten import ent/runtime?)")
+		}
+		v := proposeddate.DefaultCreatedAt()
+		pdc.mutation.SetCreatedAt(v)
+	}
+	if _, ok := pdc.mutation.UpdatedAt(); !ok {
+		if proposeddate.DefaultUpdatedAt == nil {
+			return fmt.Errorf("ent: uninitialized proposeddate.DefaultUpdatedAt (forgotten import ent/runtime?)")
+		}
+		v := proposeddate.DefaultUpdatedAt()
+		pdc.mutation.SetUpdatedAt(v)
+	}
 	if _, ok := pdc.mutation.Priority(); !ok {
 		v := proposeddate.DefaultPriority
 		pdc.mutation.SetPriority(v)
@@ -134,6 +190,12 @@ func (pdc *ProposedDateCreate) defaults() error {
 
 // check runs all checks and user-defined validators on the builder.
 func (pdc *ProposedDateCreate) check() error {
+	if _, ok := pdc.mutation.CreatedAt(); !ok {
+		return &ValidationError{Name: "created_at", err: errors.New(`ent: missing required field "ProposedDate.created_at"`)}
+	}
+	if _, ok := pdc.mutation.UpdatedAt(); !ok {
+		return &ValidationError{Name: "updated_at", err: errors.New(`ent: missing required field "ProposedDate.updated_at"`)}
+	}
 	if _, ok := pdc.mutation.StartTime(); !ok {
 		return &ValidationError{Name: "start_time", err: errors.New(`ent: missing required field "ProposedDate.start_time"`)}
 	}
@@ -177,6 +239,18 @@ func (pdc *ProposedDateCreate) createSpec() (*ProposedDate, *sqlgraph.CreateSpec
 	if id, ok := pdc.mutation.ID(); ok {
 		_node.ID = id
 		_spec.ID.Value = &id
+	}
+	if value, ok := pdc.mutation.CreatedAt(); ok {
+		_spec.SetField(proposeddate.FieldCreatedAt, field.TypeTime, value)
+		_node.CreatedAt = value
+	}
+	if value, ok := pdc.mutation.UpdatedAt(); ok {
+		_spec.SetField(proposeddate.FieldUpdatedAt, field.TypeTime, value)
+		_node.UpdatedAt = value
+	}
+	if value, ok := pdc.mutation.DeletedAt(); ok {
+		_spec.SetField(proposeddate.FieldDeletedAt, field.TypeTime, value)
+		_node.DeletedAt = &value
 	}
 	if value, ok := pdc.mutation.StartTime(); ok {
 		_spec.SetField(proposeddate.FieldStartTime, field.TypeTime, value)

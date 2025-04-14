@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"math"
 
+	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
@@ -86,7 +87,7 @@ func (gciq *GoogleCalendarInfoQuery) QueryCalendars() *CalendarQuery {
 // First returns the first GoogleCalendarInfo entity from the query.
 // Returns a *NotFoundError when no GoogleCalendarInfo was found.
 func (gciq *GoogleCalendarInfoQuery) First(ctx context.Context) (*GoogleCalendarInfo, error) {
-	nodes, err := gciq.Limit(1).All(setContextOp(ctx, gciq.ctx, "First"))
+	nodes, err := gciq.Limit(1).All(setContextOp(ctx, gciq.ctx, ent.OpQueryFirst))
 	if err != nil {
 		return nil, err
 	}
@@ -109,7 +110,7 @@ func (gciq *GoogleCalendarInfoQuery) FirstX(ctx context.Context) *GoogleCalendar
 // Returns a *NotFoundError when no GoogleCalendarInfo ID was found.
 func (gciq *GoogleCalendarInfoQuery) FirstID(ctx context.Context) (id uuid.UUID, err error) {
 	var ids []uuid.UUID
-	if ids, err = gciq.Limit(1).IDs(setContextOp(ctx, gciq.ctx, "FirstID")); err != nil {
+	if ids, err = gciq.Limit(1).IDs(setContextOp(ctx, gciq.ctx, ent.OpQueryFirstID)); err != nil {
 		return
 	}
 	if len(ids) == 0 {
@@ -132,7 +133,7 @@ func (gciq *GoogleCalendarInfoQuery) FirstIDX(ctx context.Context) uuid.UUID {
 // Returns a *NotSingularError when more than one GoogleCalendarInfo entity is found.
 // Returns a *NotFoundError when no GoogleCalendarInfo entities are found.
 func (gciq *GoogleCalendarInfoQuery) Only(ctx context.Context) (*GoogleCalendarInfo, error) {
-	nodes, err := gciq.Limit(2).All(setContextOp(ctx, gciq.ctx, "Only"))
+	nodes, err := gciq.Limit(2).All(setContextOp(ctx, gciq.ctx, ent.OpQueryOnly))
 	if err != nil {
 		return nil, err
 	}
@@ -160,7 +161,7 @@ func (gciq *GoogleCalendarInfoQuery) OnlyX(ctx context.Context) *GoogleCalendarI
 // Returns a *NotFoundError when no entities are found.
 func (gciq *GoogleCalendarInfoQuery) OnlyID(ctx context.Context) (id uuid.UUID, err error) {
 	var ids []uuid.UUID
-	if ids, err = gciq.Limit(2).IDs(setContextOp(ctx, gciq.ctx, "OnlyID")); err != nil {
+	if ids, err = gciq.Limit(2).IDs(setContextOp(ctx, gciq.ctx, ent.OpQueryOnlyID)); err != nil {
 		return
 	}
 	switch len(ids) {
@@ -185,7 +186,7 @@ func (gciq *GoogleCalendarInfoQuery) OnlyIDX(ctx context.Context) uuid.UUID {
 
 // All executes the query and returns a list of GoogleCalendarInfos.
 func (gciq *GoogleCalendarInfoQuery) All(ctx context.Context) ([]*GoogleCalendarInfo, error) {
-	ctx = setContextOp(ctx, gciq.ctx, "All")
+	ctx = setContextOp(ctx, gciq.ctx, ent.OpQueryAll)
 	if err := gciq.prepareQuery(ctx); err != nil {
 		return nil, err
 	}
@@ -207,7 +208,7 @@ func (gciq *GoogleCalendarInfoQuery) IDs(ctx context.Context) (ids []uuid.UUID, 
 	if gciq.ctx.Unique == nil && gciq.path != nil {
 		gciq.Unique(true)
 	}
-	ctx = setContextOp(ctx, gciq.ctx, "IDs")
+	ctx = setContextOp(ctx, gciq.ctx, ent.OpQueryIDs)
 	if err = gciq.Select(googlecalendarinfo.FieldID).Scan(ctx, &ids); err != nil {
 		return nil, err
 	}
@@ -225,7 +226,7 @@ func (gciq *GoogleCalendarInfoQuery) IDsX(ctx context.Context) []uuid.UUID {
 
 // Count returns the count of the given query.
 func (gciq *GoogleCalendarInfoQuery) Count(ctx context.Context) (int, error) {
-	ctx = setContextOp(ctx, gciq.ctx, "Count")
+	ctx = setContextOp(ctx, gciq.ctx, ent.OpQueryCount)
 	if err := gciq.prepareQuery(ctx); err != nil {
 		return 0, err
 	}
@@ -243,7 +244,7 @@ func (gciq *GoogleCalendarInfoQuery) CountX(ctx context.Context) int {
 
 // Exist returns true if the query has elements in the graph.
 func (gciq *GoogleCalendarInfoQuery) Exist(ctx context.Context) (bool, error) {
-	ctx = setContextOp(ctx, gciq.ctx, "Exist")
+	ctx = setContextOp(ctx, gciq.ctx, ent.OpQueryExist)
 	switch _, err := gciq.FirstID(ctx); {
 	case IsNotFound(err):
 		return false, nil
@@ -299,12 +300,12 @@ func (gciq *GoogleCalendarInfoQuery) WithCalendars(opts ...func(*CalendarQuery))
 // Example:
 //
 //	var v []struct {
-//		GoogleCalendarID string `json:"google_calendar_id,omitempty"`
+//		CreatedAt time.Time `json:"created_at,omitempty"`
 //		Count int `json:"count,omitempty"`
 //	}
 //
 //	client.GoogleCalendarInfo.Query().
-//		GroupBy(googlecalendarinfo.FieldGoogleCalendarID).
+//		GroupBy(googlecalendarinfo.FieldCreatedAt).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
 func (gciq *GoogleCalendarInfoQuery) GroupBy(field string, fields ...string) *GoogleCalendarInfoGroupBy {
@@ -322,11 +323,11 @@ func (gciq *GoogleCalendarInfoQuery) GroupBy(field string, fields ...string) *Go
 // Example:
 //
 //	var v []struct {
-//		GoogleCalendarID string `json:"google_calendar_id,omitempty"`
+//		CreatedAt time.Time `json:"created_at,omitempty"`
 //	}
 //
 //	client.GoogleCalendarInfo.Query().
-//		Select(googlecalendarinfo.FieldGoogleCalendarID).
+//		Select(googlecalendarinfo.FieldCreatedAt).
 //		Scan(ctx, &v)
 func (gciq *GoogleCalendarInfoQuery) Select(fields ...string) *GoogleCalendarInfoSelect {
 	gciq.ctx.Fields = append(gciq.ctx.Fields, fields...)
@@ -560,7 +561,7 @@ func (gcigb *GoogleCalendarInfoGroupBy) Aggregate(fns ...AggregateFunc) *GoogleC
 
 // Scan applies the selector query and scans the result into the given value.
 func (gcigb *GoogleCalendarInfoGroupBy) Scan(ctx context.Context, v any) error {
-	ctx = setContextOp(ctx, gcigb.build.ctx, "GroupBy")
+	ctx = setContextOp(ctx, gcigb.build.ctx, ent.OpQueryGroupBy)
 	if err := gcigb.build.prepareQuery(ctx); err != nil {
 		return err
 	}
@@ -608,7 +609,7 @@ func (gcis *GoogleCalendarInfoSelect) Aggregate(fns ...AggregateFunc) *GoogleCal
 
 // Scan applies the selector query and scans the result into the given value.
 func (gcis *GoogleCalendarInfoSelect) Scan(ctx context.Context, v any) error {
-	ctx = setContextOp(ctx, gcis.ctx, "Select")
+	ctx = setContextOp(ctx, gcis.ctx, ent.OpQuerySelect)
 	if err := gcis.prepareQuery(ctx); err != nil {
 		return err
 	}

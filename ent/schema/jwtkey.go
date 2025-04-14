@@ -4,6 +4,7 @@ import (
 	"entgo.io/ent"
 	"entgo.io/ent/schema/field"
 	"entgo.io/ent/schema/index"
+	"github.com/koo-arch/adjusta-backend/ent/mixins"
 )
 
 // JWTkey holds the schema definition for the JWTkey entity.
@@ -16,7 +17,6 @@ func (JWTKey) Fields() []ent.Field {
 	return []ent.Field{
 		field.String("key").NotEmpty().Sensitive(),
 		field.String("type").NotEmpty().Default("access"), // access or refresh
-		field.Time("created_at").Immutable(),
 		field.Time("expires_at").Immutable(),
 	}
 }
@@ -29,5 +29,12 @@ func (JWTKey) Edges() []ent.Edge {
 func (JWTKey) Indexes() []ent.Index {
 	return []ent.Index{
 		index.Fields("key", "expires_at").StorageKey("idx_type_expires"),
+	}
+}
+
+func (JWTKey) Mixin() []ent.Mixin {
+	return []ent.Mixin{
+		mixins.TimeMixin{},
+		mixins.SoftDeleteMixin{},
 	}
 }

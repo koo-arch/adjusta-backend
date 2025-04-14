@@ -10,6 +10,7 @@ import (
 	"github.com/koo-arch/adjusta-backend/ent/hook"
 	gen "github.com/koo-arch/adjusta-backend/ent"
 	"github.com/google/uuid"
+	"github.com/koo-arch/adjusta-backend/ent/mixins"
 )
 
 // ProposedDate holds the schema definition for the ProposedDate entity.
@@ -51,4 +52,11 @@ func proposeddateHook(next ent.Mutator) ent.Mutator {
 		}
 		return next.Mutate(ctx, m)
 	})
+}
+
+func (ProposedDate) Mixin() []ent.Mixin {
+	return []ent.Mixin{
+		mixins.TimeMixin{},
+		mixins.SoftDeleteMixin{},
+	}
 }

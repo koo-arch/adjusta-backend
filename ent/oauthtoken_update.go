@@ -30,6 +30,32 @@ func (otu *OAuthTokenUpdate) Where(ps ...predicate.OAuthToken) *OAuthTokenUpdate
 	return otu
 }
 
+// SetUpdatedAt sets the "updated_at" field.
+func (otu *OAuthTokenUpdate) SetUpdatedAt(t time.Time) *OAuthTokenUpdate {
+	otu.mutation.SetUpdatedAt(t)
+	return otu
+}
+
+// SetDeletedAt sets the "deleted_at" field.
+func (otu *OAuthTokenUpdate) SetDeletedAt(t time.Time) *OAuthTokenUpdate {
+	otu.mutation.SetDeletedAt(t)
+	return otu
+}
+
+// SetNillableDeletedAt sets the "deleted_at" field if the given value is not nil.
+func (otu *OAuthTokenUpdate) SetNillableDeletedAt(t *time.Time) *OAuthTokenUpdate {
+	if t != nil {
+		otu.SetDeletedAt(*t)
+	}
+	return otu
+}
+
+// ClearDeletedAt clears the value of the "deleted_at" field.
+func (otu *OAuthTokenUpdate) ClearDeletedAt() *OAuthTokenUpdate {
+	otu.mutation.ClearDeletedAt()
+	return otu
+}
+
 // SetAccessToken sets the "access_token" field.
 func (otu *OAuthTokenUpdate) SetAccessToken(s string) *OAuthTokenUpdate {
 	otu.mutation.SetAccessToken(s)
@@ -122,6 +148,7 @@ func (otu *OAuthTokenUpdate) ClearUser() *OAuthTokenUpdate {
 
 // Save executes the query and returns the number of nodes affected by the update operation.
 func (otu *OAuthTokenUpdate) Save(ctx context.Context) (int, error) {
+	otu.defaults()
 	return withHooks(ctx, otu.sqlSave, otu.mutation, otu.hooks)
 }
 
@@ -147,6 +174,14 @@ func (otu *OAuthTokenUpdate) ExecX(ctx context.Context) {
 	}
 }
 
+// defaults sets the default values of the builder before save.
+func (otu *OAuthTokenUpdate) defaults() {
+	if _, ok := otu.mutation.UpdatedAt(); !ok {
+		v := oauthtoken.UpdateDefaultUpdatedAt()
+		otu.mutation.SetUpdatedAt(v)
+	}
+}
+
 func (otu *OAuthTokenUpdate) sqlSave(ctx context.Context) (n int, err error) {
 	_spec := sqlgraph.NewUpdateSpec(oauthtoken.Table, oauthtoken.Columns, sqlgraph.NewFieldSpec(oauthtoken.FieldID, field.TypeUUID))
 	if ps := otu.mutation.predicates; len(ps) > 0 {
@@ -155,6 +190,15 @@ func (otu *OAuthTokenUpdate) sqlSave(ctx context.Context) (n int, err error) {
 				ps[i](selector)
 			}
 		}
+	}
+	if value, ok := otu.mutation.UpdatedAt(); ok {
+		_spec.SetField(oauthtoken.FieldUpdatedAt, field.TypeTime, value)
+	}
+	if value, ok := otu.mutation.DeletedAt(); ok {
+		_spec.SetField(oauthtoken.FieldDeletedAt, field.TypeTime, value)
+	}
+	if otu.mutation.DeletedAtCleared() {
+		_spec.ClearField(oauthtoken.FieldDeletedAt, field.TypeTime)
 	}
 	if value, ok := otu.mutation.AccessToken(); ok {
 		_spec.SetField(oauthtoken.FieldAccessToken, field.TypeString, value)
@@ -221,6 +265,32 @@ type OAuthTokenUpdateOne struct {
 	fields   []string
 	hooks    []Hook
 	mutation *OAuthTokenMutation
+}
+
+// SetUpdatedAt sets the "updated_at" field.
+func (otuo *OAuthTokenUpdateOne) SetUpdatedAt(t time.Time) *OAuthTokenUpdateOne {
+	otuo.mutation.SetUpdatedAt(t)
+	return otuo
+}
+
+// SetDeletedAt sets the "deleted_at" field.
+func (otuo *OAuthTokenUpdateOne) SetDeletedAt(t time.Time) *OAuthTokenUpdateOne {
+	otuo.mutation.SetDeletedAt(t)
+	return otuo
+}
+
+// SetNillableDeletedAt sets the "deleted_at" field if the given value is not nil.
+func (otuo *OAuthTokenUpdateOne) SetNillableDeletedAt(t *time.Time) *OAuthTokenUpdateOne {
+	if t != nil {
+		otuo.SetDeletedAt(*t)
+	}
+	return otuo
+}
+
+// ClearDeletedAt clears the value of the "deleted_at" field.
+func (otuo *OAuthTokenUpdateOne) ClearDeletedAt() *OAuthTokenUpdateOne {
+	otuo.mutation.ClearDeletedAt()
+	return otuo
 }
 
 // SetAccessToken sets the "access_token" field.
@@ -328,6 +398,7 @@ func (otuo *OAuthTokenUpdateOne) Select(field string, fields ...string) *OAuthTo
 
 // Save executes the query and returns the updated OAuthToken entity.
 func (otuo *OAuthTokenUpdateOne) Save(ctx context.Context) (*OAuthToken, error) {
+	otuo.defaults()
 	return withHooks(ctx, otuo.sqlSave, otuo.mutation, otuo.hooks)
 }
 
@@ -350,6 +421,14 @@ func (otuo *OAuthTokenUpdateOne) Exec(ctx context.Context) error {
 func (otuo *OAuthTokenUpdateOne) ExecX(ctx context.Context) {
 	if err := otuo.Exec(ctx); err != nil {
 		panic(err)
+	}
+}
+
+// defaults sets the default values of the builder before save.
+func (otuo *OAuthTokenUpdateOne) defaults() {
+	if _, ok := otuo.mutation.UpdatedAt(); !ok {
+		v := oauthtoken.UpdateDefaultUpdatedAt()
+		otuo.mutation.SetUpdatedAt(v)
 	}
 }
 
@@ -378,6 +457,15 @@ func (otuo *OAuthTokenUpdateOne) sqlSave(ctx context.Context) (_node *OAuthToken
 				ps[i](selector)
 			}
 		}
+	}
+	if value, ok := otuo.mutation.UpdatedAt(); ok {
+		_spec.SetField(oauthtoken.FieldUpdatedAt, field.TypeTime, value)
+	}
+	if value, ok := otuo.mutation.DeletedAt(); ok {
+		_spec.SetField(oauthtoken.FieldDeletedAt, field.TypeTime, value)
+	}
+	if otuo.mutation.DeletedAtCleared() {
+		_spec.ClearField(oauthtoken.FieldDeletedAt, field.TypeTime)
 	}
 	if value, ok := otuo.mutation.AccessToken(); ok {
 		_spec.SetField(oauthtoken.FieldAccessToken, field.TypeString, value)

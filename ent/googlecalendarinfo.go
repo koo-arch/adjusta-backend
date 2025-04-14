@@ -5,6 +5,7 @@ package ent
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
@@ -17,6 +18,12 @@ type GoogleCalendarInfo struct {
 	config `json:"-"`
 	// ID of the ent.
 	ID uuid.UUID `json:"id,omitempty"`
+	// CreatedAt holds the value of the "created_at" field.
+	CreatedAt time.Time `json:"created_at,omitempty"`
+	// UpdatedAt holds the value of the "updated_at" field.
+	UpdatedAt time.Time `json:"updated_at,omitempty"`
+	// DeletedAt holds the value of the "deleted_at" field.
+	DeletedAt *time.Time `json:"deleted_at,omitempty"`
 	// GoogleCalendarID holds the value of the "google_calendar_id" field.
 	GoogleCalendarID string `json:"google_calendar_id,omitempty"`
 	// Summary holds the value of the "summary" field.
@@ -56,6 +63,8 @@ func (*GoogleCalendarInfo) scanValues(columns []string) ([]any, error) {
 			values[i] = new(sql.NullBool)
 		case googlecalendarinfo.FieldGoogleCalendarID, googlecalendarinfo.FieldSummary:
 			values[i] = new(sql.NullString)
+		case googlecalendarinfo.FieldCreatedAt, googlecalendarinfo.FieldUpdatedAt, googlecalendarinfo.FieldDeletedAt:
+			values[i] = new(sql.NullTime)
 		case googlecalendarinfo.FieldID:
 			values[i] = new(uuid.UUID)
 		default:
@@ -78,6 +87,25 @@ func (gci *GoogleCalendarInfo) assignValues(columns []string, values []any) erro
 				return fmt.Errorf("unexpected type %T for field id", values[i])
 			} else if value != nil {
 				gci.ID = *value
+			}
+		case googlecalendarinfo.FieldCreatedAt:
+			if value, ok := values[i].(*sql.NullTime); !ok {
+				return fmt.Errorf("unexpected type %T for field created_at", values[i])
+			} else if value.Valid {
+				gci.CreatedAt = value.Time
+			}
+		case googlecalendarinfo.FieldUpdatedAt:
+			if value, ok := values[i].(*sql.NullTime); !ok {
+				return fmt.Errorf("unexpected type %T for field updated_at", values[i])
+			} else if value.Valid {
+				gci.UpdatedAt = value.Time
+			}
+		case googlecalendarinfo.FieldDeletedAt:
+			if value, ok := values[i].(*sql.NullTime); !ok {
+				return fmt.Errorf("unexpected type %T for field deleted_at", values[i])
+			} else if value.Valid {
+				gci.DeletedAt = new(time.Time)
+				*gci.DeletedAt = value.Time
 			}
 		case googlecalendarinfo.FieldGoogleCalendarID:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -138,6 +166,17 @@ func (gci *GoogleCalendarInfo) String() string {
 	var builder strings.Builder
 	builder.WriteString("GoogleCalendarInfo(")
 	builder.WriteString(fmt.Sprintf("id=%v, ", gci.ID))
+	builder.WriteString("created_at=")
+	builder.WriteString(gci.CreatedAt.Format(time.ANSIC))
+	builder.WriteString(", ")
+	builder.WriteString("updated_at=")
+	builder.WriteString(gci.UpdatedAt.Format(time.ANSIC))
+	builder.WriteString(", ")
+	if v := gci.DeletedAt; v != nil {
+		builder.WriteString("deleted_at=")
+		builder.WriteString(v.Format(time.ANSIC))
+	}
+	builder.WriteString(", ")
 	builder.WriteString("google_calendar_id=")
 	builder.WriteString(gci.GoogleCalendarID)
 	builder.WriteString(", ")

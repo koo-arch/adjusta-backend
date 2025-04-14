@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"math"
 
+	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
@@ -135,7 +136,7 @@ func (cq *CalendarQuery) QueryEvents() *EventQuery {
 // First returns the first Calendar entity from the query.
 // Returns a *NotFoundError when no Calendar was found.
 func (cq *CalendarQuery) First(ctx context.Context) (*Calendar, error) {
-	nodes, err := cq.Limit(1).All(setContextOp(ctx, cq.ctx, "First"))
+	nodes, err := cq.Limit(1).All(setContextOp(ctx, cq.ctx, ent.OpQueryFirst))
 	if err != nil {
 		return nil, err
 	}
@@ -158,7 +159,7 @@ func (cq *CalendarQuery) FirstX(ctx context.Context) *Calendar {
 // Returns a *NotFoundError when no Calendar ID was found.
 func (cq *CalendarQuery) FirstID(ctx context.Context) (id uuid.UUID, err error) {
 	var ids []uuid.UUID
-	if ids, err = cq.Limit(1).IDs(setContextOp(ctx, cq.ctx, "FirstID")); err != nil {
+	if ids, err = cq.Limit(1).IDs(setContextOp(ctx, cq.ctx, ent.OpQueryFirstID)); err != nil {
 		return
 	}
 	if len(ids) == 0 {
@@ -181,7 +182,7 @@ func (cq *CalendarQuery) FirstIDX(ctx context.Context) uuid.UUID {
 // Returns a *NotSingularError when more than one Calendar entity is found.
 // Returns a *NotFoundError when no Calendar entities are found.
 func (cq *CalendarQuery) Only(ctx context.Context) (*Calendar, error) {
-	nodes, err := cq.Limit(2).All(setContextOp(ctx, cq.ctx, "Only"))
+	nodes, err := cq.Limit(2).All(setContextOp(ctx, cq.ctx, ent.OpQueryOnly))
 	if err != nil {
 		return nil, err
 	}
@@ -209,7 +210,7 @@ func (cq *CalendarQuery) OnlyX(ctx context.Context) *Calendar {
 // Returns a *NotFoundError when no entities are found.
 func (cq *CalendarQuery) OnlyID(ctx context.Context) (id uuid.UUID, err error) {
 	var ids []uuid.UUID
-	if ids, err = cq.Limit(2).IDs(setContextOp(ctx, cq.ctx, "OnlyID")); err != nil {
+	if ids, err = cq.Limit(2).IDs(setContextOp(ctx, cq.ctx, ent.OpQueryOnlyID)); err != nil {
 		return
 	}
 	switch len(ids) {
@@ -234,7 +235,7 @@ func (cq *CalendarQuery) OnlyIDX(ctx context.Context) uuid.UUID {
 
 // All executes the query and returns a list of Calendars.
 func (cq *CalendarQuery) All(ctx context.Context) ([]*Calendar, error) {
-	ctx = setContextOp(ctx, cq.ctx, "All")
+	ctx = setContextOp(ctx, cq.ctx, ent.OpQueryAll)
 	if err := cq.prepareQuery(ctx); err != nil {
 		return nil, err
 	}
@@ -256,7 +257,7 @@ func (cq *CalendarQuery) IDs(ctx context.Context) (ids []uuid.UUID, err error) {
 	if cq.ctx.Unique == nil && cq.path != nil {
 		cq.Unique(true)
 	}
-	ctx = setContextOp(ctx, cq.ctx, "IDs")
+	ctx = setContextOp(ctx, cq.ctx, ent.OpQueryIDs)
 	if err = cq.Select(calendar.FieldID).Scan(ctx, &ids); err != nil {
 		return nil, err
 	}
@@ -274,7 +275,7 @@ func (cq *CalendarQuery) IDsX(ctx context.Context) []uuid.UUID {
 
 // Count returns the count of the given query.
 func (cq *CalendarQuery) Count(ctx context.Context) (int, error) {
-	ctx = setContextOp(ctx, cq.ctx, "Count")
+	ctx = setContextOp(ctx, cq.ctx, ent.OpQueryCount)
 	if err := cq.prepareQuery(ctx); err != nil {
 		return 0, err
 	}
@@ -292,7 +293,7 @@ func (cq *CalendarQuery) CountX(ctx context.Context) int {
 
 // Exist returns true if the query has elements in the graph.
 func (cq *CalendarQuery) Exist(ctx context.Context) (bool, error) {
-	ctx = setContextOp(ctx, cq.ctx, "Exist")
+	ctx = setContextOp(ctx, cq.ctx, ent.OpQueryExist)
 	switch _, err := cq.FirstID(ctx); {
 	case IsNotFound(err):
 		return false, nil
@@ -368,6 +369,18 @@ func (cq *CalendarQuery) WithEvents(opts ...func(*EventQuery)) *CalendarQuery {
 
 // GroupBy is used to group vertices by one or more fields/columns.
 // It is often used with aggregate functions, like: count, max, mean, min, sum.
+//
+// Example:
+//
+//	var v []struct {
+//		CreatedAt time.Time `json:"created_at,omitempty"`
+//		Count int `json:"count,omitempty"`
+//	}
+//
+//	client.Calendar.Query().
+//		GroupBy(calendar.FieldCreatedAt).
+//		Aggregate(ent.Count()).
+//		Scan(ctx, &v)
 func (cq *CalendarQuery) GroupBy(field string, fields ...string) *CalendarGroupBy {
 	cq.ctx.Fields = append([]string{field}, fields...)
 	grbuild := &CalendarGroupBy{build: cq}
@@ -379,6 +392,16 @@ func (cq *CalendarQuery) GroupBy(field string, fields ...string) *CalendarGroupB
 
 // Select allows the selection one or more fields/columns for the given query,
 // instead of selecting all fields in the entity.
+//
+// Example:
+//
+//	var v []struct {
+//		CreatedAt time.Time `json:"created_at,omitempty"`
+//	}
+//
+//	client.Calendar.Query().
+//		Select(calendar.FieldCreatedAt).
+//		Scan(ctx, &v)
 func (cq *CalendarQuery) Select(fields ...string) *CalendarSelect {
 	cq.ctx.Fields = append(cq.ctx.Fields, fields...)
 	sbuild := &CalendarSelect{CalendarQuery: cq}
@@ -698,7 +721,7 @@ func (cgb *CalendarGroupBy) Aggregate(fns ...AggregateFunc) *CalendarGroupBy {
 
 // Scan applies the selector query and scans the result into the given value.
 func (cgb *CalendarGroupBy) Scan(ctx context.Context, v any) error {
-	ctx = setContextOp(ctx, cgb.build.ctx, "GroupBy")
+	ctx = setContextOp(ctx, cgb.build.ctx, ent.OpQueryGroupBy)
 	if err := cgb.build.prepareQuery(ctx); err != nil {
 		return err
 	}
@@ -746,7 +769,7 @@ func (cs *CalendarSelect) Aggregate(fns ...AggregateFunc) *CalendarSelect {
 
 // Scan applies the selector query and scans the result into the given value.
 func (cs *CalendarSelect) Scan(ctx context.Context, v any) error {
-	ctx = setContextOp(ctx, cs.ctx, "Select")
+	ctx = setContextOp(ctx, cs.ctx, ent.OpQuerySelect)
 	if err := cs.prepareQuery(ctx); err != nil {
 		return err
 	}

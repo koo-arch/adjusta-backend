@@ -4,7 +4,9 @@ package ent
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"time"
 
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
@@ -20,6 +22,48 @@ type CalendarCreate struct {
 	config
 	mutation *CalendarMutation
 	hooks    []Hook
+}
+
+// SetCreatedAt sets the "created_at" field.
+func (cc *CalendarCreate) SetCreatedAt(t time.Time) *CalendarCreate {
+	cc.mutation.SetCreatedAt(t)
+	return cc
+}
+
+// SetNillableCreatedAt sets the "created_at" field if the given value is not nil.
+func (cc *CalendarCreate) SetNillableCreatedAt(t *time.Time) *CalendarCreate {
+	if t != nil {
+		cc.SetCreatedAt(*t)
+	}
+	return cc
+}
+
+// SetUpdatedAt sets the "updated_at" field.
+func (cc *CalendarCreate) SetUpdatedAt(t time.Time) *CalendarCreate {
+	cc.mutation.SetUpdatedAt(t)
+	return cc
+}
+
+// SetNillableUpdatedAt sets the "updated_at" field if the given value is not nil.
+func (cc *CalendarCreate) SetNillableUpdatedAt(t *time.Time) *CalendarCreate {
+	if t != nil {
+		cc.SetUpdatedAt(*t)
+	}
+	return cc
+}
+
+// SetDeletedAt sets the "deleted_at" field.
+func (cc *CalendarCreate) SetDeletedAt(t time.Time) *CalendarCreate {
+	cc.mutation.SetDeletedAt(t)
+	return cc
+}
+
+// SetNillableDeletedAt sets the "deleted_at" field if the given value is not nil.
+func (cc *CalendarCreate) SetNillableDeletedAt(t *time.Time) *CalendarCreate {
+	if t != nil {
+		cc.SetDeletedAt(*t)
+	}
+	return cc
 }
 
 // SetID sets the "id" field.
@@ -120,6 +164,14 @@ func (cc *CalendarCreate) ExecX(ctx context.Context) {
 
 // defaults sets the default values of the builder before save.
 func (cc *CalendarCreate) defaults() {
+	if _, ok := cc.mutation.CreatedAt(); !ok {
+		v := calendar.DefaultCreatedAt()
+		cc.mutation.SetCreatedAt(v)
+	}
+	if _, ok := cc.mutation.UpdatedAt(); !ok {
+		v := calendar.DefaultUpdatedAt()
+		cc.mutation.SetUpdatedAt(v)
+	}
 	if _, ok := cc.mutation.ID(); !ok {
 		v := calendar.DefaultID()
 		cc.mutation.SetID(v)
@@ -128,6 +180,12 @@ func (cc *CalendarCreate) defaults() {
 
 // check runs all checks and user-defined validators on the builder.
 func (cc *CalendarCreate) check() error {
+	if _, ok := cc.mutation.CreatedAt(); !ok {
+		return &ValidationError{Name: "created_at", err: errors.New(`ent: missing required field "Calendar.created_at"`)}
+	}
+	if _, ok := cc.mutation.UpdatedAt(); !ok {
+		return &ValidationError{Name: "updated_at", err: errors.New(`ent: missing required field "Calendar.updated_at"`)}
+	}
 	return nil
 }
 
@@ -162,6 +220,18 @@ func (cc *CalendarCreate) createSpec() (*Calendar, *sqlgraph.CreateSpec) {
 	if id, ok := cc.mutation.ID(); ok {
 		_node.ID = id
 		_spec.ID.Value = &id
+	}
+	if value, ok := cc.mutation.CreatedAt(); ok {
+		_spec.SetField(calendar.FieldCreatedAt, field.TypeTime, value)
+		_node.CreatedAt = value
+	}
+	if value, ok := cc.mutation.UpdatedAt(); ok {
+		_spec.SetField(calendar.FieldUpdatedAt, field.TypeTime, value)
+		_node.UpdatedAt = value
+	}
+	if value, ok := cc.mutation.DeletedAt(); ok {
+		_spec.SetField(calendar.FieldDeletedAt, field.TypeTime, value)
+		_node.DeletedAt = &value
 	}
 	if nodes := cc.mutation.UserIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{

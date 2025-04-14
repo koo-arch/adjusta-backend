@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"math"
 
+	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
@@ -60,7 +61,7 @@ func (jkq *JWTKeyQuery) Order(o ...jwtkey.OrderOption) *JWTKeyQuery {
 // First returns the first JWTKey entity from the query.
 // Returns a *NotFoundError when no JWTKey was found.
 func (jkq *JWTKeyQuery) First(ctx context.Context) (*JWTKey, error) {
-	nodes, err := jkq.Limit(1).All(setContextOp(ctx, jkq.ctx, "First"))
+	nodes, err := jkq.Limit(1).All(setContextOp(ctx, jkq.ctx, ent.OpQueryFirst))
 	if err != nil {
 		return nil, err
 	}
@@ -83,7 +84,7 @@ func (jkq *JWTKeyQuery) FirstX(ctx context.Context) *JWTKey {
 // Returns a *NotFoundError when no JWTKey ID was found.
 func (jkq *JWTKeyQuery) FirstID(ctx context.Context) (id int, err error) {
 	var ids []int
-	if ids, err = jkq.Limit(1).IDs(setContextOp(ctx, jkq.ctx, "FirstID")); err != nil {
+	if ids, err = jkq.Limit(1).IDs(setContextOp(ctx, jkq.ctx, ent.OpQueryFirstID)); err != nil {
 		return
 	}
 	if len(ids) == 0 {
@@ -106,7 +107,7 @@ func (jkq *JWTKeyQuery) FirstIDX(ctx context.Context) int {
 // Returns a *NotSingularError when more than one JWTKey entity is found.
 // Returns a *NotFoundError when no JWTKey entities are found.
 func (jkq *JWTKeyQuery) Only(ctx context.Context) (*JWTKey, error) {
-	nodes, err := jkq.Limit(2).All(setContextOp(ctx, jkq.ctx, "Only"))
+	nodes, err := jkq.Limit(2).All(setContextOp(ctx, jkq.ctx, ent.OpQueryOnly))
 	if err != nil {
 		return nil, err
 	}
@@ -134,7 +135,7 @@ func (jkq *JWTKeyQuery) OnlyX(ctx context.Context) *JWTKey {
 // Returns a *NotFoundError when no entities are found.
 func (jkq *JWTKeyQuery) OnlyID(ctx context.Context) (id int, err error) {
 	var ids []int
-	if ids, err = jkq.Limit(2).IDs(setContextOp(ctx, jkq.ctx, "OnlyID")); err != nil {
+	if ids, err = jkq.Limit(2).IDs(setContextOp(ctx, jkq.ctx, ent.OpQueryOnlyID)); err != nil {
 		return
 	}
 	switch len(ids) {
@@ -159,7 +160,7 @@ func (jkq *JWTKeyQuery) OnlyIDX(ctx context.Context) int {
 
 // All executes the query and returns a list of JWTKeys.
 func (jkq *JWTKeyQuery) All(ctx context.Context) ([]*JWTKey, error) {
-	ctx = setContextOp(ctx, jkq.ctx, "All")
+	ctx = setContextOp(ctx, jkq.ctx, ent.OpQueryAll)
 	if err := jkq.prepareQuery(ctx); err != nil {
 		return nil, err
 	}
@@ -181,7 +182,7 @@ func (jkq *JWTKeyQuery) IDs(ctx context.Context) (ids []int, err error) {
 	if jkq.ctx.Unique == nil && jkq.path != nil {
 		jkq.Unique(true)
 	}
-	ctx = setContextOp(ctx, jkq.ctx, "IDs")
+	ctx = setContextOp(ctx, jkq.ctx, ent.OpQueryIDs)
 	if err = jkq.Select(jwtkey.FieldID).Scan(ctx, &ids); err != nil {
 		return nil, err
 	}
@@ -199,7 +200,7 @@ func (jkq *JWTKeyQuery) IDsX(ctx context.Context) []int {
 
 // Count returns the count of the given query.
 func (jkq *JWTKeyQuery) Count(ctx context.Context) (int, error) {
-	ctx = setContextOp(ctx, jkq.ctx, "Count")
+	ctx = setContextOp(ctx, jkq.ctx, ent.OpQueryCount)
 	if err := jkq.prepareQuery(ctx); err != nil {
 		return 0, err
 	}
@@ -217,7 +218,7 @@ func (jkq *JWTKeyQuery) CountX(ctx context.Context) int {
 
 // Exist returns true if the query has elements in the graph.
 func (jkq *JWTKeyQuery) Exist(ctx context.Context) (bool, error) {
-	ctx = setContextOp(ctx, jkq.ctx, "Exist")
+	ctx = setContextOp(ctx, jkq.ctx, ent.OpQueryExist)
 	switch _, err := jkq.FirstID(ctx); {
 	case IsNotFound(err):
 		return false, nil
@@ -261,12 +262,12 @@ func (jkq *JWTKeyQuery) Clone() *JWTKeyQuery {
 // Example:
 //
 //	var v []struct {
-//		Key string `json:"key,omitempty"`
+//		CreatedAt time.Time `json:"created_at,omitempty"`
 //		Count int `json:"count,omitempty"`
 //	}
 //
 //	client.JWTKey.Query().
-//		GroupBy(jwtkey.FieldKey).
+//		GroupBy(jwtkey.FieldCreatedAt).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
 func (jkq *JWTKeyQuery) GroupBy(field string, fields ...string) *JWTKeyGroupBy {
@@ -284,11 +285,11 @@ func (jkq *JWTKeyQuery) GroupBy(field string, fields ...string) *JWTKeyGroupBy {
 // Example:
 //
 //	var v []struct {
-//		Key string `json:"key,omitempty"`
+//		CreatedAt time.Time `json:"created_at,omitempty"`
 //	}
 //
 //	client.JWTKey.Query().
-//		Select(jwtkey.FieldKey).
+//		Select(jwtkey.FieldCreatedAt).
 //		Scan(ctx, &v)
 func (jkq *JWTKeyQuery) Select(fields ...string) *JWTKeySelect {
 	jkq.ctx.Fields = append(jkq.ctx.Fields, fields...)
@@ -449,7 +450,7 @@ func (jkgb *JWTKeyGroupBy) Aggregate(fns ...AggregateFunc) *JWTKeyGroupBy {
 
 // Scan applies the selector query and scans the result into the given value.
 func (jkgb *JWTKeyGroupBy) Scan(ctx context.Context, v any) error {
-	ctx = setContextOp(ctx, jkgb.build.ctx, "GroupBy")
+	ctx = setContextOp(ctx, jkgb.build.ctx, ent.OpQueryGroupBy)
 	if err := jkgb.build.prepareQuery(ctx); err != nil {
 		return err
 	}
@@ -497,7 +498,7 @@ func (jks *JWTKeySelect) Aggregate(fns ...AggregateFunc) *JWTKeySelect {
 
 // Scan applies the selector query and scans the result into the given value.
 func (jks *JWTKeySelect) Scan(ctx context.Context, v any) error {
-	ctx = setContextOp(ctx, jks.ctx, "Select")
+	ctx = setContextOp(ctx, jks.ctx, ent.OpQuerySelect)
 	if err := jks.prepareQuery(ctx); err != nil {
 		return err
 	}

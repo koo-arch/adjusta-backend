@@ -5,6 +5,7 @@ package ent
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
@@ -18,6 +19,12 @@ type Event struct {
 	config `json:"-"`
 	// ID of the ent.
 	ID uuid.UUID `json:"id,omitempty"`
+	// CreatedAt holds the value of the "created_at" field.
+	CreatedAt time.Time `json:"created_at,omitempty"`
+	// UpdatedAt holds the value of the "updated_at" field.
+	UpdatedAt time.Time `json:"updated_at,omitempty"`
+	// DeletedAt holds the value of the "deleted_at" field.
+	DeletedAt *time.Time `json:"deleted_at,omitempty"`
 	// Summary holds the value of the "summary" field.
 	Summary string `json:"summary,omitempty"`
 	// Description holds the value of the "description" field.
@@ -77,6 +84,8 @@ func (*Event) scanValues(columns []string) ([]any, error) {
 		switch columns[i] {
 		case event.FieldSummary, event.FieldDescription, event.FieldLocation, event.FieldStatus, event.FieldGoogleEventID, event.FieldSlug:
 			values[i] = new(sql.NullString)
+		case event.FieldCreatedAt, event.FieldUpdatedAt, event.FieldDeletedAt:
+			values[i] = new(sql.NullTime)
 		case event.FieldID, event.FieldConfirmedDateID:
 			values[i] = new(uuid.UUID)
 		case event.ForeignKeys[0]: // calendar_events
@@ -101,6 +110,25 @@ func (e *Event) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field id", values[i])
 			} else if value != nil {
 				e.ID = *value
+			}
+		case event.FieldCreatedAt:
+			if value, ok := values[i].(*sql.NullTime); !ok {
+				return fmt.Errorf("unexpected type %T for field created_at", values[i])
+			} else if value.Valid {
+				e.CreatedAt = value.Time
+			}
+		case event.FieldUpdatedAt:
+			if value, ok := values[i].(*sql.NullTime); !ok {
+				return fmt.Errorf("unexpected type %T for field updated_at", values[i])
+			} else if value.Valid {
+				e.UpdatedAt = value.Time
+			}
+		case event.FieldDeletedAt:
+			if value, ok := values[i].(*sql.NullTime); !ok {
+				return fmt.Errorf("unexpected type %T for field deleted_at", values[i])
+			} else if value.Valid {
+				e.DeletedAt = new(time.Time)
+				*e.DeletedAt = value.Time
 			}
 		case event.FieldSummary:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -197,6 +225,17 @@ func (e *Event) String() string {
 	var builder strings.Builder
 	builder.WriteString("Event(")
 	builder.WriteString(fmt.Sprintf("id=%v, ", e.ID))
+	builder.WriteString("created_at=")
+	builder.WriteString(e.CreatedAt.Format(time.ANSIC))
+	builder.WriteString(", ")
+	builder.WriteString("updated_at=")
+	builder.WriteString(e.UpdatedAt.Format(time.ANSIC))
+	builder.WriteString(", ")
+	if v := e.DeletedAt; v != nil {
+		builder.WriteString("deleted_at=")
+		builder.WriteString(v.Format(time.ANSIC))
+	}
+	builder.WriteString(", ")
 	builder.WriteString("summary=")
 	builder.WriteString(e.Summary)
 	builder.WriteString(", ")

@@ -46,7 +46,6 @@ func (km *KeyManager) GenerateJWTKey(ctx context.Context, keyType string) (error
 		Create().
 		SetType(keyType).
 		SetKey(key).
-		SetCreatedAt(time.Now()).
 		SetExpiresAt(time.Now().Add(jwtKeyTTL)).
 		Save(ctx)
 	if err != nil {

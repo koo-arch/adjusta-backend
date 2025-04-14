@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"math"
 
+	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
@@ -86,7 +87,7 @@ func (pdq *ProposedDateQuery) QueryEvent() *EventQuery {
 // First returns the first ProposedDate entity from the query.
 // Returns a *NotFoundError when no ProposedDate was found.
 func (pdq *ProposedDateQuery) First(ctx context.Context) (*ProposedDate, error) {
-	nodes, err := pdq.Limit(1).All(setContextOp(ctx, pdq.ctx, "First"))
+	nodes, err := pdq.Limit(1).All(setContextOp(ctx, pdq.ctx, ent.OpQueryFirst))
 	if err != nil {
 		return nil, err
 	}
@@ -109,7 +110,7 @@ func (pdq *ProposedDateQuery) FirstX(ctx context.Context) *ProposedDate {
 // Returns a *NotFoundError when no ProposedDate ID was found.
 func (pdq *ProposedDateQuery) FirstID(ctx context.Context) (id uuid.UUID, err error) {
 	var ids []uuid.UUID
-	if ids, err = pdq.Limit(1).IDs(setContextOp(ctx, pdq.ctx, "FirstID")); err != nil {
+	if ids, err = pdq.Limit(1).IDs(setContextOp(ctx, pdq.ctx, ent.OpQueryFirstID)); err != nil {
 		return
 	}
 	if len(ids) == 0 {
@@ -132,7 +133,7 @@ func (pdq *ProposedDateQuery) FirstIDX(ctx context.Context) uuid.UUID {
 // Returns a *NotSingularError when more than one ProposedDate entity is found.
 // Returns a *NotFoundError when no ProposedDate entities are found.
 func (pdq *ProposedDateQuery) Only(ctx context.Context) (*ProposedDate, error) {
-	nodes, err := pdq.Limit(2).All(setContextOp(ctx, pdq.ctx, "Only"))
+	nodes, err := pdq.Limit(2).All(setContextOp(ctx, pdq.ctx, ent.OpQueryOnly))
 	if err != nil {
 		return nil, err
 	}
@@ -160,7 +161,7 @@ func (pdq *ProposedDateQuery) OnlyX(ctx context.Context) *ProposedDate {
 // Returns a *NotFoundError when no entities are found.
 func (pdq *ProposedDateQuery) OnlyID(ctx context.Context) (id uuid.UUID, err error) {
 	var ids []uuid.UUID
-	if ids, err = pdq.Limit(2).IDs(setContextOp(ctx, pdq.ctx, "OnlyID")); err != nil {
+	if ids, err = pdq.Limit(2).IDs(setContextOp(ctx, pdq.ctx, ent.OpQueryOnlyID)); err != nil {
 		return
 	}
 	switch len(ids) {
@@ -185,7 +186,7 @@ func (pdq *ProposedDateQuery) OnlyIDX(ctx context.Context) uuid.UUID {
 
 // All executes the query and returns a list of ProposedDates.
 func (pdq *ProposedDateQuery) All(ctx context.Context) ([]*ProposedDate, error) {
-	ctx = setContextOp(ctx, pdq.ctx, "All")
+	ctx = setContextOp(ctx, pdq.ctx, ent.OpQueryAll)
 	if err := pdq.prepareQuery(ctx); err != nil {
 		return nil, err
 	}
@@ -207,7 +208,7 @@ func (pdq *ProposedDateQuery) IDs(ctx context.Context) (ids []uuid.UUID, err err
 	if pdq.ctx.Unique == nil && pdq.path != nil {
 		pdq.Unique(true)
 	}
-	ctx = setContextOp(ctx, pdq.ctx, "IDs")
+	ctx = setContextOp(ctx, pdq.ctx, ent.OpQueryIDs)
 	if err = pdq.Select(proposeddate.FieldID).Scan(ctx, &ids); err != nil {
 		return nil, err
 	}
@@ -225,7 +226,7 @@ func (pdq *ProposedDateQuery) IDsX(ctx context.Context) []uuid.UUID {
 
 // Count returns the count of the given query.
 func (pdq *ProposedDateQuery) Count(ctx context.Context) (int, error) {
-	ctx = setContextOp(ctx, pdq.ctx, "Count")
+	ctx = setContextOp(ctx, pdq.ctx, ent.OpQueryCount)
 	if err := pdq.prepareQuery(ctx); err != nil {
 		return 0, err
 	}
@@ -243,7 +244,7 @@ func (pdq *ProposedDateQuery) CountX(ctx context.Context) int {
 
 // Exist returns true if the query has elements in the graph.
 func (pdq *ProposedDateQuery) Exist(ctx context.Context) (bool, error) {
-	ctx = setContextOp(ctx, pdq.ctx, "Exist")
+	ctx = setContextOp(ctx, pdq.ctx, ent.OpQueryExist)
 	switch _, err := pdq.FirstID(ctx); {
 	case IsNotFound(err):
 		return false, nil
@@ -299,12 +300,12 @@ func (pdq *ProposedDateQuery) WithEvent(opts ...func(*EventQuery)) *ProposedDate
 // Example:
 //
 //	var v []struct {
-//		StartTime time.Time `json:"start_time,omitempty"`
+//		CreatedAt time.Time `json:"created_at,omitempty"`
 //		Count int `json:"count,omitempty"`
 //	}
 //
 //	client.ProposedDate.Query().
-//		GroupBy(proposeddate.FieldStartTime).
+//		GroupBy(proposeddate.FieldCreatedAt).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
 func (pdq *ProposedDateQuery) GroupBy(field string, fields ...string) *ProposedDateGroupBy {
@@ -322,11 +323,11 @@ func (pdq *ProposedDateQuery) GroupBy(field string, fields ...string) *ProposedD
 // Example:
 //
 //	var v []struct {
-//		StartTime time.Time `json:"start_time,omitempty"`
+//		CreatedAt time.Time `json:"created_at,omitempty"`
 //	}
 //
 //	client.ProposedDate.Query().
-//		Select(proposeddate.FieldStartTime).
+//		Select(proposeddate.FieldCreatedAt).
 //		Scan(ctx, &v)
 func (pdq *ProposedDateQuery) Select(fields ...string) *ProposedDateSelect {
 	pdq.ctx.Fields = append(pdq.ctx.Fields, fields...)
@@ -537,7 +538,7 @@ func (pdgb *ProposedDateGroupBy) Aggregate(fns ...AggregateFunc) *ProposedDateGr
 
 // Scan applies the selector query and scans the result into the given value.
 func (pdgb *ProposedDateGroupBy) Scan(ctx context.Context, v any) error {
-	ctx = setContextOp(ctx, pdgb.build.ctx, "GroupBy")
+	ctx = setContextOp(ctx, pdgb.build.ctx, ent.OpQueryGroupBy)
 	if err := pdgb.build.prepareQuery(ctx); err != nil {
 		return err
 	}
@@ -585,7 +586,7 @@ func (pds *ProposedDateSelect) Aggregate(fns ...AggregateFunc) *ProposedDateSele
 
 // Scan applies the selector query and scans the result into the given value.
 func (pds *ProposedDateSelect) Scan(ctx context.Context, v any) error {
-	ctx = setContextOp(ctx, pds.ctx, "Select")
+	ctx = setContextOp(ctx, pds.ctx, ent.OpQuerySelect)
 	if err := pds.prepareQuery(ctx); err != nil {
 		return err
 	}
