@@ -18,4 +18,6 @@ type UserRepository interface {
 	Create(ctx context.Context, tx *ent.Tx, email string, jwtToken *models.JWTToken) (*ent.User, error)
 	Update(ctx context.Context, tx *ent.Tx, id uuid.UUID, jwtToken *models.JWTToken) (*ent.User, error)
 	Delete(ctx context.Context, tx *ent.Tx, id uuid.UUID) error
+	SoftDelete(ctx context.Context, tx *ent.Tx, id uuid.UUID) error
+	Restore(ctx context.Context, tx *ent.Tx, id uuid.UUID) error
 }

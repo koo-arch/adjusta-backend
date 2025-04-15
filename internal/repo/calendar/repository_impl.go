@@ -3,6 +3,7 @@ package calendar
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/koo-arch/adjusta-backend/ent"
@@ -111,6 +112,26 @@ func (r *CalendarRepositoryImpl) Delete(ctx context.Context, tx *ent.Tx, id uuid
 		return tx.Calendar.DeleteOneID(id).Exec(ctx)
 	}
 	return r.client.Calendar.DeleteOneID(id).Exec(ctx)
+}
+
+func (r *CalendarRepositoryImpl) SoftDelete(ctx context.Context, tx *ent.Tx, id uuid.UUID) error {
+	softDeleteCalendar := r.client.Calendar.UpdateOneID(id)
+	if tx != nil {
+		softDeleteCalendar = tx.Calendar.UpdateOneID(id)
+	}
+	return softDeleteCalendar.
+		SetDeletedAt(time.Now()).
+		Exec(ctx)
+}
+
+func(r *CalendarRepositoryImpl) Restore(ctx context.Context, tx *ent.Tx, id uuid.UUID) error {
+	restoreCalendar := r.client.Calendar.UpdateOneID(id)
+	if tx != nil {
+		restoreCalendar = tx.Calendar.UpdateOneID(id)
+	}
+	return restoreCalendar.
+		SetNillableDeletedAt(nil).
+		Exec(ctx)
 }
 
 func (r *CalendarRepositoryImpl) applyCalendarQueryOptions(query *ent.CalendarQuery, userID uuid.UUID, opt CalendarQueryOptions) *ent.CalendarQuery {

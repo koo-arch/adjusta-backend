@@ -2,7 +2,8 @@ package event
 
 import (
 	"context"
-
+	"time"
+	
 	"github.com/google/uuid"
 	"google.golang.org/api/calendar/v3"
 	"github.com/koo-arch/adjusta-backend/ent"
@@ -136,6 +137,26 @@ func (r *EventRepositoryImpl) Delete(ctx context.Context, tx *ent.Tx, id uuid.UU
 		return tx.Event.DeleteOneID(id).Exec(ctx)
 	}
 	return r.client.Event.DeleteOneID(id).Exec(ctx)
+}
+
+func (r *EventRepositoryImpl) SoftDelete(ctx context.Context, tx *ent.Tx, id uuid.UUID) error {
+	softDeleteEvent := r.client.Event.UpdateOneID(id)
+	if tx != nil {
+		softDeleteEvent = tx.Event.UpdateOneID(id)
+	}
+	return softDeleteEvent.
+		SetDeletedAt(time.Now()).
+		Exec(ctx)
+}
+
+func (r *EventRepositoryImpl) Restore(ctx context.Context, tx *ent.Tx, id uuid.UUID) error {
+	restoreEvent := r.client.Event.UpdateOneID(id)
+	if tx != nil {
+		restoreEvent = tx.Event.UpdateOneID(id)
+	}
+	return restoreEvent.
+		SetNillableDeletedAt(nil).
+		Exec(ctx)
 }
 
 func (r *EventRepositoryImpl) SearchEvents(ctx context.Context, tx *ent.Tx, id, calendarID uuid.UUID, opt EventQueryOptions) ([]*ent.Event, error) {

@@ -2,6 +2,7 @@ package user
 
 import (
 	"context"
+	"time"
 
 	"github.com/koo-arch/adjusta-backend/ent"
 	"github.com/koo-arch/adjusta-backend/ent/user"
@@ -78,4 +79,23 @@ func (r *UserRepositoryImpl) Delete(ctx context.Context, tx *ent.Tx, id uuid.UUI
 	}
 	return r.client.User.DeleteOneID(id).Exec(ctx)
 }
-	
+
+func (r *UserRepositoryImpl) SoftDelete(ctx context.Context, tx *ent.Tx, id uuid.UUID) error {
+	softDeleteUser := r.client.User.UpdateOneID(id)
+	if tx != nil {
+		softDeleteUser = tx.User.UpdateOneID(id)
+	}
+	return softDeleteUser.
+		SetDeletedAt(time.Now()).
+		Exec(ctx)
+}
+
+func (r *UserRepositoryImpl) Restore(ctx context.Context, tx *ent.Tx, id uuid.UUID) error {
+	restoreUser := r.client.User.UpdateOneID(id)
+	if tx != nil {
+		restoreUser = tx.User.UpdateOneID(id)
+	}
+	return restoreUser.
+		SetNillableDeletedAt(nil).
+		Exec(ctx)
+}

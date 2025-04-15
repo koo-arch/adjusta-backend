@@ -2,6 +2,7 @@ package googlecalendarinfo
 
 import (
 	"context"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/koo-arch/adjusta-backend/ent"
@@ -86,4 +87,24 @@ func (r *GoogleCalendarInfoImpl) Delete(ctx context.Context, tx *ent.Tx, id uuid
 		return tx.GoogleCalendarInfo.DeleteOneID(id).Exec(ctx)
 	}
 	return r.client.GoogleCalendarInfo.DeleteOneID(id).Exec(ctx)
+}
+
+func (r *GoogleCalendarInfoImpl) SoftDelete(ctx context.Context, tx *ent.Tx, id uuid.UUID) error {
+	softDeleteGoogleCalendarInfo := r.client.GoogleCalendarInfo.UpdateOneID(id)
+	if tx != nil {
+		softDeleteGoogleCalendarInfo = tx.GoogleCalendarInfo.UpdateOneID(id)
+	}
+	return softDeleteGoogleCalendarInfo.
+		SetDeletedAt(time.Now()).
+		Exec(ctx)
+}
+
+func (r *GoogleCalendarInfoImpl) Restore(ctx context.Context, tx *ent.Tx, id uuid.UUID) error {
+	restoreGoogleCalendarInfo := r.client.GoogleCalendarInfo.UpdateOneID(id)
+	if tx != nil {
+		restoreGoogleCalendarInfo = tx.GoogleCalendarInfo.UpdateOneID(id)
+	}
+	return restoreGoogleCalendarInfo.
+		SetNillableDeletedAt(nil).
+		Exec(ctx)
 }
