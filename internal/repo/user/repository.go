@@ -20,4 +20,6 @@ type UserRepository interface {
 	Delete(ctx context.Context, tx *ent.Tx, id uuid.UUID) error
 	SoftDelete(ctx context.Context, tx *ent.Tx, id uuid.UUID) error
 	Restore(ctx context.Context, tx *ent.Tx, id uuid.UUID) error
+	SoftDeleteWithRelations(ctx context.Context, tx *ent.Tx, id uuid.UUID) error
+	RestoreWithRelations(ctx context.Context, tx *ent.Tx, id uuid.UUID) error
 }
