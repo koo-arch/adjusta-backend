@@ -4,6 +4,7 @@ package ent
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -19,6 +20,48 @@ type OAuthTokenCreate struct {
 	config
 	mutation *OAuthTokenMutation
 	hooks    []Hook
+}
+
+// SetCreatedAt sets the "created_at" field.
+func (otc *OAuthTokenCreate) SetCreatedAt(t time.Time) *OAuthTokenCreate {
+	otc.mutation.SetCreatedAt(t)
+	return otc
+}
+
+// SetNillableCreatedAt sets the "created_at" field if the given value is not nil.
+func (otc *OAuthTokenCreate) SetNillableCreatedAt(t *time.Time) *OAuthTokenCreate {
+	if t != nil {
+		otc.SetCreatedAt(*t)
+	}
+	return otc
+}
+
+// SetUpdatedAt sets the "updated_at" field.
+func (otc *OAuthTokenCreate) SetUpdatedAt(t time.Time) *OAuthTokenCreate {
+	otc.mutation.SetUpdatedAt(t)
+	return otc
+}
+
+// SetNillableUpdatedAt sets the "updated_at" field if the given value is not nil.
+func (otc *OAuthTokenCreate) SetNillableUpdatedAt(t *time.Time) *OAuthTokenCreate {
+	if t != nil {
+		otc.SetUpdatedAt(*t)
+	}
+	return otc
+}
+
+// SetDeletedAt sets the "deleted_at" field.
+func (otc *OAuthTokenCreate) SetDeletedAt(t time.Time) *OAuthTokenCreate {
+	otc.mutation.SetDeletedAt(t)
+	return otc
+}
+
+// SetNillableDeletedAt sets the "deleted_at" field if the given value is not nil.
+func (otc *OAuthTokenCreate) SetNillableDeletedAt(t *time.Time) *OAuthTokenCreate {
+	if t != nil {
+		otc.SetDeletedAt(*t)
+	}
+	return otc
 }
 
 // SetAccessToken sets the "access_token" field.
@@ -131,6 +174,14 @@ func (otc *OAuthTokenCreate) ExecX(ctx context.Context) {
 
 // defaults sets the default values of the builder before save.
 func (otc *OAuthTokenCreate) defaults() {
+	if _, ok := otc.mutation.CreatedAt(); !ok {
+		v := oauthtoken.DefaultCreatedAt()
+		otc.mutation.SetCreatedAt(v)
+	}
+	if _, ok := otc.mutation.UpdatedAt(); !ok {
+		v := oauthtoken.DefaultUpdatedAt()
+		otc.mutation.SetUpdatedAt(v)
+	}
 	if _, ok := otc.mutation.ID(); !ok {
 		v := oauthtoken.DefaultID()
 		otc.mutation.SetID(v)
@@ -139,6 +190,12 @@ func (otc *OAuthTokenCreate) defaults() {
 
 // check runs all checks and user-defined validators on the builder.
 func (otc *OAuthTokenCreate) check() error {
+	if _, ok := otc.mutation.CreatedAt(); !ok {
+		return &ValidationError{Name: "created_at", err: errors.New(`ent: missing required field "OAuthToken.created_at"`)}
+	}
+	if _, ok := otc.mutation.UpdatedAt(); !ok {
+		return &ValidationError{Name: "updated_at", err: errors.New(`ent: missing required field "OAuthToken.updated_at"`)}
+	}
 	return nil
 }
 
@@ -173,6 +230,18 @@ func (otc *OAuthTokenCreate) createSpec() (*OAuthToken, *sqlgraph.CreateSpec) {
 	if id, ok := otc.mutation.ID(); ok {
 		_node.ID = id
 		_spec.ID.Value = &id
+	}
+	if value, ok := otc.mutation.CreatedAt(); ok {
+		_spec.SetField(oauthtoken.FieldCreatedAt, field.TypeTime, value)
+		_node.CreatedAt = value
+	}
+	if value, ok := otc.mutation.UpdatedAt(); ok {
+		_spec.SetField(oauthtoken.FieldUpdatedAt, field.TypeTime, value)
+		_node.UpdatedAt = value
+	}
+	if value, ok := otc.mutation.DeletedAt(); ok {
+		_spec.SetField(oauthtoken.FieldDeletedAt, field.TypeTime, value)
+		_node.DeletedAt = &value
 	}
 	if value, ok := otc.mutation.AccessToken(); ok {
 		_spec.SetField(oauthtoken.FieldAccessToken, field.TypeString, value)

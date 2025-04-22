@@ -19,4 +19,6 @@ type GoogleCalendarInfoRepository interface {
 	Create(ctx context.Context, tx *ent.Tx, opt GoogleCalendarInfoQueryOptions, entCalendar *ent.Calendar) (*ent.GoogleCalendarInfo, error)
 	Update(ctx context.Context, tx *ent.Tx, id uuid.UUID, opt GoogleCalendarInfoQueryOptions, entCalendar *ent.Calendar) (*ent.GoogleCalendarInfo, error)
 	Delete(ctx context.Context, tx *ent.Tx, id uuid.UUID) error
+	SoftDelete(ctx context.Context, tx *ent.Tx, id uuid.UUID) error
+	Restore(ctx context.Context, tx *ent.Tx, id uuid.UUID) error
 }

@@ -17,12 +17,16 @@ type JWTKey struct {
 	config `json:"-"`
 	// ID of the ent.
 	ID int `json:"id,omitempty"`
+	// CreatedAt holds the value of the "created_at" field.
+	CreatedAt time.Time `json:"created_at,omitempty"`
+	// UpdatedAt holds the value of the "updated_at" field.
+	UpdatedAt time.Time `json:"updated_at,omitempty"`
+	// DeletedAt holds the value of the "deleted_at" field.
+	DeletedAt *time.Time `json:"deleted_at,omitempty"`
 	// Key holds the value of the "key" field.
 	Key string `json:"-"`
 	// Type holds the value of the "type" field.
 	Type string `json:"type,omitempty"`
-	// CreatedAt holds the value of the "created_at" field.
-	CreatedAt time.Time `json:"created_at,omitempty"`
 	// ExpiresAt holds the value of the "expires_at" field.
 	ExpiresAt    time.Time `json:"expires_at,omitempty"`
 	selectValues sql.SelectValues
@@ -37,7 +41,7 @@ func (*JWTKey) scanValues(columns []string) ([]any, error) {
 			values[i] = new(sql.NullInt64)
 		case jwtkey.FieldKey, jwtkey.FieldType:
 			values[i] = new(sql.NullString)
-		case jwtkey.FieldCreatedAt, jwtkey.FieldExpiresAt:
+		case jwtkey.FieldCreatedAt, jwtkey.FieldUpdatedAt, jwtkey.FieldDeletedAt, jwtkey.FieldExpiresAt:
 			values[i] = new(sql.NullTime)
 		default:
 			values[i] = new(sql.UnknownType)
@@ -60,6 +64,25 @@ func (jk *JWTKey) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field id", value)
 			}
 			jk.ID = int(value.Int64)
+		case jwtkey.FieldCreatedAt:
+			if value, ok := values[i].(*sql.NullTime); !ok {
+				return fmt.Errorf("unexpected type %T for field created_at", values[i])
+			} else if value.Valid {
+				jk.CreatedAt = value.Time
+			}
+		case jwtkey.FieldUpdatedAt:
+			if value, ok := values[i].(*sql.NullTime); !ok {
+				return fmt.Errorf("unexpected type %T for field updated_at", values[i])
+			} else if value.Valid {
+				jk.UpdatedAt = value.Time
+			}
+		case jwtkey.FieldDeletedAt:
+			if value, ok := values[i].(*sql.NullTime); !ok {
+				return fmt.Errorf("unexpected type %T for field deleted_at", values[i])
+			} else if value.Valid {
+				jk.DeletedAt = new(time.Time)
+				*jk.DeletedAt = value.Time
+			}
 		case jwtkey.FieldKey:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field key", values[i])
@@ -71,12 +94,6 @@ func (jk *JWTKey) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field type", values[i])
 			} else if value.Valid {
 				jk.Type = value.String
-			}
-		case jwtkey.FieldCreatedAt:
-			if value, ok := values[i].(*sql.NullTime); !ok {
-				return fmt.Errorf("unexpected type %T for field created_at", values[i])
-			} else if value.Valid {
-				jk.CreatedAt = value.Time
 			}
 		case jwtkey.FieldExpiresAt:
 			if value, ok := values[i].(*sql.NullTime); !ok {
@@ -120,13 +137,21 @@ func (jk *JWTKey) String() string {
 	var builder strings.Builder
 	builder.WriteString("JWTKey(")
 	builder.WriteString(fmt.Sprintf("id=%v, ", jk.ID))
+	builder.WriteString("created_at=")
+	builder.WriteString(jk.CreatedAt.Format(time.ANSIC))
+	builder.WriteString(", ")
+	builder.WriteString("updated_at=")
+	builder.WriteString(jk.UpdatedAt.Format(time.ANSIC))
+	builder.WriteString(", ")
+	if v := jk.DeletedAt; v != nil {
+		builder.WriteString("deleted_at=")
+		builder.WriteString(v.Format(time.ANSIC))
+	}
+	builder.WriteString(", ")
 	builder.WriteString("key=<sensitive>")
 	builder.WriteString(", ")
 	builder.WriteString("type=")
 	builder.WriteString(jk.Type)
-	builder.WriteString(", ")
-	builder.WriteString("created_at=")
-	builder.WriteString(jk.CreatedAt.Format(time.ANSIC))
 	builder.WriteString(", ")
 	builder.WriteString("expires_at=")
 	builder.WriteString(jk.ExpiresAt.Format(time.ANSIC))

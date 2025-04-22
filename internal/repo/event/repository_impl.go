@@ -2,6 +2,8 @@ package event
 
 import (
 	"context"
+	"time"
+	"fmt"
 
 	"github.com/google/uuid"
 	"google.golang.org/api/calendar/v3"
@@ -136,6 +138,86 @@ func (r *EventRepositoryImpl) Delete(ctx context.Context, tx *ent.Tx, id uuid.UU
 		return tx.Event.DeleteOneID(id).Exec(ctx)
 	}
 	return r.client.Event.DeleteOneID(id).Exec(ctx)
+}
+
+func (r *EventRepositoryImpl) SoftDelete(ctx context.Context, tx *ent.Tx, id uuid.UUID) error {
+	softDeleteEvent := r.client.Event.UpdateOneID(id)
+	if tx != nil {
+		softDeleteEvent = tx.Event.UpdateOneID(id)
+	}
+	return softDeleteEvent.
+		SetDeletedAt(time.Now()).
+		Exec(ctx)
+}
+
+func (r *EventRepositoryImpl) Restore(ctx context.Context, tx *ent.Tx, id uuid.UUID) error {
+	restoreEvent := r.client.Event.UpdateOneID(id)
+	if tx != nil {
+		restoreEvent = tx.Event.UpdateOneID(id)
+	}
+	return restoreEvent.
+		SetNillableDeletedAt(nil).
+		Exec(ctx)
+}
+
+func (r *EventRepositoryImpl) SoftDeleteWithRelations(ctx context.Context, tx *ent.Tx, id uuid.UUID) error {
+	if tx == nil {
+		return fmt.Errorf("transaction is nil")
+	}
+
+	// イベントを論理削除
+	if err := r.SoftDelete(ctx, tx, id); err != nil {
+		return fmt.Errorf("failed to soft delete event: %w", err)
+	}
+
+	// 関連する提案日を論理削除
+	proposedDateIDs, err := tx.ProposedDate.
+		Query().
+		Where(proposeddate.HasEventWith(event.IDEQ(id))).
+		IDs(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to query proposed dates: %w", err)
+	}
+	if len(proposedDateIDs) > 0 {
+		if err := tx.ProposedDate.Update().
+			Where(proposeddate.IDIn(proposedDateIDs...)).
+			SetDeletedAt(time.Now()).
+			Exec(ctx); err != nil {
+			return fmt.Errorf("failed to soft delete proposed dates: %w", err)
+		}
+	}
+
+	return nil
+}
+
+func (r *EventRepositoryImpl) RestoreWithRelations(ctx context.Context, tx *ent.Tx, id uuid.UUID) error {
+	if tx == nil {
+		return fmt.Errorf("transaction is nil")
+	}
+
+	// イベントを復元
+	if err := r.Restore(ctx, tx, id); err != nil {
+		return fmt.Errorf("failed to restore event: %w", err)
+	}
+
+	// 関連する提案日を復元
+	proposedDateIDs, err := tx.ProposedDate.
+		Query().
+		Where(proposeddate.HasEventWith(event.IDEQ(id))).
+		IDs(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to query proposed dates: %w", err)
+	}
+	if len(proposedDateIDs) > 0 {
+		if err := tx.ProposedDate.Update().
+			Where(proposeddate.IDIn(proposedDateIDs...)).
+			SetNillableDeletedAt(nil).
+			Exec(ctx); err != nil {
+			return fmt.Errorf("failed to restore proposed dates: %w", err)
+		}
+	}
+
+	return nil
 }
 
 func (r *EventRepositoryImpl) SearchEvents(ctx context.Context, tx *ent.Tx, id, calendarID uuid.UUID, opt EventQueryOptions) ([]*ent.Event, error) {

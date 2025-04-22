@@ -6,6 +6,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
@@ -24,6 +25,32 @@ type JWTKeyUpdate struct {
 // Where appends a list predicates to the JWTKeyUpdate builder.
 func (jku *JWTKeyUpdate) Where(ps ...predicate.JWTKey) *JWTKeyUpdate {
 	jku.mutation.Where(ps...)
+	return jku
+}
+
+// SetUpdatedAt sets the "updated_at" field.
+func (jku *JWTKeyUpdate) SetUpdatedAt(t time.Time) *JWTKeyUpdate {
+	jku.mutation.SetUpdatedAt(t)
+	return jku
+}
+
+// SetDeletedAt sets the "deleted_at" field.
+func (jku *JWTKeyUpdate) SetDeletedAt(t time.Time) *JWTKeyUpdate {
+	jku.mutation.SetDeletedAt(t)
+	return jku
+}
+
+// SetNillableDeletedAt sets the "deleted_at" field if the given value is not nil.
+func (jku *JWTKeyUpdate) SetNillableDeletedAt(t *time.Time) *JWTKeyUpdate {
+	if t != nil {
+		jku.SetDeletedAt(*t)
+	}
+	return jku
+}
+
+// ClearDeletedAt clears the value of the "deleted_at" field.
+func (jku *JWTKeyUpdate) ClearDeletedAt() *JWTKeyUpdate {
+	jku.mutation.ClearDeletedAt()
 	return jku
 }
 
@@ -62,6 +89,7 @@ func (jku *JWTKeyUpdate) Mutation() *JWTKeyMutation {
 
 // Save executes the query and returns the number of nodes affected by the update operation.
 func (jku *JWTKeyUpdate) Save(ctx context.Context) (int, error) {
+	jku.defaults()
 	return withHooks(ctx, jku.sqlSave, jku.mutation, jku.hooks)
 }
 
@@ -84,6 +112,14 @@ func (jku *JWTKeyUpdate) Exec(ctx context.Context) error {
 func (jku *JWTKeyUpdate) ExecX(ctx context.Context) {
 	if err := jku.Exec(ctx); err != nil {
 		panic(err)
+	}
+}
+
+// defaults sets the default values of the builder before save.
+func (jku *JWTKeyUpdate) defaults() {
+	if _, ok := jku.mutation.UpdatedAt(); !ok {
+		v := jwtkey.UpdateDefaultUpdatedAt()
+		jku.mutation.SetUpdatedAt(v)
 	}
 }
 
@@ -114,6 +150,15 @@ func (jku *JWTKeyUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			}
 		}
 	}
+	if value, ok := jku.mutation.UpdatedAt(); ok {
+		_spec.SetField(jwtkey.FieldUpdatedAt, field.TypeTime, value)
+	}
+	if value, ok := jku.mutation.DeletedAt(); ok {
+		_spec.SetField(jwtkey.FieldDeletedAt, field.TypeTime, value)
+	}
+	if jku.mutation.DeletedAtCleared() {
+		_spec.ClearField(jwtkey.FieldDeletedAt, field.TypeTime)
+	}
 	if value, ok := jku.mutation.Key(); ok {
 		_spec.SetField(jwtkey.FieldKey, field.TypeString, value)
 	}
@@ -138,6 +183,32 @@ type JWTKeyUpdateOne struct {
 	fields   []string
 	hooks    []Hook
 	mutation *JWTKeyMutation
+}
+
+// SetUpdatedAt sets the "updated_at" field.
+func (jkuo *JWTKeyUpdateOne) SetUpdatedAt(t time.Time) *JWTKeyUpdateOne {
+	jkuo.mutation.SetUpdatedAt(t)
+	return jkuo
+}
+
+// SetDeletedAt sets the "deleted_at" field.
+func (jkuo *JWTKeyUpdateOne) SetDeletedAt(t time.Time) *JWTKeyUpdateOne {
+	jkuo.mutation.SetDeletedAt(t)
+	return jkuo
+}
+
+// SetNillableDeletedAt sets the "deleted_at" field if the given value is not nil.
+func (jkuo *JWTKeyUpdateOne) SetNillableDeletedAt(t *time.Time) *JWTKeyUpdateOne {
+	if t != nil {
+		jkuo.SetDeletedAt(*t)
+	}
+	return jkuo
+}
+
+// ClearDeletedAt clears the value of the "deleted_at" field.
+func (jkuo *JWTKeyUpdateOne) ClearDeletedAt() *JWTKeyUpdateOne {
+	jkuo.mutation.ClearDeletedAt()
+	return jkuo
 }
 
 // SetKey sets the "key" field.
@@ -188,6 +259,7 @@ func (jkuo *JWTKeyUpdateOne) Select(field string, fields ...string) *JWTKeyUpdat
 
 // Save executes the query and returns the updated JWTKey entity.
 func (jkuo *JWTKeyUpdateOne) Save(ctx context.Context) (*JWTKey, error) {
+	jkuo.defaults()
 	return withHooks(ctx, jkuo.sqlSave, jkuo.mutation, jkuo.hooks)
 }
 
@@ -210,6 +282,14 @@ func (jkuo *JWTKeyUpdateOne) Exec(ctx context.Context) error {
 func (jkuo *JWTKeyUpdateOne) ExecX(ctx context.Context) {
 	if err := jkuo.Exec(ctx); err != nil {
 		panic(err)
+	}
+}
+
+// defaults sets the default values of the builder before save.
+func (jkuo *JWTKeyUpdateOne) defaults() {
+	if _, ok := jkuo.mutation.UpdatedAt(); !ok {
+		v := jwtkey.UpdateDefaultUpdatedAt()
+		jkuo.mutation.SetUpdatedAt(v)
 	}
 }
 
@@ -256,6 +336,15 @@ func (jkuo *JWTKeyUpdateOne) sqlSave(ctx context.Context) (_node *JWTKey, err er
 				ps[i](selector)
 			}
 		}
+	}
+	if value, ok := jkuo.mutation.UpdatedAt(); ok {
+		_spec.SetField(jwtkey.FieldUpdatedAt, field.TypeTime, value)
+	}
+	if value, ok := jkuo.mutation.DeletedAt(); ok {
+		_spec.SetField(jwtkey.FieldDeletedAt, field.TypeTime, value)
+	}
+	if jkuo.mutation.DeletedAtCleared() {
+		_spec.ClearField(jwtkey.FieldDeletedAt, field.TypeTime)
 	}
 	if value, ok := jkuo.mutation.Key(); ok {
 		_spec.SetField(jwtkey.FieldKey, field.TypeString, value)

@@ -12,6 +12,7 @@ import (
 	"entgo.io/ent/dialect/entsql"
 	"github.com/koo-arch/adjusta-backend/ent/hook"
 	"github.com/google/uuid"
+	"github.com/koo-arch/adjusta-backend/ent/mixins"
 )
 
 // User holds the schema definition for the User entity.
@@ -55,4 +56,11 @@ func userhook(next ent.Mutator) ent.Mutator {
 		}
 		return next.Mutate(ctx, m)
 	})
+}
+
+func (User) Mixin() []ent.Mixin {
+	return []ent.Mixin{
+		mixins.TimeMixin{},
+		mixins.SoftDeleteMixin{},
+	}
 }

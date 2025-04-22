@@ -12,6 +12,7 @@ import (
 	"github.com/koo-arch/adjusta-backend/ent/event"
 	"github.com/koo-arch/adjusta-backend/internal/models"
 	"github.com/koo-arch/adjusta-backend/utils"
+	"github.com/koo-arch/adjusta-backend/ent/mixins"
 )
 
 const (
@@ -55,6 +56,13 @@ func (Event) Edges() []ent.Edge {
 	return []ent.Edge{
 		edge.From("calendar", Calendar.Type).Ref("events").Unique(),
 		edge.To("proposed_dates", ProposedDate.Type).Annotations(entsql.OnDelete(entsql.Cascade)),
+	}
+}
+
+func (Event) Mixin() []ent.Mixin {
+	return []ent.Mixin{
+		mixins.TimeMixin{},
+		mixins.SoftDeleteMixin{},
 	}
 }
 

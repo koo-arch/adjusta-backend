@@ -6,6 +6,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
@@ -26,6 +27,32 @@ type GoogleCalendarInfoUpdate struct {
 // Where appends a list predicates to the GoogleCalendarInfoUpdate builder.
 func (gciu *GoogleCalendarInfoUpdate) Where(ps ...predicate.GoogleCalendarInfo) *GoogleCalendarInfoUpdate {
 	gciu.mutation.Where(ps...)
+	return gciu
+}
+
+// SetUpdatedAt sets the "updated_at" field.
+func (gciu *GoogleCalendarInfoUpdate) SetUpdatedAt(t time.Time) *GoogleCalendarInfoUpdate {
+	gciu.mutation.SetUpdatedAt(t)
+	return gciu
+}
+
+// SetDeletedAt sets the "deleted_at" field.
+func (gciu *GoogleCalendarInfoUpdate) SetDeletedAt(t time.Time) *GoogleCalendarInfoUpdate {
+	gciu.mutation.SetDeletedAt(t)
+	return gciu
+}
+
+// SetNillableDeletedAt sets the "deleted_at" field if the given value is not nil.
+func (gciu *GoogleCalendarInfoUpdate) SetNillableDeletedAt(t *time.Time) *GoogleCalendarInfoUpdate {
+	if t != nil {
+		gciu.SetDeletedAt(*t)
+	}
+	return gciu
+}
+
+// ClearDeletedAt clears the value of the "deleted_at" field.
+func (gciu *GoogleCalendarInfoUpdate) ClearDeletedAt() *GoogleCalendarInfoUpdate {
+	gciu.mutation.ClearDeletedAt()
 	return gciu
 }
 
@@ -120,6 +147,7 @@ func (gciu *GoogleCalendarInfoUpdate) RemoveCalendars(c ...*Calendar) *GoogleCal
 
 // Save executes the query and returns the number of nodes affected by the update operation.
 func (gciu *GoogleCalendarInfoUpdate) Save(ctx context.Context) (int, error) {
+	gciu.defaults()
 	return withHooks(ctx, gciu.sqlSave, gciu.mutation, gciu.hooks)
 }
 
@@ -145,6 +173,14 @@ func (gciu *GoogleCalendarInfoUpdate) ExecX(ctx context.Context) {
 	}
 }
 
+// defaults sets the default values of the builder before save.
+func (gciu *GoogleCalendarInfoUpdate) defaults() {
+	if _, ok := gciu.mutation.UpdatedAt(); !ok {
+		v := googlecalendarinfo.UpdateDefaultUpdatedAt()
+		gciu.mutation.SetUpdatedAt(v)
+	}
+}
+
 // check runs all checks and user-defined validators on the builder.
 func (gciu *GoogleCalendarInfoUpdate) check() error {
 	if v, ok := gciu.mutation.GoogleCalendarID(); ok {
@@ -166,6 +202,15 @@ func (gciu *GoogleCalendarInfoUpdate) sqlSave(ctx context.Context) (n int, err e
 				ps[i](selector)
 			}
 		}
+	}
+	if value, ok := gciu.mutation.UpdatedAt(); ok {
+		_spec.SetField(googlecalendarinfo.FieldUpdatedAt, field.TypeTime, value)
+	}
+	if value, ok := gciu.mutation.DeletedAt(); ok {
+		_spec.SetField(googlecalendarinfo.FieldDeletedAt, field.TypeTime, value)
+	}
+	if gciu.mutation.DeletedAtCleared() {
+		_spec.ClearField(googlecalendarinfo.FieldDeletedAt, field.TypeTime)
 	}
 	if value, ok := gciu.mutation.GoogleCalendarID(); ok {
 		_spec.SetField(googlecalendarinfo.FieldGoogleCalendarID, field.TypeString, value)
@@ -242,6 +287,32 @@ type GoogleCalendarInfoUpdateOne struct {
 	fields   []string
 	hooks    []Hook
 	mutation *GoogleCalendarInfoMutation
+}
+
+// SetUpdatedAt sets the "updated_at" field.
+func (gciuo *GoogleCalendarInfoUpdateOne) SetUpdatedAt(t time.Time) *GoogleCalendarInfoUpdateOne {
+	gciuo.mutation.SetUpdatedAt(t)
+	return gciuo
+}
+
+// SetDeletedAt sets the "deleted_at" field.
+func (gciuo *GoogleCalendarInfoUpdateOne) SetDeletedAt(t time.Time) *GoogleCalendarInfoUpdateOne {
+	gciuo.mutation.SetDeletedAt(t)
+	return gciuo
+}
+
+// SetNillableDeletedAt sets the "deleted_at" field if the given value is not nil.
+func (gciuo *GoogleCalendarInfoUpdateOne) SetNillableDeletedAt(t *time.Time) *GoogleCalendarInfoUpdateOne {
+	if t != nil {
+		gciuo.SetDeletedAt(*t)
+	}
+	return gciuo
+}
+
+// ClearDeletedAt clears the value of the "deleted_at" field.
+func (gciuo *GoogleCalendarInfoUpdateOne) ClearDeletedAt() *GoogleCalendarInfoUpdateOne {
+	gciuo.mutation.ClearDeletedAt()
+	return gciuo
 }
 
 // SetGoogleCalendarID sets the "google_calendar_id" field.
@@ -348,6 +419,7 @@ func (gciuo *GoogleCalendarInfoUpdateOne) Select(field string, fields ...string)
 
 // Save executes the query and returns the updated GoogleCalendarInfo entity.
 func (gciuo *GoogleCalendarInfoUpdateOne) Save(ctx context.Context) (*GoogleCalendarInfo, error) {
+	gciuo.defaults()
 	return withHooks(ctx, gciuo.sqlSave, gciuo.mutation, gciuo.hooks)
 }
 
@@ -370,6 +442,14 @@ func (gciuo *GoogleCalendarInfoUpdateOne) Exec(ctx context.Context) error {
 func (gciuo *GoogleCalendarInfoUpdateOne) ExecX(ctx context.Context) {
 	if err := gciuo.Exec(ctx); err != nil {
 		panic(err)
+	}
+}
+
+// defaults sets the default values of the builder before save.
+func (gciuo *GoogleCalendarInfoUpdateOne) defaults() {
+	if _, ok := gciuo.mutation.UpdatedAt(); !ok {
+		v := googlecalendarinfo.UpdateDefaultUpdatedAt()
+		gciuo.mutation.SetUpdatedAt(v)
 	}
 }
 
@@ -411,6 +491,15 @@ func (gciuo *GoogleCalendarInfoUpdateOne) sqlSave(ctx context.Context) (_node *G
 				ps[i](selector)
 			}
 		}
+	}
+	if value, ok := gciuo.mutation.UpdatedAt(); ok {
+		_spec.SetField(googlecalendarinfo.FieldUpdatedAt, field.TypeTime, value)
+	}
+	if value, ok := gciuo.mutation.DeletedAt(); ok {
+		_spec.SetField(googlecalendarinfo.FieldDeletedAt, field.TypeTime, value)
+	}
+	if gciuo.mutation.DeletedAtCleared() {
+		_spec.ClearField(googlecalendarinfo.FieldDeletedAt, field.TypeTime)
 	}
 	if value, ok := gciuo.mutation.GoogleCalendarID(); ok {
 		_spec.SetField(googlecalendarinfo.FieldGoogleCalendarID, field.TypeString, value)

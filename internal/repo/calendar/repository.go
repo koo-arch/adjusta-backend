@@ -28,4 +28,8 @@ type CalendarRepository interface {
 	Create(ctx context.Context, tx *ent.Tx, entUser *ent.User, entGoogleCalendar *ent.GoogleCalendarInfo) (*ent.Calendar, error)
 	Update(ctx context.Context, tx *ent.Tx, id uuid.UUID) (*ent.Calendar, error)
 	Delete(ctx context.Context, tx *ent.Tx, id uuid.UUID) error
+	SoftDelete(ctx context.Context, tx *ent.Tx, id uuid.UUID) error
+	Restore(ctx context.Context, tx *ent.Tx, id uuid.UUID) error
+	SoftDeleteWithRelations(ctx context.Context, tx *ent.Tx, id uuid.UUID) error
+	RestoreWithRelations(ctx context.Context, tx *ent.Tx, id uuid.UUID) error
 }

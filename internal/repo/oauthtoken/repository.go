@@ -21,4 +21,6 @@ type OAuthTokenRepository interface {
 	Create(ctx context.Context, tx *ent.Tx, token *oauth2.Token, entUser *ent.User) (*ent.OAuthToken, error)
 	Update(ctx context.Context, tx *ent.Tx, id uuid.UUID, opt OAuthTokenQuertOptions) (*ent.OAuthToken, error)
 	Delete(ctx context.Context, tx *ent.Tx, id uuid.UUID) error
+	SoftDelete(ctx context.Context, tx *ent.Tx, id uuid.UUID) error
+	Restore(ctx context.Context, tx *ent.Tx, id uuid.UUID) error
 }

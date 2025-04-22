@@ -6,6 +6,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
@@ -27,6 +28,32 @@ type EventUpdate struct {
 // Where appends a list predicates to the EventUpdate builder.
 func (eu *EventUpdate) Where(ps ...predicate.Event) *EventUpdate {
 	eu.mutation.Where(ps...)
+	return eu
+}
+
+// SetUpdatedAt sets the "updated_at" field.
+func (eu *EventUpdate) SetUpdatedAt(t time.Time) *EventUpdate {
+	eu.mutation.SetUpdatedAt(t)
+	return eu
+}
+
+// SetDeletedAt sets the "deleted_at" field.
+func (eu *EventUpdate) SetDeletedAt(t time.Time) *EventUpdate {
+	eu.mutation.SetDeletedAt(t)
+	return eu
+}
+
+// SetNillableDeletedAt sets the "deleted_at" field if the given value is not nil.
+func (eu *EventUpdate) SetNillableDeletedAt(t *time.Time) *EventUpdate {
+	if t != nil {
+		eu.SetDeletedAt(*t)
+	}
+	return eu
+}
+
+// ClearDeletedAt clears the value of the "deleted_at" field.
+func (eu *EventUpdate) ClearDeletedAt() *EventUpdate {
+	eu.mutation.ClearDeletedAt()
 	return eu
 }
 
@@ -226,6 +253,9 @@ func (eu *EventUpdate) RemoveProposedDates(p ...*ProposedDate) *EventUpdate {
 
 // Save executes the query and returns the number of nodes affected by the update operation.
 func (eu *EventUpdate) Save(ctx context.Context) (int, error) {
+	if err := eu.defaults(); err != nil {
+		return 0, err
+	}
 	return withHooks(ctx, eu.sqlSave, eu.mutation, eu.hooks)
 }
 
@@ -251,6 +281,18 @@ func (eu *EventUpdate) ExecX(ctx context.Context) {
 	}
 }
 
+// defaults sets the default values of the builder before save.
+func (eu *EventUpdate) defaults() error {
+	if _, ok := eu.mutation.UpdatedAt(); !ok {
+		if event.UpdateDefaultUpdatedAt == nil {
+			return fmt.Errorf("ent: uninitialized event.UpdateDefaultUpdatedAt (forgotten import ent/runtime?)")
+		}
+		v := event.UpdateDefaultUpdatedAt()
+		eu.mutation.SetUpdatedAt(v)
+	}
+	return nil
+}
+
 // check runs all checks and user-defined validators on the builder.
 func (eu *EventUpdate) check() error {
 	if v, ok := eu.mutation.Status(); ok {
@@ -272,6 +314,15 @@ func (eu *EventUpdate) sqlSave(ctx context.Context) (n int, err error) {
 				ps[i](selector)
 			}
 		}
+	}
+	if value, ok := eu.mutation.UpdatedAt(); ok {
+		_spec.SetField(event.FieldUpdatedAt, field.TypeTime, value)
+	}
+	if value, ok := eu.mutation.DeletedAt(); ok {
+		_spec.SetField(event.FieldDeletedAt, field.TypeTime, value)
+	}
+	if eu.mutation.DeletedAtCleared() {
+		_spec.ClearField(event.FieldDeletedAt, field.TypeTime)
 	}
 	if value, ok := eu.mutation.Summary(); ok {
 		_spec.SetField(event.FieldSummary, field.TypeString, value)
@@ -401,6 +452,32 @@ type EventUpdateOne struct {
 	fields   []string
 	hooks    []Hook
 	mutation *EventMutation
+}
+
+// SetUpdatedAt sets the "updated_at" field.
+func (euo *EventUpdateOne) SetUpdatedAt(t time.Time) *EventUpdateOne {
+	euo.mutation.SetUpdatedAt(t)
+	return euo
+}
+
+// SetDeletedAt sets the "deleted_at" field.
+func (euo *EventUpdateOne) SetDeletedAt(t time.Time) *EventUpdateOne {
+	euo.mutation.SetDeletedAt(t)
+	return euo
+}
+
+// SetNillableDeletedAt sets the "deleted_at" field if the given value is not nil.
+func (euo *EventUpdateOne) SetNillableDeletedAt(t *time.Time) *EventUpdateOne {
+	if t != nil {
+		euo.SetDeletedAt(*t)
+	}
+	return euo
+}
+
+// ClearDeletedAt clears the value of the "deleted_at" field.
+func (euo *EventUpdateOne) ClearDeletedAt() *EventUpdateOne {
+	euo.mutation.ClearDeletedAt()
+	return euo
 }
 
 // SetSummary sets the "summary" field.
@@ -612,6 +689,9 @@ func (euo *EventUpdateOne) Select(field string, fields ...string) *EventUpdateOn
 
 // Save executes the query and returns the updated Event entity.
 func (euo *EventUpdateOne) Save(ctx context.Context) (*Event, error) {
+	if err := euo.defaults(); err != nil {
+		return nil, err
+	}
 	return withHooks(ctx, euo.sqlSave, euo.mutation, euo.hooks)
 }
 
@@ -635,6 +715,18 @@ func (euo *EventUpdateOne) ExecX(ctx context.Context) {
 	if err := euo.Exec(ctx); err != nil {
 		panic(err)
 	}
+}
+
+// defaults sets the default values of the builder before save.
+func (euo *EventUpdateOne) defaults() error {
+	if _, ok := euo.mutation.UpdatedAt(); !ok {
+		if event.UpdateDefaultUpdatedAt == nil {
+			return fmt.Errorf("ent: uninitialized event.UpdateDefaultUpdatedAt (forgotten import ent/runtime?)")
+		}
+		v := event.UpdateDefaultUpdatedAt()
+		euo.mutation.SetUpdatedAt(v)
+	}
+	return nil
 }
 
 // check runs all checks and user-defined validators on the builder.
@@ -675,6 +767,15 @@ func (euo *EventUpdateOne) sqlSave(ctx context.Context) (_node *Event, err error
 				ps[i](selector)
 			}
 		}
+	}
+	if value, ok := euo.mutation.UpdatedAt(); ok {
+		_spec.SetField(event.FieldUpdatedAt, field.TypeTime, value)
+	}
+	if value, ok := euo.mutation.DeletedAt(); ok {
+		_spec.SetField(event.FieldDeletedAt, field.TypeTime, value)
+	}
+	if euo.mutation.DeletedAtCleared() {
+		_spec.ClearField(event.FieldDeletedAt, field.TypeTime)
 	}
 	if value, ok := euo.mutation.Summary(); ok {
 		_spec.SetField(event.FieldSummary, field.TypeString, value)

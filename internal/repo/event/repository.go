@@ -38,5 +38,9 @@ type EventRepository interface {
 	Create(ctx context.Context, tx *ent.Tx, googleEvent *calendar.Event, entCalendar *ent.Calendar) (*ent.Event, error)
 	Update(ctx context.Context, tx *ent.Tx, id uuid.UUID, opt EventQueryOptions) (*ent.Event, error)
 	Delete(ctx context.Context, tx *ent.Tx, id uuid.UUID) error
+	SoftDelete(ctx context.Context, tx *ent.Tx, id uuid.UUID) error
+	Restore(ctx context.Context, tx *ent.Tx, id uuid.UUID) error
+	SoftDeleteWithRelations(ctx context.Context, tx *ent.Tx, id uuid.UUID) error
+	RestoreWithRelations(ctx context.Context, tx *ent.Tx, id uuid.UUID) error
 	SearchEvents(ctx context.Context, tx *ent.Tx, id, calendarID uuid.UUID, opt EventQueryOptions) ([]*ent.Event, error)
 }

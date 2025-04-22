@@ -2,6 +2,7 @@ package oauthtoken
 
 import (
 	"context"
+	"time"
 
 	"github.com/google/uuid"
 	"golang.org/x/oauth2"
@@ -77,4 +78,24 @@ func (r *OAuthTokenRepositoryImpl) Delete(ctx context.Context, tx *ent.Tx, id uu
 		return tx.OAuthToken.DeleteOneID(id).Exec(ctx)
 	}
 	return r.client.OAuthToken.DeleteOneID(id).Exec(ctx)
+}
+
+func (r *OAuthTokenRepositoryImpl) SoftDelete(ctx context.Context, tx *ent.Tx, id uuid.UUID) error {
+	softDeleteOAuthToken := r.client.OAuthToken.UpdateOneID(id)
+	if tx != nil {
+		softDeleteOAuthToken = tx.OAuthToken.UpdateOneID(id)
+	}
+	return softDeleteOAuthToken.
+		SetDeletedAt(time.Now()).
+		Exec(ctx)
+}
+
+func (r *OAuthTokenRepositoryImpl) Restore(ctx context.Context, tx *ent.Tx, id uuid.UUID) error {
+	restoreOAuthToken := r.client.OAuthToken.UpdateOneID(id)
+	if tx != nil {
+		restoreOAuthToken = tx.OAuthToken.UpdateOneID(id)
+	}
+	return restoreOAuthToken.
+		SetNillableDeletedAt(nil).
+		Exec(ctx)
 }

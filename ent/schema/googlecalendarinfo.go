@@ -5,6 +5,7 @@ import (
 	"github.com/google/uuid"
 	"entgo.io/ent/schema/field"
 	"entgo.io/ent/schema/edge"
+	"github.com/koo-arch/adjusta-backend/ent/mixins"
 )
 
 // GoogleCalendarInfo holds the schema definition for the GoogleCalendarInfo entity.
@@ -26,5 +27,12 @@ func (GoogleCalendarInfo) Fields() []ent.Field {
 func (GoogleCalendarInfo) Edges() []ent.Edge {
 	return []ent.Edge{
 		edge.From("calendars", Calendar.Type).Ref("google_calendar_infos"),
+	}
+}
+
+func (GoogleCalendarInfo) Mixin() []ent.Mixin {
+	return []ent.Mixin{
+		mixins.TimeMixin{},
+		mixins.SoftDeleteMixin{},
 	}
 }

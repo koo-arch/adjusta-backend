@@ -2,6 +2,7 @@ package proposeddate
 
 import (
 	"context"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/koo-arch/adjusta-backend/ent"
@@ -90,6 +91,25 @@ func (r *ProposedDateRepositoryImpl) Delete(ctx context.Context, tx *ent.Tx, id 
 	return r.client.ProposedDate.DeleteOneID(id).Exec(ctx)
 }
 
+func (r *ProposedDateRepositoryImpl) SoftDelete(ctx context.Context, tx *ent.Tx, id uuid.UUID) error {
+	softDeleteProposedDate := r.client.ProposedDate.UpdateOneID(id)
+	if tx != nil {
+		softDeleteProposedDate = tx.ProposedDate.UpdateOneID(id)
+	}
+	return softDeleteProposedDate.
+		SetDeletedAt(time.Now()).
+		Exec(ctx)
+}
+
+func (r *ProposedDateRepositoryImpl) Restore(ctx context.Context, tx *ent.Tx, id uuid.UUID) error {
+	restoreProposedDate := r.client.ProposedDate.UpdateOneID(id)
+	if tx != nil {
+		restoreProposedDate = tx.ProposedDate.UpdateOneID(id)
+	}
+	return restoreProposedDate.
+		SetNillableDeletedAt(nil).
+		Exec(ctx)
+}
 
 func (r *ProposedDateRepositoryImpl) CreateBulk(ctx context.Context, tx *ent.Tx, selectedDates []models.SelectedDate, entEvent *ent.Event) ([]*ent.ProposedDate, error) {
 	var proposedDateCreates []*ent.ProposedDateCreate

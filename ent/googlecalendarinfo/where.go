@@ -3,6 +3,8 @@
 package googlecalendarinfo
 
 import (
+	"time"
+
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/google/uuid"
@@ -54,6 +56,21 @@ func IDLTE(id uuid.UUID) predicate.GoogleCalendarInfo {
 	return predicate.GoogleCalendarInfo(sql.FieldLTE(FieldID, id))
 }
 
+// CreatedAt applies equality check predicate on the "created_at" field. It's identical to CreatedAtEQ.
+func CreatedAt(v time.Time) predicate.GoogleCalendarInfo {
+	return predicate.GoogleCalendarInfo(sql.FieldEQ(FieldCreatedAt, v))
+}
+
+// UpdatedAt applies equality check predicate on the "updated_at" field. It's identical to UpdatedAtEQ.
+func UpdatedAt(v time.Time) predicate.GoogleCalendarInfo {
+	return predicate.GoogleCalendarInfo(sql.FieldEQ(FieldUpdatedAt, v))
+}
+
+// DeletedAt applies equality check predicate on the "deleted_at" field. It's identical to DeletedAtEQ.
+func DeletedAt(v time.Time) predicate.GoogleCalendarInfo {
+	return predicate.GoogleCalendarInfo(sql.FieldEQ(FieldDeletedAt, v))
+}
+
 // GoogleCalendarID applies equality check predicate on the "google_calendar_id" field. It's identical to GoogleCalendarIDEQ.
 func GoogleCalendarID(v string) predicate.GoogleCalendarInfo {
 	return predicate.GoogleCalendarInfo(sql.FieldEQ(FieldGoogleCalendarID, v))
@@ -67,6 +84,136 @@ func Summary(v string) predicate.GoogleCalendarInfo {
 // IsPrimary applies equality check predicate on the "is_primary" field. It's identical to IsPrimaryEQ.
 func IsPrimary(v bool) predicate.GoogleCalendarInfo {
 	return predicate.GoogleCalendarInfo(sql.FieldEQ(FieldIsPrimary, v))
+}
+
+// CreatedAtEQ applies the EQ predicate on the "created_at" field.
+func CreatedAtEQ(v time.Time) predicate.GoogleCalendarInfo {
+	return predicate.GoogleCalendarInfo(sql.FieldEQ(FieldCreatedAt, v))
+}
+
+// CreatedAtNEQ applies the NEQ predicate on the "created_at" field.
+func CreatedAtNEQ(v time.Time) predicate.GoogleCalendarInfo {
+	return predicate.GoogleCalendarInfo(sql.FieldNEQ(FieldCreatedAt, v))
+}
+
+// CreatedAtIn applies the In predicate on the "created_at" field.
+func CreatedAtIn(vs ...time.Time) predicate.GoogleCalendarInfo {
+	return predicate.GoogleCalendarInfo(sql.FieldIn(FieldCreatedAt, vs...))
+}
+
+// CreatedAtNotIn applies the NotIn predicate on the "created_at" field.
+func CreatedAtNotIn(vs ...time.Time) predicate.GoogleCalendarInfo {
+	return predicate.GoogleCalendarInfo(sql.FieldNotIn(FieldCreatedAt, vs...))
+}
+
+// CreatedAtGT applies the GT predicate on the "created_at" field.
+func CreatedAtGT(v time.Time) predicate.GoogleCalendarInfo {
+	return predicate.GoogleCalendarInfo(sql.FieldGT(FieldCreatedAt, v))
+}
+
+// CreatedAtGTE applies the GTE predicate on the "created_at" field.
+func CreatedAtGTE(v time.Time) predicate.GoogleCalendarInfo {
+	return predicate.GoogleCalendarInfo(sql.FieldGTE(FieldCreatedAt, v))
+}
+
+// CreatedAtLT applies the LT predicate on the "created_at" field.
+func CreatedAtLT(v time.Time) predicate.GoogleCalendarInfo {
+	return predicate.GoogleCalendarInfo(sql.FieldLT(FieldCreatedAt, v))
+}
+
+// CreatedAtLTE applies the LTE predicate on the "created_at" field.
+func CreatedAtLTE(v time.Time) predicate.GoogleCalendarInfo {
+	return predicate.GoogleCalendarInfo(sql.FieldLTE(FieldCreatedAt, v))
+}
+
+// UpdatedAtEQ applies the EQ predicate on the "updated_at" field.
+func UpdatedAtEQ(v time.Time) predicate.GoogleCalendarInfo {
+	return predicate.GoogleCalendarInfo(sql.FieldEQ(FieldUpdatedAt, v))
+}
+
+// UpdatedAtNEQ applies the NEQ predicate on the "updated_at" field.
+func UpdatedAtNEQ(v time.Time) predicate.GoogleCalendarInfo {
+	return predicate.GoogleCalendarInfo(sql.FieldNEQ(FieldUpdatedAt, v))
+}
+
+// UpdatedAtIn applies the In predicate on the "updated_at" field.
+func UpdatedAtIn(vs ...time.Time) predicate.GoogleCalendarInfo {
+	return predicate.GoogleCalendarInfo(sql.FieldIn(FieldUpdatedAt, vs...))
+}
+
+// UpdatedAtNotIn applies the NotIn predicate on the "updated_at" field.
+func UpdatedAtNotIn(vs ...time.Time) predicate.GoogleCalendarInfo {
+	return predicate.GoogleCalendarInfo(sql.FieldNotIn(FieldUpdatedAt, vs...))
+}
+
+// UpdatedAtGT applies the GT predicate on the "updated_at" field.
+func UpdatedAtGT(v time.Time) predicate.GoogleCalendarInfo {
+	return predicate.GoogleCalendarInfo(sql.FieldGT(FieldUpdatedAt, v))
+}
+
+// UpdatedAtGTE applies the GTE predicate on the "updated_at" field.
+func UpdatedAtGTE(v time.Time) predicate.GoogleCalendarInfo {
+	return predicate.GoogleCalendarInfo(sql.FieldGTE(FieldUpdatedAt, v))
+}
+
+// UpdatedAtLT applies the LT predicate on the "updated_at" field.
+func UpdatedAtLT(v time.Time) predicate.GoogleCalendarInfo {
+	return predicate.GoogleCalendarInfo(sql.FieldLT(FieldUpdatedAt, v))
+}
+
+// UpdatedAtLTE applies the LTE predicate on the "updated_at" field.
+func UpdatedAtLTE(v time.Time) predicate.GoogleCalendarInfo {
+	return predicate.GoogleCalendarInfo(sql.FieldLTE(FieldUpdatedAt, v))
+}
+
+// DeletedAtEQ applies the EQ predicate on the "deleted_at" field.
+func DeletedAtEQ(v time.Time) predicate.GoogleCalendarInfo {
+	return predicate.GoogleCalendarInfo(sql.FieldEQ(FieldDeletedAt, v))
+}
+
+// DeletedAtNEQ applies the NEQ predicate on the "deleted_at" field.
+func DeletedAtNEQ(v time.Time) predicate.GoogleCalendarInfo {
+	return predicate.GoogleCalendarInfo(sql.FieldNEQ(FieldDeletedAt, v))
+}
+
+// DeletedAtIn applies the In predicate on the "deleted_at" field.
+func DeletedAtIn(vs ...time.Time) predicate.GoogleCalendarInfo {
+	return predicate.GoogleCalendarInfo(sql.FieldIn(FieldDeletedAt, vs...))
+}
+
+// DeletedAtNotIn applies the NotIn predicate on the "deleted_at" field.
+func DeletedAtNotIn(vs ...time.Time) predicate.GoogleCalendarInfo {
+	return predicate.GoogleCalendarInfo(sql.FieldNotIn(FieldDeletedAt, vs...))
+}
+
+// DeletedAtGT applies the GT predicate on the "deleted_at" field.
+func DeletedAtGT(v time.Time) predicate.GoogleCalendarInfo {
+	return predicate.GoogleCalendarInfo(sql.FieldGT(FieldDeletedAt, v))
+}
+
+// DeletedAtGTE applies the GTE predicate on the "deleted_at" field.
+func DeletedAtGTE(v time.Time) predicate.GoogleCalendarInfo {
+	return predicate.GoogleCalendarInfo(sql.FieldGTE(FieldDeletedAt, v))
+}
+
+// DeletedAtLT applies the LT predicate on the "deleted_at" field.
+func DeletedAtLT(v time.Time) predicate.GoogleCalendarInfo {
+	return predicate.GoogleCalendarInfo(sql.FieldLT(FieldDeletedAt, v))
+}
+
+// DeletedAtLTE applies the LTE predicate on the "deleted_at" field.
+func DeletedAtLTE(v time.Time) predicate.GoogleCalendarInfo {
+	return predicate.GoogleCalendarInfo(sql.FieldLTE(FieldDeletedAt, v))
+}
+
+// DeletedAtIsNil applies the IsNil predicate on the "deleted_at" field.
+func DeletedAtIsNil() predicate.GoogleCalendarInfo {
+	return predicate.GoogleCalendarInfo(sql.FieldIsNull(FieldDeletedAt))
+}
+
+// DeletedAtNotNil applies the NotNil predicate on the "deleted_at" field.
+func DeletedAtNotNil() predicate.GoogleCalendarInfo {
+	return predicate.GoogleCalendarInfo(sql.FieldNotNull(FieldDeletedAt))
 }
 
 // GoogleCalendarIDEQ applies the EQ predicate on the "google_calendar_id" field.

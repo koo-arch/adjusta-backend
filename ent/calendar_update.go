@@ -6,6 +6,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
@@ -28,6 +29,32 @@ type CalendarUpdate struct {
 // Where appends a list predicates to the CalendarUpdate builder.
 func (cu *CalendarUpdate) Where(ps ...predicate.Calendar) *CalendarUpdate {
 	cu.mutation.Where(ps...)
+	return cu
+}
+
+// SetUpdatedAt sets the "updated_at" field.
+func (cu *CalendarUpdate) SetUpdatedAt(t time.Time) *CalendarUpdate {
+	cu.mutation.SetUpdatedAt(t)
+	return cu
+}
+
+// SetDeletedAt sets the "deleted_at" field.
+func (cu *CalendarUpdate) SetDeletedAt(t time.Time) *CalendarUpdate {
+	cu.mutation.SetDeletedAt(t)
+	return cu
+}
+
+// SetNillableDeletedAt sets the "deleted_at" field if the given value is not nil.
+func (cu *CalendarUpdate) SetNillableDeletedAt(t *time.Time) *CalendarUpdate {
+	if t != nil {
+		cu.SetDeletedAt(*t)
+	}
+	return cu
+}
+
+// ClearDeletedAt clears the value of the "deleted_at" field.
+func (cu *CalendarUpdate) ClearDeletedAt() *CalendarUpdate {
+	cu.mutation.ClearDeletedAt()
 	return cu
 }
 
@@ -135,6 +162,7 @@ func (cu *CalendarUpdate) RemoveEvents(e ...*Event) *CalendarUpdate {
 
 // Save executes the query and returns the number of nodes affected by the update operation.
 func (cu *CalendarUpdate) Save(ctx context.Context) (int, error) {
+	cu.defaults()
 	return withHooks(ctx, cu.sqlSave, cu.mutation, cu.hooks)
 }
 
@@ -160,6 +188,14 @@ func (cu *CalendarUpdate) ExecX(ctx context.Context) {
 	}
 }
 
+// defaults sets the default values of the builder before save.
+func (cu *CalendarUpdate) defaults() {
+	if _, ok := cu.mutation.UpdatedAt(); !ok {
+		v := calendar.UpdateDefaultUpdatedAt()
+		cu.mutation.SetUpdatedAt(v)
+	}
+}
+
 func (cu *CalendarUpdate) sqlSave(ctx context.Context) (n int, err error) {
 	_spec := sqlgraph.NewUpdateSpec(calendar.Table, calendar.Columns, sqlgraph.NewFieldSpec(calendar.FieldID, field.TypeUUID))
 	if ps := cu.mutation.predicates; len(ps) > 0 {
@@ -168,6 +204,15 @@ func (cu *CalendarUpdate) sqlSave(ctx context.Context) (n int, err error) {
 				ps[i](selector)
 			}
 		}
+	}
+	if value, ok := cu.mutation.UpdatedAt(); ok {
+		_spec.SetField(calendar.FieldUpdatedAt, field.TypeTime, value)
+	}
+	if value, ok := cu.mutation.DeletedAt(); ok {
+		_spec.SetField(calendar.FieldDeletedAt, field.TypeTime, value)
+	}
+	if cu.mutation.DeletedAtCleared() {
+		_spec.ClearField(calendar.FieldDeletedAt, field.TypeTime)
 	}
 	if cu.mutation.UserCleared() {
 		edge := &sqlgraph.EdgeSpec{
@@ -308,6 +353,32 @@ type CalendarUpdateOne struct {
 	mutation *CalendarMutation
 }
 
+// SetUpdatedAt sets the "updated_at" field.
+func (cuo *CalendarUpdateOne) SetUpdatedAt(t time.Time) *CalendarUpdateOne {
+	cuo.mutation.SetUpdatedAt(t)
+	return cuo
+}
+
+// SetDeletedAt sets the "deleted_at" field.
+func (cuo *CalendarUpdateOne) SetDeletedAt(t time.Time) *CalendarUpdateOne {
+	cuo.mutation.SetDeletedAt(t)
+	return cuo
+}
+
+// SetNillableDeletedAt sets the "deleted_at" field if the given value is not nil.
+func (cuo *CalendarUpdateOne) SetNillableDeletedAt(t *time.Time) *CalendarUpdateOne {
+	if t != nil {
+		cuo.SetDeletedAt(*t)
+	}
+	return cuo
+}
+
+// ClearDeletedAt clears the value of the "deleted_at" field.
+func (cuo *CalendarUpdateOne) ClearDeletedAt() *CalendarUpdateOne {
+	cuo.mutation.ClearDeletedAt()
+	return cuo
+}
+
 // SetUserID sets the "user" edge to the User entity by ID.
 func (cuo *CalendarUpdateOne) SetUserID(id uuid.UUID) *CalendarUpdateOne {
 	cuo.mutation.SetUserID(id)
@@ -425,6 +496,7 @@ func (cuo *CalendarUpdateOne) Select(field string, fields ...string) *CalendarUp
 
 // Save executes the query and returns the updated Calendar entity.
 func (cuo *CalendarUpdateOne) Save(ctx context.Context) (*Calendar, error) {
+	cuo.defaults()
 	return withHooks(ctx, cuo.sqlSave, cuo.mutation, cuo.hooks)
 }
 
@@ -447,6 +519,14 @@ func (cuo *CalendarUpdateOne) Exec(ctx context.Context) error {
 func (cuo *CalendarUpdateOne) ExecX(ctx context.Context) {
 	if err := cuo.Exec(ctx); err != nil {
 		panic(err)
+	}
+}
+
+// defaults sets the default values of the builder before save.
+func (cuo *CalendarUpdateOne) defaults() {
+	if _, ok := cuo.mutation.UpdatedAt(); !ok {
+		v := calendar.UpdateDefaultUpdatedAt()
+		cuo.mutation.SetUpdatedAt(v)
 	}
 }
 
@@ -475,6 +555,15 @@ func (cuo *CalendarUpdateOne) sqlSave(ctx context.Context) (_node *Calendar, err
 				ps[i](selector)
 			}
 		}
+	}
+	if value, ok := cuo.mutation.UpdatedAt(); ok {
+		_spec.SetField(calendar.FieldUpdatedAt, field.TypeTime, value)
+	}
+	if value, ok := cuo.mutation.DeletedAt(); ok {
+		_spec.SetField(calendar.FieldDeletedAt, field.TypeTime, value)
+	}
+	if cuo.mutation.DeletedAtCleared() {
+		_spec.ClearField(calendar.FieldDeletedAt, field.TypeTime)
 	}
 	if cuo.mutation.UserCleared() {
 		edge := &sqlgraph.EdgeSpec{

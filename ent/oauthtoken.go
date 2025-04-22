@@ -19,6 +19,12 @@ type OAuthToken struct {
 	config `json:"-"`
 	// ID of the ent.
 	ID uuid.UUID `json:"id,omitempty"`
+	// CreatedAt holds the value of the "created_at" field.
+	CreatedAt time.Time `json:"created_at,omitempty"`
+	// UpdatedAt holds the value of the "updated_at" field.
+	UpdatedAt time.Time `json:"updated_at,omitempty"`
+	// DeletedAt holds the value of the "deleted_at" field.
+	DeletedAt *time.Time `json:"deleted_at,omitempty"`
 	// AccessToken holds the value of the "access_token" field.
 	AccessToken string `json:"-"`
 	// RefreshToken holds the value of the "refresh_token" field.
@@ -59,7 +65,7 @@ func (*OAuthToken) scanValues(columns []string) ([]any, error) {
 		switch columns[i] {
 		case oauthtoken.FieldAccessToken, oauthtoken.FieldRefreshToken:
 			values[i] = new(sql.NullString)
-		case oauthtoken.FieldExpiry:
+		case oauthtoken.FieldCreatedAt, oauthtoken.FieldUpdatedAt, oauthtoken.FieldDeletedAt, oauthtoken.FieldExpiry:
 			values[i] = new(sql.NullTime)
 		case oauthtoken.FieldID:
 			values[i] = new(uuid.UUID)
@@ -85,6 +91,25 @@ func (ot *OAuthToken) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field id", values[i])
 			} else if value != nil {
 				ot.ID = *value
+			}
+		case oauthtoken.FieldCreatedAt:
+			if value, ok := values[i].(*sql.NullTime); !ok {
+				return fmt.Errorf("unexpected type %T for field created_at", values[i])
+			} else if value.Valid {
+				ot.CreatedAt = value.Time
+			}
+		case oauthtoken.FieldUpdatedAt:
+			if value, ok := values[i].(*sql.NullTime); !ok {
+				return fmt.Errorf("unexpected type %T for field updated_at", values[i])
+			} else if value.Valid {
+				ot.UpdatedAt = value.Time
+			}
+		case oauthtoken.FieldDeletedAt:
+			if value, ok := values[i].(*sql.NullTime); !ok {
+				return fmt.Errorf("unexpected type %T for field deleted_at", values[i])
+			} else if value.Valid {
+				ot.DeletedAt = new(time.Time)
+				*ot.DeletedAt = value.Time
 			}
 		case oauthtoken.FieldAccessToken:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -152,6 +177,17 @@ func (ot *OAuthToken) String() string {
 	var builder strings.Builder
 	builder.WriteString("OAuthToken(")
 	builder.WriteString(fmt.Sprintf("id=%v, ", ot.ID))
+	builder.WriteString("created_at=")
+	builder.WriteString(ot.CreatedAt.Format(time.ANSIC))
+	builder.WriteString(", ")
+	builder.WriteString("updated_at=")
+	builder.WriteString(ot.UpdatedAt.Format(time.ANSIC))
+	builder.WriteString(", ")
+	if v := ot.DeletedAt; v != nil {
+		builder.WriteString("deleted_at=")
+		builder.WriteString(v.Format(time.ANSIC))
+	}
+	builder.WriteString(", ")
 	builder.WriteString("access_token=<sensitive>")
 	builder.WriteString(", ")
 	builder.WriteString("refresh_token=<sensitive>")

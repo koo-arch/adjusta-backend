@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"math"
 
+	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
@@ -86,7 +87,7 @@ func (otq *OAuthTokenQuery) QueryUser() *UserQuery {
 // First returns the first OAuthToken entity from the query.
 // Returns a *NotFoundError when no OAuthToken was found.
 func (otq *OAuthTokenQuery) First(ctx context.Context) (*OAuthToken, error) {
-	nodes, err := otq.Limit(1).All(setContextOp(ctx, otq.ctx, "First"))
+	nodes, err := otq.Limit(1).All(setContextOp(ctx, otq.ctx, ent.OpQueryFirst))
 	if err != nil {
 		return nil, err
 	}
@@ -109,7 +110,7 @@ func (otq *OAuthTokenQuery) FirstX(ctx context.Context) *OAuthToken {
 // Returns a *NotFoundError when no OAuthToken ID was found.
 func (otq *OAuthTokenQuery) FirstID(ctx context.Context) (id uuid.UUID, err error) {
 	var ids []uuid.UUID
-	if ids, err = otq.Limit(1).IDs(setContextOp(ctx, otq.ctx, "FirstID")); err != nil {
+	if ids, err = otq.Limit(1).IDs(setContextOp(ctx, otq.ctx, ent.OpQueryFirstID)); err != nil {
 		return
 	}
 	if len(ids) == 0 {
@@ -132,7 +133,7 @@ func (otq *OAuthTokenQuery) FirstIDX(ctx context.Context) uuid.UUID {
 // Returns a *NotSingularError when more than one OAuthToken entity is found.
 // Returns a *NotFoundError when no OAuthToken entities are found.
 func (otq *OAuthTokenQuery) Only(ctx context.Context) (*OAuthToken, error) {
-	nodes, err := otq.Limit(2).All(setContextOp(ctx, otq.ctx, "Only"))
+	nodes, err := otq.Limit(2).All(setContextOp(ctx, otq.ctx, ent.OpQueryOnly))
 	if err != nil {
 		return nil, err
 	}
@@ -160,7 +161,7 @@ func (otq *OAuthTokenQuery) OnlyX(ctx context.Context) *OAuthToken {
 // Returns a *NotFoundError when no entities are found.
 func (otq *OAuthTokenQuery) OnlyID(ctx context.Context) (id uuid.UUID, err error) {
 	var ids []uuid.UUID
-	if ids, err = otq.Limit(2).IDs(setContextOp(ctx, otq.ctx, "OnlyID")); err != nil {
+	if ids, err = otq.Limit(2).IDs(setContextOp(ctx, otq.ctx, ent.OpQueryOnlyID)); err != nil {
 		return
 	}
 	switch len(ids) {
@@ -185,7 +186,7 @@ func (otq *OAuthTokenQuery) OnlyIDX(ctx context.Context) uuid.UUID {
 
 // All executes the query and returns a list of OAuthTokens.
 func (otq *OAuthTokenQuery) All(ctx context.Context) ([]*OAuthToken, error) {
-	ctx = setContextOp(ctx, otq.ctx, "All")
+	ctx = setContextOp(ctx, otq.ctx, ent.OpQueryAll)
 	if err := otq.prepareQuery(ctx); err != nil {
 		return nil, err
 	}
@@ -207,7 +208,7 @@ func (otq *OAuthTokenQuery) IDs(ctx context.Context) (ids []uuid.UUID, err error
 	if otq.ctx.Unique == nil && otq.path != nil {
 		otq.Unique(true)
 	}
-	ctx = setContextOp(ctx, otq.ctx, "IDs")
+	ctx = setContextOp(ctx, otq.ctx, ent.OpQueryIDs)
 	if err = otq.Select(oauthtoken.FieldID).Scan(ctx, &ids); err != nil {
 		return nil, err
 	}
@@ -225,7 +226,7 @@ func (otq *OAuthTokenQuery) IDsX(ctx context.Context) []uuid.UUID {
 
 // Count returns the count of the given query.
 func (otq *OAuthTokenQuery) Count(ctx context.Context) (int, error) {
-	ctx = setContextOp(ctx, otq.ctx, "Count")
+	ctx = setContextOp(ctx, otq.ctx, ent.OpQueryCount)
 	if err := otq.prepareQuery(ctx); err != nil {
 		return 0, err
 	}
@@ -243,7 +244,7 @@ func (otq *OAuthTokenQuery) CountX(ctx context.Context) int {
 
 // Exist returns true if the query has elements in the graph.
 func (otq *OAuthTokenQuery) Exist(ctx context.Context) (bool, error) {
-	ctx = setContextOp(ctx, otq.ctx, "Exist")
+	ctx = setContextOp(ctx, otq.ctx, ent.OpQueryExist)
 	switch _, err := otq.FirstID(ctx); {
 	case IsNotFound(err):
 		return false, nil
@@ -299,12 +300,12 @@ func (otq *OAuthTokenQuery) WithUser(opts ...func(*UserQuery)) *OAuthTokenQuery 
 // Example:
 //
 //	var v []struct {
-//		AccessToken string `json:"access_token,omitempty"`
+//		CreatedAt time.Time `json:"created_at,omitempty"`
 //		Count int `json:"count,omitempty"`
 //	}
 //
 //	client.OAuthToken.Query().
-//		GroupBy(oauthtoken.FieldAccessToken).
+//		GroupBy(oauthtoken.FieldCreatedAt).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
 func (otq *OAuthTokenQuery) GroupBy(field string, fields ...string) *OAuthTokenGroupBy {
@@ -322,11 +323,11 @@ func (otq *OAuthTokenQuery) GroupBy(field string, fields ...string) *OAuthTokenG
 // Example:
 //
 //	var v []struct {
-//		AccessToken string `json:"access_token,omitempty"`
+//		CreatedAt time.Time `json:"created_at,omitempty"`
 //	}
 //
 //	client.OAuthToken.Query().
-//		Select(oauthtoken.FieldAccessToken).
+//		Select(oauthtoken.FieldCreatedAt).
 //		Scan(ctx, &v)
 func (otq *OAuthTokenQuery) Select(fields ...string) *OAuthTokenSelect {
 	otq.ctx.Fields = append(otq.ctx.Fields, fields...)
@@ -537,7 +538,7 @@ func (otgb *OAuthTokenGroupBy) Aggregate(fns ...AggregateFunc) *OAuthTokenGroupB
 
 // Scan applies the selector query and scans the result into the given value.
 func (otgb *OAuthTokenGroupBy) Scan(ctx context.Context, v any) error {
-	ctx = setContextOp(ctx, otgb.build.ctx, "GroupBy")
+	ctx = setContextOp(ctx, otgb.build.ctx, ent.OpQueryGroupBy)
 	if err := otgb.build.prepareQuery(ctx); err != nil {
 		return err
 	}
@@ -585,7 +586,7 @@ func (ots *OAuthTokenSelect) Aggregate(fns ...AggregateFunc) *OAuthTokenSelect {
 
 // Scan applies the selector query and scans the result into the given value.
 func (ots *OAuthTokenSelect) Scan(ctx context.Context, v any) error {
-	ctx = setContextOp(ctx, ots.ctx, "Select")
+	ctx = setContextOp(ctx, ots.ctx, ent.OpQuerySelect)
 	if err := ots.prepareQuery(ctx); err != nil {
 		return err
 	}

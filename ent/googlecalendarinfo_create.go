@@ -6,6 +6,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
@@ -19,6 +20,48 @@ type GoogleCalendarInfoCreate struct {
 	config
 	mutation *GoogleCalendarInfoMutation
 	hooks    []Hook
+}
+
+// SetCreatedAt sets the "created_at" field.
+func (gcic *GoogleCalendarInfoCreate) SetCreatedAt(t time.Time) *GoogleCalendarInfoCreate {
+	gcic.mutation.SetCreatedAt(t)
+	return gcic
+}
+
+// SetNillableCreatedAt sets the "created_at" field if the given value is not nil.
+func (gcic *GoogleCalendarInfoCreate) SetNillableCreatedAt(t *time.Time) *GoogleCalendarInfoCreate {
+	if t != nil {
+		gcic.SetCreatedAt(*t)
+	}
+	return gcic
+}
+
+// SetUpdatedAt sets the "updated_at" field.
+func (gcic *GoogleCalendarInfoCreate) SetUpdatedAt(t time.Time) *GoogleCalendarInfoCreate {
+	gcic.mutation.SetUpdatedAt(t)
+	return gcic
+}
+
+// SetNillableUpdatedAt sets the "updated_at" field if the given value is not nil.
+func (gcic *GoogleCalendarInfoCreate) SetNillableUpdatedAt(t *time.Time) *GoogleCalendarInfoCreate {
+	if t != nil {
+		gcic.SetUpdatedAt(*t)
+	}
+	return gcic
+}
+
+// SetDeletedAt sets the "deleted_at" field.
+func (gcic *GoogleCalendarInfoCreate) SetDeletedAt(t time.Time) *GoogleCalendarInfoCreate {
+	gcic.mutation.SetDeletedAt(t)
+	return gcic
+}
+
+// SetNillableDeletedAt sets the "deleted_at" field if the given value is not nil.
+func (gcic *GoogleCalendarInfoCreate) SetNillableDeletedAt(t *time.Time) *GoogleCalendarInfoCreate {
+	if t != nil {
+		gcic.SetDeletedAt(*t)
+	}
+	return gcic
 }
 
 // SetGoogleCalendarID sets the "google_calendar_id" field.
@@ -119,6 +162,14 @@ func (gcic *GoogleCalendarInfoCreate) ExecX(ctx context.Context) {
 
 // defaults sets the default values of the builder before save.
 func (gcic *GoogleCalendarInfoCreate) defaults() {
+	if _, ok := gcic.mutation.CreatedAt(); !ok {
+		v := googlecalendarinfo.DefaultCreatedAt()
+		gcic.mutation.SetCreatedAt(v)
+	}
+	if _, ok := gcic.mutation.UpdatedAt(); !ok {
+		v := googlecalendarinfo.DefaultUpdatedAt()
+		gcic.mutation.SetUpdatedAt(v)
+	}
 	if _, ok := gcic.mutation.IsPrimary(); !ok {
 		v := googlecalendarinfo.DefaultIsPrimary
 		gcic.mutation.SetIsPrimary(v)
@@ -131,6 +182,12 @@ func (gcic *GoogleCalendarInfoCreate) defaults() {
 
 // check runs all checks and user-defined validators on the builder.
 func (gcic *GoogleCalendarInfoCreate) check() error {
+	if _, ok := gcic.mutation.CreatedAt(); !ok {
+		return &ValidationError{Name: "created_at", err: errors.New(`ent: missing required field "GoogleCalendarInfo.created_at"`)}
+	}
+	if _, ok := gcic.mutation.UpdatedAt(); !ok {
+		return &ValidationError{Name: "updated_at", err: errors.New(`ent: missing required field "GoogleCalendarInfo.updated_at"`)}
+	}
 	if _, ok := gcic.mutation.GoogleCalendarID(); !ok {
 		return &ValidationError{Name: "google_calendar_id", err: errors.New(`ent: missing required field "GoogleCalendarInfo.google_calendar_id"`)}
 	}
@@ -176,6 +233,18 @@ func (gcic *GoogleCalendarInfoCreate) createSpec() (*GoogleCalendarInfo, *sqlgra
 	if id, ok := gcic.mutation.ID(); ok {
 		_node.ID = id
 		_spec.ID.Value = &id
+	}
+	if value, ok := gcic.mutation.CreatedAt(); ok {
+		_spec.SetField(googlecalendarinfo.FieldCreatedAt, field.TypeTime, value)
+		_node.CreatedAt = value
+	}
+	if value, ok := gcic.mutation.UpdatedAt(); ok {
+		_spec.SetField(googlecalendarinfo.FieldUpdatedAt, field.TypeTime, value)
+		_node.UpdatedAt = value
+	}
+	if value, ok := gcic.mutation.DeletedAt(); ok {
+		_spec.SetField(googlecalendarinfo.FieldDeletedAt, field.TypeTime, value)
+		_node.DeletedAt = &value
 	}
 	if value, ok := gcic.mutation.GoogleCalendarID(); ok {
 		_spec.SetField(googlecalendarinfo.FieldGoogleCalendarID, field.TypeString, value)
