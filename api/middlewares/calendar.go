@@ -122,9 +122,12 @@ func(cm *CalendarMiddleware) syncCalendar(ctx context.Context, calendars []*cust
 	calendarRepo := cm.middleware.Server.CalendarRepo
 	googleCalendarRepo := cm.middleware.Server.GoogleCalendarRepo
 
-	
+	// 同期対象を集める
+	incoming := make(map[string]struct{}, len(calendars))
 	// カレンダーがDBに存在するか確認
 	for _, cal := range calendars {
+		// カレンダーIDをキーにしてマップに追加
+		incoming[cal.CalendarID] = struct{}{}
 		// カレンダーがDBに存在するか確認
 		repoCalOptions := repoCalendar.CalendarQueryOptions{
 			WithGoogleCalendarInfo: true,
@@ -174,6 +177,19 @@ func(cm *CalendarMiddleware) syncCalendar(ctx context.Context, calendars []*cust
 		}
 	}
 
+	// 既存のカレンダー情報を取得
+	dbInfos, err := googleCalendarRepo.ListByUser(ctx, tx, entUser.ID)
+	if err != nil {
+		return fmt.Errorf("failed to list google calendar info: %w", err)
+	}
+	// 現在Googleカレンダーに存在しないカレンダー情報を削除
+	for _, dbInfo := range dbInfos {
+		if _, ok := incoming[dbInfo.GoogleCalendarID]; !ok {
+			if err := googleCalendarRepo.SoftDelete(ctx, tx, dbInfo.ID); err != nil {
+				return fmt.Errorf("failed to soft delete google calendar info: %w", err)
+			}
+		}
+	}
 	// トランザクションをコミット
 	return nil
 }

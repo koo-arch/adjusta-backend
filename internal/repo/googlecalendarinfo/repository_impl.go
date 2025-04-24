@@ -7,6 +7,8 @@ import (
 	"github.com/google/uuid"
 	"github.com/koo-arch/adjusta-backend/ent"
 	"github.com/koo-arch/adjusta-backend/ent/googlecalendarinfo"
+	"github.com/koo-arch/adjusta-backend/ent/calendar"
+	"github.com/koo-arch/adjusta-backend/ent/user"
 )
 
 type GoogleCalendarInfoImpl struct {
@@ -43,6 +45,17 @@ func (r *GoogleCalendarInfoImpl) FindByFields(ctx context.Context, tx *ent.Tx, o
 	}
 
 	return findGoogleCalendarInfo.Only(ctx)
+}
+
+func (r *GoogleCalendarInfoImpl) ListByUser(ctx context.Context, tx *ent.Tx, userID uuid.UUID) ([]*ent.GoogleCalendarInfo, error) {
+	findGoogleCalendarInfo := r.client.GoogleCalendarInfo.Query()
+	if tx != nil {
+		findGoogleCalendarInfo = tx.GoogleCalendarInfo.Query()
+	}
+
+	return findGoogleCalendarInfo.
+		Where(googlecalendarinfo.HasCalendarsWith(calendar.HasUserWith(user.IDEQ(userID)))).
+		All(ctx)
 }
 
 func (r *GoogleCalendarInfoImpl) Create(ctx context.Context, tx *ent.Tx, opt GoogleCalendarInfoQueryOptions, entCalendar *ent.Calendar) (*ent.GoogleCalendarInfo, error) {

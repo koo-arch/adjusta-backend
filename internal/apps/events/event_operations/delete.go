@@ -49,7 +49,7 @@ func (edm *EventDeleteManager) DeleteDraftedEvents(ctx context.Context, userID u
 
 
 	// データベースからイベントを削除
-	err = edm.event.EventRepo.Delete(ctx, tx, eventReq.ID)
+	err = edm.event.EventRepo.SoftDelete(ctx, tx, eventReq.ID)
 	if err != nil {
 		log.Printf("failed to delete event for account: %s, error: %v", email, err)
 		return internalErrors.NewAPIError(http.StatusInternalServerError, "イベント削除時にエラーが発生しました")
