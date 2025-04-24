@@ -419,7 +419,8 @@ func (c *CalendarClient) Hooks() []Hook {
 
 // Interceptors returns the client interceptors.
 func (c *CalendarClient) Interceptors() []Interceptor {
-	return c.inters.Calendar
+	inters := c.inters.Calendar
+	return append(inters[:len(inters):len(inters)], calendar.Interceptors[:]...)
 }
 
 func (c *CalendarClient) mutate(ctx context.Context, m *CalendarMutation) (Value, error) {
@@ -585,7 +586,8 @@ func (c *EventClient) Hooks() []Hook {
 
 // Interceptors returns the client interceptors.
 func (c *EventClient) Interceptors() []Interceptor {
-	return c.inters.Event
+	inters := c.inters.Event
+	return append(inters[:len(inters):len(inters)], event.Interceptors[:]...)
 }
 
 func (c *EventClient) mutate(ctx context.Context, m *EventMutation) (Value, error) {
@@ -734,7 +736,8 @@ func (c *GoogleCalendarInfoClient) Hooks() []Hook {
 
 // Interceptors returns the client interceptors.
 func (c *GoogleCalendarInfoClient) Interceptors() []Interceptor {
-	return c.inters.GoogleCalendarInfo
+	inters := c.inters.GoogleCalendarInfo
+	return append(inters[:len(inters):len(inters)], googlecalendarinfo.Interceptors[:]...)
 }
 
 func (c *GoogleCalendarInfoClient) mutate(ctx context.Context, m *GoogleCalendarInfoMutation) (Value, error) {
@@ -867,7 +870,8 @@ func (c *JWTKeyClient) Hooks() []Hook {
 
 // Interceptors returns the client interceptors.
 func (c *JWTKeyClient) Interceptors() []Interceptor {
-	return c.inters.JWTKey
+	inters := c.inters.JWTKey
+	return append(inters[:len(inters):len(inters)], jwtkey.Interceptors[:]...)
 }
 
 func (c *JWTKeyClient) mutate(ctx context.Context, m *JWTKeyMutation) (Value, error) {
@@ -1016,7 +1020,8 @@ func (c *OAuthTokenClient) Hooks() []Hook {
 
 // Interceptors returns the client interceptors.
 func (c *OAuthTokenClient) Interceptors() []Interceptor {
-	return c.inters.OAuthToken
+	inters := c.inters.OAuthToken
+	return append(inters[:len(inters):len(inters)], oauthtoken.Interceptors[:]...)
 }
 
 func (c *OAuthTokenClient) mutate(ctx context.Context, m *OAuthTokenMutation) (Value, error) {
@@ -1166,7 +1171,8 @@ func (c *ProposedDateClient) Hooks() []Hook {
 
 // Interceptors returns the client interceptors.
 func (c *ProposedDateClient) Interceptors() []Interceptor {
-	return c.inters.ProposedDate
+	inters := c.inters.ProposedDate
+	return append(inters[:len(inters):len(inters)], proposeddate.Interceptors[:]...)
 }
 
 func (c *ProposedDateClient) mutate(ctx context.Context, m *ProposedDateMutation) (Value, error) {
@@ -1332,7 +1338,8 @@ func (c *UserClient) Hooks() []Hook {
 
 // Interceptors returns the client interceptors.
 func (c *UserClient) Interceptors() []Interceptor {
-	return c.inters.User
+	inters := c.inters.User
+	return append(inters[:len(inters):len(inters)], user.Interceptors[:]...)
 }
 
 func (c *UserClient) mutate(ctx context.Context, m *UserMutation) (Value, error) {

@@ -21,6 +21,8 @@ import (
 // to their package variables.
 func init() {
 	calendarMixin := schema.Calendar{}.Mixin()
+	calendarMixinInters1 := calendarMixin[1].Interceptors()
+	calendar.Interceptors[0] = calendarMixinInters1[0]
 	calendarMixinFields0 := calendarMixin[0].Fields()
 	_ = calendarMixinFields0
 	calendarFields := schema.Calendar{}.Fields()
@@ -42,6 +44,8 @@ func init() {
 	eventMixin := schema.Event{}.Mixin()
 	eventHooks := schema.Event{}.Hooks()
 	event.Hooks[0] = eventHooks[0]
+	eventMixinInters1 := eventMixin[1].Interceptors()
+	event.Interceptors[0] = eventMixinInters1[0]
 	eventMixinFields0 := eventMixin[0].Fields()
 	_ = eventMixinFields0
 	eventFields := schema.Event{}.Fields()
@@ -61,6 +65,8 @@ func init() {
 	// event.DefaultID holds the default value on creation for the id field.
 	event.DefaultID = eventDescID.Default.(func() uuid.UUID)
 	googlecalendarinfoMixin := schema.GoogleCalendarInfo{}.Mixin()
+	googlecalendarinfoMixinInters1 := googlecalendarinfoMixin[1].Interceptors()
+	googlecalendarinfo.Interceptors[0] = googlecalendarinfoMixinInters1[0]
 	googlecalendarinfoMixinFields0 := googlecalendarinfoMixin[0].Fields()
 	_ = googlecalendarinfoMixinFields0
 	googlecalendarinfoFields := schema.GoogleCalendarInfo{}.Fields()
@@ -88,6 +94,8 @@ func init() {
 	// googlecalendarinfo.DefaultID holds the default value on creation for the id field.
 	googlecalendarinfo.DefaultID = googlecalendarinfoDescID.Default.(func() uuid.UUID)
 	jwtkeyMixin := schema.JWTKey{}.Mixin()
+	jwtkeyMixinInters1 := jwtkeyMixin[1].Interceptors()
+	jwtkey.Interceptors[0] = jwtkeyMixinInters1[0]
 	jwtkeyMixinFields0 := jwtkeyMixin[0].Fields()
 	_ = jwtkeyMixinFields0
 	jwtkeyFields := schema.JWTKey{}.Fields()
@@ -113,6 +121,8 @@ func init() {
 	// jwtkey.TypeValidator is a validator for the "type" field. It is called by the builders before save.
 	jwtkey.TypeValidator = jwtkeyDescType.Validators[0].(func(string) error)
 	oauthtokenMixin := schema.OAuthToken{}.Mixin()
+	oauthtokenMixinInters1 := oauthtokenMixin[1].Interceptors()
+	oauthtoken.Interceptors[0] = oauthtokenMixinInters1[0]
 	oauthtokenMixinFields0 := oauthtokenMixin[0].Fields()
 	_ = oauthtokenMixinFields0
 	oauthtokenFields := schema.OAuthToken{}.Fields()
@@ -134,6 +144,8 @@ func init() {
 	proposeddateMixin := schema.ProposedDate{}.Mixin()
 	proposeddateHooks := schema.ProposedDate{}.Hooks()
 	proposeddate.Hooks[0] = proposeddateHooks[0]
+	proposeddateMixinInters1 := proposeddateMixin[1].Interceptors()
+	proposeddate.Interceptors[0] = proposeddateMixinInters1[0]
 	proposeddateMixinFields0 := proposeddateMixin[0].Fields()
 	_ = proposeddateMixinFields0
 	proposeddateFields := schema.ProposedDate{}.Fields()
@@ -159,6 +171,8 @@ func init() {
 	userMixin := schema.User{}.Mixin()
 	userHooks := schema.User{}.Hooks()
 	user.Hooks[0] = userHooks[0]
+	userMixinInters1 := userMixin[1].Interceptors()
+	user.Interceptors[0] = userMixinInters1[0]
 	userMixinFields0 := userMixin[0].Fields()
 	_ = userMixinFields0
 	userFields := schema.User{}.Fields()
