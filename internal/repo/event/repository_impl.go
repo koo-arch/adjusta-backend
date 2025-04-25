@@ -8,6 +8,7 @@ import (
 	"github.com/google/uuid"
 	"google.golang.org/api/calendar/v3"
 	"github.com/koo-arch/adjusta-backend/ent"
+	"github.com/koo-arch/adjusta-backend/ent/user"
 	dbCalendar "github.com/koo-arch/adjusta-backend/ent/calendar"
 	"github.com/koo-arch/adjusta-backend/ent/event"
 	"github.com/koo-arch/adjusta-backend/ent/proposeddate"
@@ -67,7 +68,7 @@ func (r *EventRepositoryImpl) FilterByCalendarID(ctx context.Context, tx *ent.Tx
 	return filterEvent.All(ctx)
 }
 
-func (r *EventRepositoryImpl) FindBySlug(ctx context.Context, tx *ent.Tx, slug string, opt EventQueryOptions) (*ent.Event, error) {
+func (r *EventRepositoryImpl) FindBySlugAndUser(ctx context.Context, tx *ent.Tx, userID uuid.UUID, slug string, opt EventQueryOptions) (*ent.Event, error) {
 	query := r.client.Event.Query()
 	if tx != nil {
 		query = tx.Event.Query()
@@ -77,7 +78,12 @@ func (r *EventRepositoryImpl) FindBySlug(ctx context.Context, tx *ent.Tx, slug s
 		query = query.WithProposedDates()
 	}
 
-	return query.Where(event.SlugEQ(slug)).Only(ctx)
+	return query.
+		Where(
+			event.SlugEQ(slug),
+			event.HasCalendarWith(dbCalendar.HasUserWith(user.IDEQ(userID))),
+		).
+		Only(ctx)
 }
 
 func (r *EventRepositoryImpl) Create(ctx context.Context, tx *ent.Tx, googleEvent *calendar.Event, entCalendar *ent.Calendar) (*ent.Event, error) {

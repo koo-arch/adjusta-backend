@@ -53,7 +53,7 @@ func (eum *EventUpdateManager) UpdateDraftedEvents(ctx context.Context, userID u
 		return internalErrors.NewAPIError(http.StatusInternalServerError, internalErrors.InternalErrorMessage)
 	}
 
-	entEvent, err := eum.event.EventRepo.FindBySlug(ctx, tx, slug, event.EventQueryOptions{})
+	entEvent, err := eum.event.EventRepo.FindBySlugAndUser(ctx, tx, userID, slug, event.EventQueryOptions{})
 	if err != nil {
 		log.Printf("failed to get event for account: %s, error: %v", email, err)
 		if ent.IsNotFound(err) {

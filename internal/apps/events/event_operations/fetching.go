@@ -252,7 +252,7 @@ func (efm *EventFetchingManager) FetchDraftedEventDetail(ctx context.Context, us
 	queryOpt := event.EventQueryOptions{
 		WithProposedDates: true,
 	}
-	entEvent, err := efm.event.EventRepo.FindBySlug(ctx, tx, slug, queryOpt)
+	entEvent, err := efm.event.EventRepo.FindBySlugAndUser(ctx, tx, userID, slug, queryOpt)
 	if err != nil {
 		log.Printf("failed to get event for account: %s, error: %v", email, err)
 		if ent.IsNotFound(err) {
