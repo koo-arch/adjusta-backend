@@ -75,7 +75,7 @@ func (em *EventManager) FinalizeProposedDate(ctx context.Context, userID uuid.UU
 	// トランザクションをデファーで処理
 	defer transaction.HandleTransaction(tx, &err)
 
-	entEvent, err := em.EventRepo.FindBySlug(ctx, tx, slug, event.EventQueryOptions{})
+	entEvent, err := em.EventRepo.FindBySlugAndUser(ctx, tx, userID, slug, event.EventQueryOptions{})
 	if err != nil {
 		log.Printf("failed to get event for account: %s, error: %v", email, err)
 		if ent.IsNotFound(err) {

@@ -34,7 +34,7 @@ type EventQueryOptions struct {
 type EventRepository interface {
 	Read(ctx context.Context, tx *ent.Tx, id uuid.UUID, opt EventQueryOptions) (*ent.Event, error)
 	FilterByCalendarID(ctx context.Context, tx *ent.Tx, calendarID uuid.UUID, opt EventQueryOptions) ([]*ent.Event, error)
-	FindBySlug(ctx context.Context, tx *ent.Tx, slug string, opt EventQueryOptions) (*ent.Event, error)
+	FindBySlugAndUser(ctx context.Context, tx *ent.Tx, userID uuid.UUID, slug string, opt EventQueryOptions) (*ent.Event, error)
 	Create(ctx context.Context, tx *ent.Tx, googleEvent *calendar.Event, entCalendar *ent.Calendar) (*ent.Event, error)
 	Update(ctx context.Context, tx *ent.Tx, id uuid.UUID, opt EventQueryOptions) (*ent.Event, error)
 	Delete(ctx context.Context, tx *ent.Tx, id uuid.UUID) error
