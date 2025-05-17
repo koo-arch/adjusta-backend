@@ -5,7 +5,9 @@ import (
 	"fmt"
 
 	translate "cloud.google.com/go/translate/apiv3"
+	"cloud.google.com/go/compute/metadata"
 	"cloud.google.com/go/translate/apiv3/translatepb"
+	"github.com/koo-arch/adjusta-backend/configs"
 )
 
 type serviceAccount struct {
@@ -23,9 +25,17 @@ func NewTranslator(ctx context.Context) (*Translator, error) {
 		return nil, fmt.Errorf("failed to create client: %v", err)
 	}
 
-	projectID, err := GetProjectID()
-	if err != nil {
-		return nil, err
+	var projectID string
+	if configs.GetEnv("GO_ENV") == "development" {
+		projectID, err = GetProjectID()
+		if err != nil {
+			return nil, fmt.Errorf("failed to get project ID: %v", err)
+		}
+	} else {
+		projectID, err = metadata.ProjectIDWithContext(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get project ID: %v", err)
+		}
 	}
 
 	return &Translator{

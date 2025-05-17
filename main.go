@@ -2,9 +2,7 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"log"
-	"net/http"
 	"strings"
 	"time"
 
@@ -17,6 +15,7 @@ import (
 	"github.com/koo-arch/adjusta-backend/api/middlewares"
 	"github.com/koo-arch/adjusta-backend/configs"
 	"github.com/koo-arch/adjusta-backend/ent"
+	opCookie "github.com/koo-arch/adjusta-backend/cookie"
 
 	_ "github.com/koo-arch/adjusta-backend/ent/runtime"
 	"github.com/koo-arch/adjusta-backend/scheduler"
@@ -26,20 +25,17 @@ import (
 func main() {
 	// 環境変数の読み込み
 	configs.LoadEnv()
-
+	
 	// DB接続
-	DBUser := configs.GetEnv("DB_USER")
-	DBName := configs.GetEnv("DB_NAME")
-	DBPass := configs.GetEnv("DB_PASS")
-	DBHost := configs.GetEnv("DB_HOST")
-	DBPort := configs.GetEnv("DB_PORT")
-	databaseURL := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable", DBUser, DBPass, DBHost, DBPort, DBName)
+    databaseURL := configs.GetEnv("DATABASE_URL")
+    if databaseURL == "" {
+        log.Fatal("DATABASE_URL is not set")
+    }
 
-	client, err := ent.Open("postgres", databaseURL)
-	if err != nil {
-		log.Fatalf("failed opening connection to postgres: %v", err)
-	}
-
+    client, err := ent.Open("postgres", databaseURL)
+    if err != nil {
+        log.Fatalf("failed opening connection to postgres: %v", err)
+    }
 	defer func() {
 		if err := client.Close(); err != nil {
 			log.Fatalf("failed closing connection to postgres: %v", err)
@@ -83,13 +79,8 @@ func main() {
 		MaxAge:           12 * time.Hour,
 	}))
 
-	store := cookie.NewStore([]byte("secret"))
-	store.Options(sessions.Options{
-		Path:     "/",
-		MaxAge:   60 * 60 * 24 * 7,
-		HttpOnly: true,
-		SameSite: http.SameSiteLaxMode,
-	})
+	store := cookie.NewStore([]byte(configs.GetEnv("SESSION_SECRET")))
+	store.Options(opCookie.DefaultCookieOptions())
 	router.Use(sessions.Sessions("session", store))
 
 	handler := handlers.NewHandler(server)
@@ -131,7 +122,12 @@ func main() {
 	}
 
 	// サーバー起動
-	if err := router.Run(":8080"); err != nil {
+	port := configs.GetEnv("PORT")
+	if port == "" {
+		port = "8080"
+	}
+	if err := router.Run(":" + port); err != nil {
 		log.Fatalf("failed to run server: %v", err)
 	}
+
 }
