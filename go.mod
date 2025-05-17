@@ -3,6 +3,7 @@ module github.com/koo-arch/adjusta-backend
 go 1.23.0
 
 require (
+	cloud.google.com/go/compute/metadata v0.6.0
 	cloud.google.com/go/translate v1.12.4
 	entgo.io/ent v0.14.4
 	github.com/abadojack/whatlanggo v1.0.1
@@ -25,7 +26,6 @@ require (
 	cloud.google.com/go v0.118.3 // indirect
 	cloud.google.com/go/auth v0.15.0 // indirect
 	cloud.google.com/go/auth/oauth2adapt v0.2.7 // indirect
-	cloud.google.com/go/compute/metadata v0.6.0 // indirect
 	cloud.google.com/go/longrunning v0.6.5 // indirect
 	github.com/agext/levenshtein v1.2.1 // indirect
 	github.com/apparentlymart/go-textseg/v13 v13.0.0 // indirect

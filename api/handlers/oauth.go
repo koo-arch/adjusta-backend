@@ -32,7 +32,6 @@ func (oh *OauthHandler) LogoutHandler(c *gin.Context) {
 	// セッションをクリア
 	session := sessions.Default(c)
 	session.Clear()
-	session.Options(sessions.Options{MaxAge: -1, Path: "/"})
 	if err := session.Save(); err != nil {
 		log.Printf("failed to save session for account: %v", err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "セッションの保存に失敗しました"})
@@ -42,6 +41,7 @@ func (oh *OauthHandler) LogoutHandler(c *gin.Context) {
 	// クッキーを削除
 	cookie.DeleteCookie(c, "access_token")
 	cookie.DeleteCookie(c, "refresh_token")
+	cookie.DeleteCookie(c, "session")
 
 	c.JSON(http.StatusOK, gin.H{"message": "logged out"})
 }
